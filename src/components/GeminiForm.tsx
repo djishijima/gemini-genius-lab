@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from "react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Card } from "@/components/ui/card";
@@ -12,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ImagePlus, X } from "lucide-react";
+import { ImagePlus, X, FileText } from "lucide-react";
 
 const MODEL_TOKEN_LIMITS = {
   "gemini-1.5-flash": 1000000,
@@ -26,11 +27,14 @@ const GeminiForm = () => {
   const [response, setResponse] = useState("");
   const [streamingResponse, setStreamingResponse] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [model, setModel] = useState("gemini-1.0-pro-vision");
+  const [model, setModel] = useState("gemini-1.5-flash");
   const [isStreaming, setIsStreaming] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfName, setPdfName] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const [estimatedTokens, setEstimatedTokens] = useState(0);
 
@@ -72,11 +76,45 @@ const GeminiForm = () => {
     }
   };
 
+  const handlePdfUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 20 * 1024 * 1024) {
+        toast({
+          title: "PDFサイズが大きすぎます",
+          description: "20MB以下のPDFを選択してください。",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (file.type !== 'application/pdf') {
+        toast({
+          title: "無効なファイル形式",
+          description: "PDFファイルを選択してください。",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setPdfFile(file);
+      setPdfName(file.name);
+    }
+  };
+
   const removeImage = () => {
     setImageFile(null);
     setImagePreview("");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
+    }
+  };
+
+  const removePdf = () => {
+    setPdfFile(null);
+    setPdfName("");
+    if (pdfInputRef.current) {
+      pdfInputRef.current.value = "";
     }
   };
 
@@ -127,6 +165,25 @@ const GeminiForm = () => {
           setResponse(result.response.text());
         };
         reader.readAsDataURL(imageFile);
+      } else if (pdfFile) {
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          const pdfData = reader.result as string;
+          const base64Pdf = pdfData.split(',')[1];
+          
+          const result = await genModel.generateContent([
+            {
+              inlineData: {
+                data: base64Pdf,
+                mimeType: "application/pdf"
+              }
+            },
+            prompt
+          ]);
+          
+          setResponse(result.response.text());
+        };
+        reader.readAsDataURL(pdfFile);
       } else if (isStreaming) {
         const result = await genModel.generateContentStream(prompt);
         let fullResponse = "";
@@ -251,6 +308,45 @@ const GeminiForm = () => {
                 </Button>
               </div>
             )}
+
+            <div className="space-y-4">
+              <input
+                type="file"
+                accept="application/pdf"
+                onChange={handlePdfUpload}
+                className="hidden"
+                ref={pdfInputRef}
+              />
+              
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full h-16 border-dashed"
+                onClick={() => pdfInputRef.current?.click()}
+              >
+                {pdfName ? (
+                  <div className="relative w-full flex items-center justify-center">
+                    <FileText className="h-6 w-6 mr-2" />
+                    <span className="truncate max-w-[200px]">{pdfName}</span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removePdf();
+                      }}
+                      className="absolute right-2 p-1 bg-background/80 rounded-full"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center text-muted-foreground">
+                    <FileText className="h-6 w-6 mr-2" />
+                    <span>PDFをアップロード</span>
+                  </div>
+                )}
+              </Button>
+            </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm text-muted-foreground mb-1">
