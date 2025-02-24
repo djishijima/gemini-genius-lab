@@ -1,5 +1,4 @@
-
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +14,12 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { ImagePlus, X } from "lucide-react";
 
+const MODEL_TOKEN_LIMITS = {
+  "gemini-1.5-flash": 1000000,
+  "gemini-1.0-pro": 32768,
+  "gemini-1.0-pro-vision": 32768,
+};
+
 const GeminiForm = () => {
   const [apiKey, setApiKey] = useState("");
   const [prompt, setPrompt] = useState("");
@@ -27,11 +32,20 @@ const GeminiForm = () => {
   const [imagePreview, setImagePreview] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const [estimatedTokens, setEstimatedTokens] = useState(0);
+
+  const estimateTokens = (text: string) => {
+    return Math.ceil(text.length / 4);
+  };
+
+  useEffect(() => {
+    setEstimatedTokens(estimateTokens(prompt));
+  }, [prompt]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 20 * 1024 * 1024) { // 20MB limit
+      if (file.size > 20 * 1024 * 1024) {
         toast({
           title: "画像サイズが大きすぎます",
           description: "20MB以下の画像を選択してください。",
@@ -95,7 +109,6 @@ const GeminiForm = () => {
       const genModel = genAI.getGenerativeModel({ model });
       
       if (imageFile && model === "gemini-1.0-pro-vision") {
-        // Handle image analysis
         const reader = new FileReader();
         reader.onloadend = async () => {
           const imageData = reader.result as string;
@@ -177,9 +190,9 @@ const GeminiForm = () => {
                     <SelectValue placeholder="モデルを選択" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="gemini-1.5-flash">gemini-1.5-flash</SelectItem>
-                    <SelectItem value="gemini-1.0-pro">gemini-1.0-pro</SelectItem>
-                    <SelectItem value="gemini-1.0-pro-vision">gemini-1.0-pro-vision</SelectItem>
+                    <SelectItem value="gemini-1.5-flash">gemini-1.5-flash (100万トークン)</SelectItem>
+                    <SelectItem value="gemini-1.0-pro">gemini-1.0-pro (32Kトークン)</SelectItem>
+                    <SelectItem value="gemini-1.0-pro-vision">gemini-1.0-pro-vision (32Kトークン + 画像)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -240,18 +253,29 @@ const GeminiForm = () => {
             )}
 
             <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm text-muted-foreground mb-1">
+                <span>プロンプトを入力...</span>
+                <span className={estimatedTokens > MODEL_TOKEN_LIMITS[model] ? "text-destructive" : ""}>
+                  推定トークン数: {estimatedTokens.toLocaleString()} / {MODEL_TOKEN_LIMITS[model].toLocaleString()}
+                </span>
+              </div>
               <Textarea
                 placeholder="プロンプトを入力..."
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 className="min-h-[150px] transition-all duration-200 hover:border-primary/50 focus:border-primary"
               />
+              {estimatedTokens > MODEL_TOKEN_LIMITS[model] && (
+                <p className="text-sm text-destructive">
+                  警告: 入力テキストが選択したモデルのトークン制限を超えています
+                </p>
+              )}
             </div>
 
             <Button 
               type="submit" 
               className="w-full transition-all duration-200"
-              disabled={isLoading}
+              disabled={isLoading || estimatedTokens > MODEL_TOKEN_LIMITS[model]}
             >
               {isLoading ? "生成中..." : "コンテンツを生成"}
             </Button>
@@ -262,7 +286,7 @@ const GeminiForm = () => {
           <Card className="p-6 backdrop-blur-sm bg-card/80 border shadow-lg animate-fade-in">
             <h2 className="text-xl font-semibold mb-4">応答</h2>
             <div className="prose max-w-none">
-              <pre className="whitespace-pre-wrap font-mono text-sm bg-muted p-4 rounded-lg">
+              <pre className="whitespace-pre-wrap font-mono text-sm bg-muted p-4 rounded-lg overflow-auto max-h-[600px]">
                 {isStreaming ? streamingResponse : response}
               </pre>
             </div>
