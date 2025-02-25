@@ -64,20 +64,34 @@ export default function AudioRecorder() {
             const audioBlob = new Blob(chunks, { type: 'audio/webm' });
             console.log('Audio data captured:', audioBlob.size, 'bytes');
             
-            const formData = new FormData();
-            formData.append('audio', audioBlob);
-            formData.append('config', JSON.stringify(config));
+            // Google Cloud Speech-to-Text APIの要求形式に合わせる
+            const requestBody = {
+              config: {
+                encoding: 'WEBM_OPUS',
+                sampleRateHertz: 16000,
+                languageCode: 'ja-JP',
+              },
+              audio: {
+                content: await audioBlob.arrayBuffer().then(buffer => 
+                  Buffer.from(buffer).toString('base64')
+                )
+              }
+            };
 
             const response = await fetch(
               `https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`,
               {
                 method: 'POST',
-                body: formData,
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestBody)
               }
             );
 
             if (!response.ok) {
-              throw new Error('Speech-to-Text API request failed');
+              const errorData = await response.json();
+              throw new Error(`Speech-to-Text API error: ${JSON.stringify(errorData)}`);
             }
 
             const data = await response.json();
