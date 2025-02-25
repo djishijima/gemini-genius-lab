@@ -1,6 +1,13 @@
 
-import { VertexAI } from '@google-cloud/vertexai';
-import { Content, Part } from '@google-cloud/vertexai';
+interface GeminiResponse {
+  candidates: Array<{
+    content: {
+      parts: Array<{
+        text: string;
+      }>;
+    };
+  }>;
+}
 
 export async function transcribeAudio(audioBlob: Blob, apiKey: string): Promise<string> {
   try {
@@ -10,39 +17,43 @@ export async function transcribeAudio(audioBlob: Blob, apiKey: string): Promise<
         .reduce((data, byte) => data + String.fromCharCode(byte), '')
     );
 
-    const vertexAI = new VertexAI({
-      project: 'your-project-id',
-      location: 'us-central1',
-      credential: { apiKey }
-    });
+    const response = await fetch(
+      'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-001:generateContent?key=' + apiKey,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            role: 'user',
+            parts: [
+              {
+                inlineData: {
+                  data: base64Data,
+                  mimeType: 'audio/webm'
+                }
+              },
+              {
+                text: `
+                この音声を文字起こしして、以下のフォーマットで出力してください：
+                - タイムスタンプ付きで
+                - 話者が複数いる場合は、話者A、話者B等で区別してください
+                `
+              }
+            ]
+          }]
+        })
+      }
+    );
 
-    const generativeModel = vertexAI.getGenerativeModel({
-      model: 'gemini-1.5-flash-001',
-    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Gemini API Error: ${JSON.stringify(errorData)}`);
+    }
 
-    const filePart: Part = {
-      inlineData: {
-        data: base64Data,
-        mimeType: 'audio/webm',
-      },
-    };
-
-    const textPart: Part = {
-      text: `
-      この音声を文字起こしして、以下のフォーマットで出力してください：
-      - タイムスタンプ付きで
-      - 話者が複数いる場合は、話者A、話者B等で区別してください
-      `,
-    };
-
-    const content: Content = {
-      role: 'user',
-      parts: [filePart, textPart]
-    };
-
-    const response = await generativeModel.generateContent([content]);
-    const result = await response.response;
-    const text = result.candidates[0].content.parts[0].text;
+    const result: GeminiResponse = await response.json();
+    const text = result.candidates[0]?.content?.parts[0]?.text;
     return text || '文字起こしに失敗しました';
 
   } catch (error) {
@@ -59,39 +70,43 @@ export async function processAudioFile(file: File, apiKey: string): Promise<stri
         .reduce((data, byte) => data + String.fromCharCode(byte), '')
     );
 
-    const vertexAI = new VertexAI({
-      project: 'your-project-id',
-      location: 'us-central1',
-      credential: { apiKey }
-    });
+    const response = await fetch(
+      'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-001:generateContent?key=' + apiKey,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            role: 'user',
+            parts: [
+              {
+                inlineData: {
+                  data: base64Data,
+                  mimeType: file.type
+                }
+              },
+              {
+                text: `
+                この音声を文字起こしして、以下のフォーマットで出力してください：
+                - タイムスタンプ付きで
+                - 話者が複数いる場合は、話者A、話者B等で区別してください
+                `
+              }
+            ]
+          }]
+        })
+      }
+    );
 
-    const generativeModel = vertexAI.getGenerativeModel({
-      model: 'gemini-1.5-flash-001',
-    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Gemini API Error: ${JSON.stringify(errorData)}`);
+    }
 
-    const filePart: Part = {
-      inlineData: {
-        data: base64Data,
-        mimeType: file.type,
-      },
-    };
-
-    const textPart: Part = {
-      text: `
-      この音声を文字起こしして、以下のフォーマットで出力してください：
-      - タイムスタンプ付きで
-      - 話者が複数いる場合は、話者A、話者B等で区別してください
-      `,
-    };
-
-    const content: Content = {
-      role: 'user',
-      parts: [filePart, textPart]
-    };
-
-    const response = await generativeModel.generateContent([content]);
-    const result = await response.response;
-    const text = result.candidates[0].content.parts[0].text;
+    const result: GeminiResponse = await response.json();
+    const text = result.candidates[0]?.content?.parts[0]?.text;
     return text || '文字起こしに失敗しました';
 
   } catch (error) {
