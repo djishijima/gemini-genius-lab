@@ -1,8 +1,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, RefreshCcw, Upload, Wand2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { ArrowLeft, RefreshCcw, Upload, Wand2, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -162,101 +162,159 @@ app.scriptPreferences.enableRedraw = true;`;
         戻る
       </Button>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* 左カラム：原稿入力 */}
+      <div className="grid gap-6">
+        {/* リソースリンク */}
         <Card>
           <CardHeader>
-            <CardTitle>原稿入力</CardTitle>
+            <CardTitle>InDesignリソース</CardTitle>
+            <CardDescription>
+              InDesignスクリプトの開発に役立つリソース
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <Input
-                type="file"
-                accept=".txt,.pdf"
-                onChange={handleFileUpload}
-                className="w-full"
-              />
-              <p className="text-sm text-muted-foreground">
-                テキストファイルをアップロードするか、下のテキストエリアに直接コピー&ペーストしてください。
-              </p>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">AIプロンプト</label>
-                <Textarea
-                  value={prompt}
-                  onChange={(e) => {
-                    setPrompt(e.target.value);
-                    if (manuscriptText.trim()) {
-                      generateScript();
-                    }
-                  }}
-                  placeholder="例: A4サイズの縦書き、明朝体で本文を組んでください。"
-                  className="min-h-[100px]"
-                />
-                <p className="text-sm text-muted-foreground">
-                  プロンプトの例:
-                  <br />
-                  • A4サイズの縦書き、明朝体で本文を組んでください
-                  <br />
-                  • B5サイズで、横書き、ゴシック体、行間を広めに設定してください
-                  <br />
-                  • 見開きページで、外側のマージンを広めに設定してください
-                </p>
-              </div>
-              <Textarea
-                value={manuscriptText}
-                onChange={(e) => {
-                  setManuscriptText(e.target.value);
-                  if (e.target.value.trim()) {
-                    generateScript();
-                  }
-                }}
-                placeholder="ここに原稿テキストを入力してください..."
-                className="min-h-[400px]"
-              />
+            <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+              <a 
+                href="https://www.adobe.com/jp/products/indesign.html" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Adobe InDesign 公式サイト
+              </a>
+              <a 
+                href="https://www.adobe.com/jp/products/indesign/scripting.html" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ExternalLink className="h-4 w-4" />
+                InDesignスクリプティングガイド
+              </a>
+              <a 
+                href="https://creative.adobe.com/ja/products/download/indesign" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ExternalLink className="h-4 w-4" />
+                InDesignダウンロード
+              </a>
             </div>
           </CardContent>
         </Card>
 
-        {/* 右カラム：スクリプトプレビューとダウンロード */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex justify-between items-center">
-              <span>InDesignスクリプト</span>
-              <div className="flex gap-2">
-                <Button 
-                  variant="secondary"
-                  onClick={() => {
-                    if (manuscriptText.trim()) {
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* 左カラム：原稿入力 */}
+          <Card>
+            <CardHeader>
+              <CardTitle>原稿入力</CardTitle>
+              <CardDescription>
+                テキストファイルをアップロードするか、直接入力してください
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <Input
+                  type="file"
+                  accept=".txt,.pdf"
+                  onChange={handleFileUpload}
+                  className="w-full"
+                />
+                <p className="text-sm text-muted-foreground">
+                  テキストファイルをアップロードするか、下のテキストエリアに直接コピー&ペーストしてください。
+                </p>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">AIプロンプト</label>
+                  <Textarea
+                    value={prompt}
+                    onChange={(e) => {
+                      setPrompt(e.target.value);
+                      if (manuscriptText.trim()) {
+                        generateScript();
+                      }
+                    }}
+                    placeholder="例: A4サイズの縦書き、明朝体で本文を組んでください。"
+                    className="min-h-[100px]"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    プロンプトの例:
+                    <br />
+                    • A4サイズの縦書き、明朝体で本文を組んでください
+                    <br />
+                    • B5サイズで、横書き、ゴシック体、行間を広めに設定してください
+                    <br />
+                    • 見開きページで、外側のマージンを広めに設定してください
+                  </p>
+                </div>
+                <Textarea
+                  value={manuscriptText}
+                  onChange={(e) => {
+                    setManuscriptText(e.target.value);
+                    if (e.target.value.trim()) {
                       generateScript();
                     }
                   }}
-                >
-                  <Wand2 className="mr-2 h-4 w-4" />
-                  スクリプト生成
-                </Button>
-                <Button 
-                  variant="default"
-                  onClick={handleDownloadScript}
-                >
-                  <Upload className="mr-2 h-4 w-4" />
-                  ダウンロード
-                </Button>
+                  placeholder="ここに原稿テキストを入力してください..."
+                  className="min-h-[400px]"
+                />
               </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="bg-muted p-4 rounded-md">
-                <p className="text-sm text-muted-foreground mb-2">
-                  スクリプトプレビュー:
-                </p>
-                <pre className="text-xs overflow-auto whitespace-pre-wrap bg-background p-4 rounded border min-h-[600px]">
-                  {scriptPreview}
-                </pre>
+            </CardContent>
+          </Card>
+
+          {/* 右カラム：スクリプトプレビューとダウンロード */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex justify-between items-center">
+                <span>InDesignスクリプト</span>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="secondary"
+                    onClick={() => {
+                      if (manuscriptText.trim()) {
+                        generateScript();
+                      }
+                    }}
+                  >
+                    <Wand2 className="mr-2 h-4 w-4" />
+                    スクリプト生成
+                  </Button>
+                  <Button 
+                    variant="default"
+                    onClick={handleDownloadScript}
+                  >
+                    <Upload className="mr-2 h-4 w-4" />
+                    ダウンロード
+                  </Button>
+                </div>
+              </CardTitle>
+              <CardDescription>
+                生成されたスクリプトをダウンロードしてInDesignで実行できます
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="bg-muted p-4 rounded-md">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    スクリプトプレビュー:
+                  </p>
+                  <pre className="text-xs overflow-auto whitespace-pre-wrap bg-background p-4 rounded border min-h-[600px]">
+                    {scriptPreview}
+                  </pre>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  <p>スクリプトの使い方:</p>
+                  <ol className="list-decimal list-inside space-y-1 mt-2">
+                    <li>スクリプトをダウンロード</li>
+                    <li>InDesignを起動</li>
+                    <li>ファイル &gt; スクリプト &gt; スクリプトを実行</li>
+                    <li>ダウンロードしたスクリプトを選択</li>
+                  </ol>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
