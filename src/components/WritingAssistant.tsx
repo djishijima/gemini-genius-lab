@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Wand2, MessagesSquare, FileText, Search, ChevronDown, ChevronUp, BookOpen } from "lucide-react";
+import { Wand2, MessagesSquare, Search, ChevronDown, ChevronUp, BookOpen } from "lucide-react";
 import * as pdfjsLib from 'pdfjs-dist';
 
 interface WritingAssistantProps {
@@ -126,10 +126,10 @@ const WritingAssistant: React.FC<WritingAssistantProps> = ({ apiKey }) => {
           prompt = "以下のテキストの要約を箇条書きで作成してください：\n\n";
           break;
         case "suggestions":
-          prompt = "以下のテキストの改善点を具体的に指摘してください：\n\n";
+          prompt = "原稿に対する改善点や修正指示を箇条書きで整理し、以下のフォーマットで出力してください：\n\n【ページ/段落】\n- 修正内容\n- 修正理由\n\n対象テキスト：\n\n";
           break;
         case "keywords":
-          prompt = "以下のテキストから重要なキーワードを抽出し、それぞれの文脈を説明してください：\n\n";
+          prompt = "印刷物として重要な確認ポイントを以下のカテゴリごとに抽出してください：\n\n1. 表記の統一\n2. 専門用語\n3. 重要な数値\n4. 固有名詞\n\n対象テキスト：\n\n";
           break;
       }
 
@@ -168,8 +168,8 @@ const WritingAssistant: React.FC<WritingAssistantProps> = ({ apiKey }) => {
                 disabled={isLoading}
                 className="gap-2"
               >
-                <FileText className="w-4 h-4" />
-                PDFをアップロード
+                <BookOpen className="w-4 h-4" />
+                原稿PDFをアップロード
               </Button>
             </div>
           </CardHeader>
@@ -177,7 +177,7 @@ const WritingAssistant: React.FC<WritingAssistantProps> = ({ apiKey }) => {
             <div className="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-6">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">テキストエディタ</h3>
+                  <h3 className="text-lg font-semibold">原稿テキスト</h3>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -203,7 +203,7 @@ const WritingAssistant: React.FC<WritingAssistantProps> = ({ apiKey }) => {
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   onSelect={handleSelectionChange}
-                  placeholder="PDFファイルをアップロードするか、テキストを直接入力してください..."
+                  placeholder="PDFファイルをアップロードすると、ここにテキストが表示されます..."
                   className="min-h-[400px] font-mono text-base"
                 />
                 <div className="flex flex-wrap gap-2">
@@ -213,7 +213,7 @@ const WritingAssistant: React.FC<WritingAssistantProps> = ({ apiKey }) => {
                     className="gap-2"
                   >
                     <Search className="w-4 h-4" />
-                    要約を作成
+                    全体の要約
                   </Button>
                   <Button
                     onClick={() => handleAnalyze("suggestions")}
@@ -221,7 +221,7 @@ const WritingAssistant: React.FC<WritingAssistantProps> = ({ apiKey }) => {
                     className="gap-2"
                   >
                     <Wand2 className="w-4 h-4" />
-                    改善点を分析
+                    修正指示の整理
                   </Button>
                   <Button
                     onClick={() => handleAnalyze("keywords")}
@@ -229,7 +229,7 @@ const WritingAssistant: React.FC<WritingAssistantProps> = ({ apiKey }) => {
                     className="gap-2"
                   >
                     <MessagesSquare className="w-4 h-4" />
-                    キーワード抽出
+                    確認ポイント抽出
                   </Button>
                 </div>
               </div>
@@ -261,14 +261,14 @@ const WritingAssistant: React.FC<WritingAssistantProps> = ({ apiKey }) => {
                 <div className="text-sm text-muted-foreground">
                   <p className="font-semibold mb-2">使い方:</p>
                   <ul className="list-disc pl-4 space-y-2">
-                    <li>PDFファイルをアップロードするか、テキストを直接入力してください</li>
-                    <li>全文を分析する場合は、そのまま分析ボタンをクリックしてください</li>
-                    <li>特定の部分を分析する場合は、テキストを選択してから分析ボタンをクリックしてください</li>
-                    <li>各分析機能の説明:
+                    <li>クライアントから受け取った原稿PDFをアップロードしてください</li>
+                    <li>全体の内容を確認する場合は「全体の要約」を使用してください</li>
+                    <li>修正指示を整理する場合は、該当部分を選択して「修正指示の整理」をクリックしてください</li>
+                    <li>各機能の説明:
                       <ul className="list-disc pl-4 mt-1 space-y-1">
-                        <li>要約: テキストの主要なポイントを箇条書きで表示</li>
-                        <li>改善点: 文章の改善すべき点を具体的に指摘</li>
-                        <li>キーワード: 重要な用語とその文脈を説明</li>
+                        <li>全体の要約: 原稿の主要ポイントを箇条書きで表示</li>
+                        <li>修正指示の整理: 赤ペンの修正指示を整理して表示（ページ/段落ごと）</li>
+                        <li>確認ポイント抽出: 表記統一や重要な用語などを整理</li>
                       </ul>
                     </li>
                   </ul>
