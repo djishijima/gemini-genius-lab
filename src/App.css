@@ -1,3 +1,4 @@
+
 #root {
   max-width: 1280px;
   margin: 0 auto;
@@ -41,7 +42,7 @@
   color: #888;
 }
 
-.password-input {
-  -webkit-text-security: disc;
-  text-security: disc;
+.password-input textarea {
+  -webkit-text-security: disc !important;
+  text-security: disc !important;
 }

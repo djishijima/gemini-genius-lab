@@ -112,7 +112,7 @@ export default function AudioRecorder() {
 
     } catch (error) {
       console.error('Error initializing recording:', error);
-      alert('録音の初期化中にエラーが発生しました');
+      alert('録音の初期��中にエラーが発生しました');
     }
   };
 
@@ -173,15 +173,15 @@ export default function AudioRecorder() {
                     )}
                   </Button>
                 </div>
-                <Textarea
-                  id="apiKey"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="Google Cloud APIキーを入力してください"
-                  className={`min-h-[40px] max-h-[40px] font-mono text-sm resize-none ${
-                    !showApiKey ? "password-input" : ""
-                  }`}
-                />
+                <div className={!showApiKey ? "password-input" : ""}>
+                  <Textarea
+                    id="apiKey"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder="Google Cloud APIキーを入力してください"
+                    className="min-h-[40px] max-h-[40px] font-mono text-sm resize-none"
+                  />
+                </div>
               </div>
 
               {isRecording && (
