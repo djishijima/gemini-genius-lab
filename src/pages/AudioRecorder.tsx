@@ -189,20 +189,34 @@ export default function AudioRecorder() {
                     menubar: true,
                     language: 'ja',
                     plugins: [
-                      'ai', 'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
-                      'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-                      'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount',
-                      'accordion', 'emoticons', 'importcss', 'searchreplace',
-                      'textpattern', 'visualchars', 'wordcount', 'quickbars'
+                      // Core editing features
+                      'anchor', 'autolink', 'charmap', 'codesample', 'emoticons', 
+                      'image', 'link', 'lists', 'media', 'searchreplace', 'table', 
+                      'visualblocks', 'wordcount',
+                      // Premium features
+                      'checklist', 'mediaembed', 'casechange', 'export', 
+                      'formatpainter', 'pageembed', 'a11ychecker', 
+                      'tinymcespellchecker', 'permanentpen', 'powerpaste', 
+                      'advtable', 'advcode', 'editimage', 'advtemplate', 'ai', 
+                      'mentions', 'tinycomments', 'tableofcontents', 'footnotes', 
+                      'mergetags', 'autocorrect', 'typography', 'inlinecss', 
+                      'markdown', 'importword', 'exportword', 'exportpdf'
                     ],
-                    toolbar: 'undo redo | styles | ai aiproofreader aitranslate | ' +
-                      'bold italic backcolor | alignleft aligncenter alignright alignjustify | ' +
-                      'bullist numlist outdent indent | image media table emoticons | ' +
-                      'removeformat help',
+                    toolbar: 'undo redo | blocks fontfamily fontsize | ' +
+                      'bold italic underline strikethrough | link image media table mergetags | ' +
+                      'addcomment showcomments | spellcheckdialog a11ycheck typography | ' +
+                      'align lineheight | checklist numlist bullist indent outdent | ' +
+                      'emoticons charmap | removeformat',
                     content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 14px }',
                     readonly: false,
                     branding: false,
                     promotion: false,
+                    tinycomments_mode: 'embedded',
+                    tinycomments_author: 'User',
+                    mergetags_list: [
+                      { value: 'First.Name', title: 'First Name' },
+                      { value: 'Email', title: 'Email' },
+                    ],
                     ai_request: (request: any, respondWith: any) => {
                       respondWith.string(() => Promise.resolve('This is a mock AI response'));
                     }
