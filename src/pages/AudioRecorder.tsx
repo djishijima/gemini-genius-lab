@@ -7,6 +7,8 @@ import { AudioWaveform } from "@/components/AudioWaveform";
 import { ApiKeyInput } from "@/components/ApiKeyInput";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { transcribeAudio, processAudioFile } from "@/utils/speechToText";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 export default function AudioRecorder() {
   const [transcription, setTranscription] = useState("");

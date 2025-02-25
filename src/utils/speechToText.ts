@@ -1,11 +1,9 @@
 
 import { VertexAI } from '@google-cloud/vertexai';
-
-const PROJECT_ID = 'your-project-id'; // ユーザーのプロジェクトIDに置き換える必要があります
+import { Content, Part } from '@google-cloud/vertexai';
 
 export async function transcribeAudio(audioBlob: Blob, apiKey: string): Promise<string> {
   try {
-    // Blobをbase64に変換
     const buffer = await audioBlob.arrayBuffer();
     const base64Data = btoa(
       new Uint8Array(buffer)
@@ -13,23 +11,23 @@ export async function transcribeAudio(audioBlob: Blob, apiKey: string): Promise<
     );
 
     const vertexAI = new VertexAI({
-      project: PROJECT_ID,
+      project: 'your-project-id',
       location: 'us-central1',
-      apiKey: apiKey
+      credential: { apiKey }
     });
 
     const generativeModel = vertexAI.getGenerativeModel({
       model: 'gemini-1.5-flash-001',
     });
 
-    const filePart = {
-      file_data: {
-        file_content: base64Data,
-        mime_type: 'audio/webm',
+    const filePart: Part = {
+      inlineData: {
+        data: base64Data,
+        mimeType: 'audio/webm',
       },
     };
 
-    const textPart = {
+    const textPart: Part = {
       text: `
       この音声を文字起こしして、以下のフォーマットで出力してください：
       - タイムスタンプ付きで
@@ -37,13 +35,15 @@ export async function transcribeAudio(audioBlob: Blob, apiKey: string): Promise<
       `,
     };
 
-    const request = {
-      contents: [{role: 'user', parts: [filePart, textPart]}],
+    const content: Content = {
+      role: 'user',
+      parts: [filePart, textPart]
     };
 
-    const response = await generativeModel.generateContent(request);
+    const response = await generativeModel.generateContent([content]);
     const result = await response.response;
-    return result.text();
+    const text = result.candidates[0].content.parts[0].text;
+    return text || '文字起こしに失敗しました';
 
   } catch (error) {
     console.error('Gemini Transcription Error:', error);
@@ -60,23 +60,23 @@ export async function processAudioFile(file: File, apiKey: string): Promise<stri
     );
 
     const vertexAI = new VertexAI({
-      project: PROJECT_ID,
+      project: 'your-project-id',
       location: 'us-central1',
-      apiKey: apiKey
+      credential: { apiKey }
     });
 
     const generativeModel = vertexAI.getGenerativeModel({
       model: 'gemini-1.5-flash-001',
     });
 
-    const filePart = {
-      file_data: {
-        file_content: base64Data,
-        mime_type: file.type,
+    const filePart: Part = {
+      inlineData: {
+        data: base64Data,
+        mimeType: file.type,
       },
     };
 
-    const textPart = {
+    const textPart: Part = {
       text: `
       この音声を文字起こしして、以下のフォーマットで出力してください：
       - タイムスタンプ付きで
@@ -84,13 +84,15 @@ export async function processAudioFile(file: File, apiKey: string): Promise<stri
       `,
     };
 
-    const request = {
-      contents: [{role: 'user', parts: [filePart, textPart]}],
+    const content: Content = {
+      role: 'user',
+      parts: [filePart, textPart]
     };
 
-    const response = await generativeModel.generateContent(request);
+    const response = await generativeModel.generateContent([content]);
     const result = await response.response;
-    return result.text();
+    const text = result.candidates[0].content.parts[0].text;
+    return text || '文字起こしに失敗しました';
 
   } catch (error) {
     console.error('Gemini File Processing Error:', error);
