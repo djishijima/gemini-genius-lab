@@ -18,3 +18,9 @@ export interface TourState {
     content: string;
   }[];
 }
+
+export interface DiffHighlight {
+  text: string;
+  diffIndex: number;
+  isLeft: boolean;
+}
