@@ -1,11 +1,9 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mic, Square, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export default function AudioRecorder() {
@@ -16,7 +14,6 @@ export default function AudioRecorder() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const navigate = useNavigate();
 
-  // 音声認識の設定
   const config = {
     encoding: 'LINEAR16',
     sampleRateHertz: 16000,
@@ -29,7 +26,6 @@ export default function AudioRecorder() {
   };
 
   useEffect(() => {
-    // コンポーネントのクリーンアップ時に録音を停止
     return () => {
       if (mediaRecorderRef.current && isRecording) {
         mediaRecorderRef.current.stop();
@@ -58,15 +54,12 @@ export default function AudioRecorder() {
       });
       mediaRecorderRef.current = mediaRecorder;
 
-      // 音声データが利用可能になったときの処理
       mediaRecorder.ondataavailable = async (event) => {
         if (event.data.size > 0) {
           try {
-            // 音声データの処理
             const audioBlob = new Blob([event.data], { type: 'audio/webm' });
             console.log('Audio data captured:', audioBlob.size, 'bytes');
             
-            // Google Cloud Speech-to-Text APIにリクエストを送信
             const formData = new FormData();
             formData.append('audio', audioBlob);
             formData.append('config', JSON.stringify(config));
@@ -100,7 +93,6 @@ export default function AudioRecorder() {
         }
       };
 
-      // 1秒ごとにデータを送信
       mediaRecorder.start(1000);
       setIsRecording(true);
 
@@ -114,7 +106,6 @@ export default function AudioRecorder() {
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
-      // すべてのトラックを停止
       mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
       setIsRecording(false);
       console.log('Recording stopped.');
@@ -142,18 +133,18 @@ export default function AudioRecorder() {
               <div className="space-y-2">
                 <Label htmlFor="apiKey">Google Cloud APIキー</Label>
                 <div className="relative">
-                  <Input
+                  <Textarea
                     id="apiKey"
-                    type={showApiKey ? "text" : "password"}
                     value={apiKey}
                     onChange={(e) => setApiKey(e.target.value)}
                     placeholder="Google Cloud APIキーを入力してください"
+                    className="min-h-[100px] font-mono text-sm"
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="absolute right-2 top-1/2 -translate-y-1/2"
+                    className="absolute right-2 top-2"
                     onClick={() => setShowApiKey(!showApiKey)}
                   >
                     {showApiKey ? (
