@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, RefreshCcw, Upload } from "lucide-react";
+import { ArrowLeft, RefreshCcw, Upload, Wand2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function Transcription() {
   const [manuscriptText, setManuscriptText] = useState("");
+  const [prompt, setPrompt] = useState("A4サイズの縦書き、明朝体で本文を組んでください。");
   const [scriptPreview, setScriptPreview] = useState(`#target "InDesign"
 // 基本設定
 app.scriptPreferences.userInteractionLevel = UserInteractionLevels.NEVER_INTERACT;
@@ -57,12 +58,13 @@ doc.documentPreferences.facingPages = false;
   };
 
   const generateScript = () => {
+    // この部分は後でAIによる生成に置き換えることができます
     const script = `#target "InDesign"
 // 基本設定
 app.scriptPreferences.userInteractionLevel = UserInteractionLevels.NEVER_INTERACT;
 app.scriptPreferences.enableRedraw = false;
 
-// 新規ドキュメント作成
+// 新規ドキュメント作成 (${prompt} に基づく設定)
 var doc = app.documents.add();
 doc.documentPreferences.pageSize = "A4";
 doc.documentPreferences.facingPages = false;
@@ -97,12 +99,15 @@ var textFrame = page.textFrames.add({
     ]
 });
 
-// テキストの設定
+// テキストの設定 (プロンプトに基づく設定)
 textFrame.contents = "${manuscriptText.replace(/"/g, '\\"').replace(/\n/g, '\\r')}";
 var text = textFrame.texts[0];
-text.appliedFont = "Hiragino Kaku Gothic ProN";
+text.appliedFont = "Hiragino Mincho ProN"; // プロンプトに基づいて変更
 text.pointSize = 10.5;
 text.leading = 16;
+text.verticalScale = 100;
+text.composer = "Japanese Composer";
+text.writingDirection = WritingDirectionValues.VERTICAL; // プロンプトに基づいて変更
 
 app.scriptPreferences.enableRedraw = true;`;
 
@@ -174,6 +179,29 @@ app.scriptPreferences.enableRedraw = true;`;
               <p className="text-sm text-muted-foreground">
                 テキストファイルをアップロードするか、下のテキストエリアに直接コピー&ペーストしてください。
               </p>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">AIプロンプト</label>
+                <Textarea
+                  value={prompt}
+                  onChange={(e) => {
+                    setPrompt(e.target.value);
+                    if (manuscriptText.trim()) {
+                      generateScript();
+                    }
+                  }}
+                  placeholder="例: A4サイズの縦書き、明朝体で本文を組んでください。"
+                  className="min-h-[100px]"
+                />
+                <p className="text-sm text-muted-foreground">
+                  プロンプトの例:
+                  <br />
+                  • A4サイズの縦書き、明朝体で本文を組んでください
+                  <br />
+                  • B5サイズで、横書き、ゴシック体、行間を広めに設定してください
+                  <br />
+                  • 見開きページで、外側のマージンを広めに設定してください
+                </p>
+              </div>
               <Textarea
                 value={manuscriptText}
                 onChange={(e) => {
@@ -183,7 +211,7 @@ app.scriptPreferences.enableRedraw = true;`;
                   }
                 }}
                 placeholder="ここに原稿テキストを入力してください..."
-                className="min-h-[600px]"
+                className="min-h-[400px]"
               />
             </div>
           </CardContent>
@@ -194,13 +222,26 @@ app.scriptPreferences.enableRedraw = true;`;
           <CardHeader>
             <CardTitle className="flex justify-between items-center">
               <span>InDesignスクリプト</span>
-              <Button 
-                variant="secondary"
-                onClick={handleDownloadScript}
-                className="ml-4"
-              >
-                スクリプトをダウンロード
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="secondary"
+                  onClick={() => {
+                    if (manuscriptText.trim()) {
+                      generateScript();
+                    }
+                  }}
+                >
+                  <Wand2 className="mr-2 h-4 w-4" />
+                  スクリプト生成
+                </Button>
+                <Button 
+                  variant="default"
+                  onClick={handleDownloadScript}
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  ダウンロード
+                </Button>
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
