@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { FileText, Mic, FileCompare } from "lucide-react";
+import { FileText, Mic, FileDiff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export default function Index() {
@@ -36,7 +36,7 @@ export default function Index() {
           onClick={() => navigate("/pdf-compare")}
         >
           <div className="flex flex-col items-center gap-2">
-            <FileCompare className="h-6 w-6" />
+            <FileDiff className="h-6 w-6" />
             <span>PDF比較ツール</span>
           </div>
         </Button>
