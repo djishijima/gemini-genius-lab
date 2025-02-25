@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Editor } from '@tinymce/tinymce-react';
+import { AudioWaveform } from "@/components/AudioWaveform";
 
 export default function AudioRecorder() {
   const [isRecording, setIsRecording] = useState(false);
@@ -13,6 +15,7 @@ export default function AudioRecorder() {
   const [apiKey, setApiKey] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [audioStream, setAudioStream] = useState<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const navigate = useNavigate();
 
@@ -52,6 +55,7 @@ export default function AudioRecorder() {
         } 
       });
       
+      setAudioStream(stream);
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'audio/webm;codecs=opus',
       });
@@ -131,6 +135,7 @@ export default function AudioRecorder() {
       mediaRecorderRef.current.stop();
       mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
       setIsRecording(false);
+      setAudioStream(null);
       console.log('Recording stopped.');
     }
   };
@@ -191,6 +196,12 @@ export default function AudioRecorder() {
                   className="min-h-[40px] max-h-[40px] font-mono text-sm resize-none"
                 />
               </div>
+
+              {isRecording && (
+                <div className="mt-4">
+                  <AudioWaveform stream={audioStream} isRecording={isRecording} />
+                </div>
+              )}
 
               <div className="flex justify-center gap-2">
                 <Button
