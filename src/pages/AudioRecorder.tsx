@@ -1,188 +1,51 @@
-import { useState, useEffect, useRef } from "react";
+
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mic, Square, ArrowLeft, Eye, EyeOff, Download } from "lucide-react";
+import { Mic, Square, ArrowLeft, Download } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { Editor } from '@tinymce/tinymce-react';
 import { AudioWaveform } from "@/components/AudioWaveform";
+import { ApiKeyInput } from "@/components/ApiKeyInput";
+import { useAudioRecorder } from "@/hooks/useAudioRecorder";
+import { transcribeAudio } from "@/utils/speechToText";
 
 export default function AudioRecorder() {
-  const [isRecording, setIsRecording] = useState(false);
   const [transcription, setTranscription] = useState("");
   const [apiKey, setApiKey] = useState("");
-  const [showApiKey, setShowApiKey] = useState(false);
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-  const [audioStream, setAudioStream] = useState<MediaStream | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    return () => {
-      if (mediaRecorderRef.current && isRecording) {
-        mediaRecorderRef.current.stop();
-      }
-    };
-  }, [isRecording]);
+  const handleRecordingComplete = async (blob: Blob) => {
+    try {
+      const transcriptText = await transcribeAudio(blob, apiKey);
+      const timestamp = new Date().toLocaleTimeString();
+      setTranscription(prev => 
+        prev + `[${timestamp}] ${transcriptText}\n`
+      );
+    } catch (error) {
+      console.error('Speech-to-Text Error:', error);
+      setTranscription(prev => 
+        prev + `[ERROR] Speech-to-Text処理エラー: ${error}\n`
+      );
+    }
+  };
 
-  const startRecording = async () => {
+  const {
+    isRecording,
+    audioStream,
+    audioBlob,
+    startRecording,
+    stopRecording
+  } = useAudioRecorder({
+    onRecordingComplete: handleRecordingComplete
+  });
+
+  const handleStartRecording = () => {
     if (!apiKey) {
       alert('APIキーを入力してください');
       return;
     }
-
-    setAudioBlob(null);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          sampleRate: 48000,
-          channelCount: 1,
-          echoCancellation: true,
-          noiseSuppression: true,
-        } 
-      });
-      
-      setAudioStream(stream);
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      chunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          chunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
-        setAudioBlob(audioBlob);
-        
-        try {
-          const buffer = await audioBlob.arrayBuffer();
-          const base64Data = btoa(
-            new Uint8Array(buffer)
-              .reduce((data, byte) => data + String.fromCharCode(byte), '')
-          );
-
-          const audioContext = new AudioContext();
-          const audioBuffer = await audioContext.decodeAudioData(buffer);
-          const durationInSeconds = audioBuffer.duration;
-
-          let transcriptText = '';
-          
-          if (durationInSeconds > 60) {
-            const response = await fetch(
-              `https://speech.googleapis.com/v1/speech:longrunningrecognize?key=${apiKey}`,
-              {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  config: {
-                    encoding: 'WEBM_OPUS',
-                    sampleRateHertz: 48000,
-                    languageCode: 'ja-JP',
-                  },
-                  audio: {
-                    content: base64Data
-                  }
-                })
-              }
-            );
-
-            if (!response.ok) {
-              const errorData = await response.json();
-              throw new Error(`Speech-to-Text API error: ${JSON.stringify(errorData)}`);
-            }
-
-            const operationData = await response.json();
-            
-            const checkOperation = async (operationName: string) => {
-              const operationResponse = await fetch(
-                `https://speech.googleapis.com/v1/operations/${operationName}?key=${apiKey}`
-              );
-              const operationStatus = await operationResponse.json();
-              
-              if (operationStatus.done) {
-                if (operationStatus.response?.results) {
-                  return operationStatus.response.results
-                    .map((result: any) => result.alternatives[0].transcript)
-                    .join('\n');
-                }
-                return '';
-              }
-              
-              await new Promise(resolve => setTimeout(resolve, 10000));
-              return checkOperation(operationName);
-            };
-
-            transcriptText = await checkOperation(operationData.name);
-          } else {
-            const response = await fetch(
-              `https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`,
-              {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  config: {
-                    encoding: 'WEBM_OPUS',
-                    sampleRateHertz: 48000,
-                    languageCode: 'ja-JP',
-                  },
-                  audio: {
-                    content: base64Data
-                  }
-                })
-              }
-            );
-
-            if (!response.ok) {
-              const errorData = await response.json();
-              throw new Error(`Speech-to-Text API error: ${JSON.stringify(errorData)}`);
-            }
-
-            const data = await response.json();
-            if (data.results) {
-              transcriptText = data.results
-                .map((result: any) => result.alternatives[0].transcript)
-                .join('\n');
-            }
-          }
-
-          const timestamp = new Date().toLocaleTimeString();
-          setTranscription(prev => 
-            prev + `[${timestamp}] ${transcriptText}\n`
-          );
-
-        } catch (error) {
-          console.error('Speech-to-Text Error:', error);
-          setTranscription(prev => 
-            prev + `[ERROR] Speech-to-Text処理エラー: ${error}\n`
-          );
-        }
-      };
-
-      mediaRecorder.start(1000);
-      setIsRecording(true);
-
-    } catch (error) {
-      console.error('Error initializing recording:', error);
-      alert('録音の初期化中にエラーが発生しました');
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
-      setIsRecording(false);
-      setAudioStream(null);
-    }
+    startRecording();
   };
 
   const exportAudio = () => {
@@ -197,6 +60,14 @@ export default function AudioRecorder() {
       URL.revokeObjectURL(url);
     }
   };
+
+  useEffect(() => {
+    return () => {
+      if (isRecording) {
+        stopRecording();
+      }
+    };
+  }, [isRecording]);
 
   return (
     <div className="p-6">
@@ -216,33 +87,10 @@ export default function AudioRecorder() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor="apiKey">Google Cloud APIキー</Label>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => setShowApiKey(!showApiKey)}
-                  >
-                    {showApiKey ? (
-                      <EyeOff className="h-3 w-3" />
-                    ) : (
-                      <Eye className="h-3 w-3" />
-                    )}
-                  </Button>
-                </div>
-                <div className={!showApiKey ? "password-input" : ""}>
-                  <Textarea
-                    id="apiKey"
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    placeholder="Google Cloud APIキーを入力してください"
-                    className="min-h-[40px] max-h-[40px] font-mono text-sm resize-none"
-                  />
-                </div>
-              </div>
+              <ApiKeyInput
+                apiKey={apiKey}
+                onChange={setApiKey}
+              />
 
               {isRecording && (
                 <div className="mt-4">
@@ -254,7 +102,7 @@ export default function AudioRecorder() {
                 <Button
                   size="lg"
                   variant={isRecording ? "destructive" : "default"}
-                  onClick={isRecording ? stopRecording : startRecording}
+                  onClick={isRecording ? stopRecording : handleStartRecording}
                 >
                   {isRecording ? (
                     <>
