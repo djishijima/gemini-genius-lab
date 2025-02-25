@@ -68,52 +68,72 @@ ${manuscriptText}
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = async (e) => {
-      const fileContent = e.target?.result;
-      let text = "";
-
-      if (file.type === "application/pdf") {
+    
+    const tryReadWithEncodings = async (file: File, encodings: string[]) => {
+      for (const encoding of encodings) {
         try {
-          const pdfData = new Uint8Array(fileContent as ArrayBuffer);
-          const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
-          const maxPages = pdf.numPages;
-          for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
-            const page = await pdf.getPage(pageNum);
-            const content = await page.getTextContent();
-            const strings = content.items.map((item: any) => item.str);
-            text += strings.join(" ") + "\n";
+          const blob = new Blob([await file.arrayBuffer()], { type: file.type });
+          const reader = new FileReader();
+          reader.readAsText(blob, encoding);
+          
+          const text = await new Promise<string>((resolve, reject) => {
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+          });
+          
+          if (!text.includes('�') && !text.includes('□')) {
+            return text;
           }
         } catch (error) {
-          console.error("Error reading PDF:", error);
-          toast({
-            title: "エラー",
-            description: "PDFファイルの読み込みに失敗しました。",
-            variant: "destructive"
-          });
-          return;
+          console.error(`Error reading with ${encoding}:`, error);
         }
-      } else {
-        text = fileContent as string;
       }
-
-      setManuscriptText(text);
-      if (prompt.trim()) {
-        generateScript();
-      }
-    };
-
-    reader.onerror = () => {
-      toast({
-        title: "エラー",
-        description: "ファイルの読み込みに失敗しました。",
-        variant: "destructive"
-      });
+      return null;
     };
 
     if (file.type === "application/pdf") {
-      reader.readAsArrayBuffer(file);
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdfData = new Uint8Array(arrayBuffer);
+        const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+        const maxPages = pdf.numPages;
+        let text = "";
+        
+        for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
+          const page = await pdf.getPage(pageNum);
+          const content = await page.getTextContent();
+          const strings = content.items.map((item: any) => item.str);
+          text += strings.join(" ") + "\n";
+        }
+        
+        setManuscriptText(text);
+        if (prompt.trim()) {
+          generateScript();
+        }
+      } catch (error) {
+        console.error("Error reading PDF:", error);
+        toast({
+          title: "エラー",
+          description: "PDFファイルの読み込みに失敗しました。",
+          variant: "destructive"
+        });
+      }
     } else {
-      reader.readAsText(file);
+      const encodings = ['UTF-8', 'Shift-JIS', 'EUC-JP', 'ISO-2022-JP'];
+      const text = await tryReadWithEncodings(file, encodings);
+      
+      if (text) {
+        setManuscriptText(text);
+        if (prompt.trim()) {
+          generateScript();
+        }
+      } else {
+        toast({
+          title: "エラー",
+          description: "テキストの読み込みに失敗しました。ファイルのエンコーディングを確認してください。",
+          variant: "destructive"
+        });
+      }
     }
   };
 
