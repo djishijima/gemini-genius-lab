@@ -5,13 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mic, Square, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Textarea } from "@/components/ui/textarea";
-
-// Google Cloud Speech-to-Text API用の設定
-const GOOGLE_CLOUD_API_KEY = 'YOUR_API_KEY'; // ここに実際のAPIキーを設定
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function AudioRecorder() {
   const [isRecording, setIsRecording] = useState(false);
   const [transcription, setTranscription] = useState("");
+  const [apiKey, setApiKey] = useState("");
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const navigate = useNavigate();
 
@@ -37,6 +37,11 @@ export default function AudioRecorder() {
   }, [isRecording]);
 
   const startRecording = async () => {
+    if (!apiKey) {
+      alert('APIキーを入力してください');
+      return;
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
@@ -66,7 +71,7 @@ export default function AudioRecorder() {
             formData.append('config', JSON.stringify(config));
 
             const response = await fetch(
-              `https://speech.googleapis.com/v1/speech:recognize?key=${GOOGLE_CLOUD_API_KEY}`,
+              `https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`,
               {
                 method: 'POST',
                 body: formData,
@@ -94,7 +99,7 @@ export default function AudioRecorder() {
         }
       };
 
-      // 1秒ごとにデータを送信（Googleのサンプルコードと同じ間隔）
+      // 1秒ごとにデータを送信
       mediaRecorder.start(1000);
       setIsRecording(true);
 
@@ -133,6 +138,17 @@ export default function AudioRecorder() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="apiKey">Google Cloud APIキー</Label>
+                <Input
+                  id="apiKey"
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="Google Cloud APIキーを入力してください"
+                />
+              </div>
+
               <div className="flex justify-center">
                 <Button
                   size="lg"
