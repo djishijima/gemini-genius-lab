@@ -12,6 +12,18 @@ export default function AudioRecorder() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const navigate = useNavigate();
 
+  // 音声認識の設定
+  const config = {
+    encoding: 'LINEAR16',
+    sampleRateHertz: 16000,
+    languageCode: 'ja-JP',
+  };
+
+  const request = {
+    config,
+    interimResults: true, // 中間結果を有効化
+  };
+
   useEffect(() => {
     // コンポーネントのクリーンアップ時に録音を停止
     return () => {
@@ -23,32 +35,49 @@ export default function AudioRecorder() {
 
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          sampleRate: 16000,
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+        } 
+      });
+      
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm;codecs=opus',
+      });
       mediaRecorderRef.current = mediaRecorder;
 
+      // 音声データが利用可能になったときの処理
       mediaRecorder.ondataavailable = async (event) => {
         if (event.data.size > 0) {
-          // 音声データをVertex AIに送信（仮実装）
           try {
-            // TODO: 実際のVertex AI APIエンドポイントに置き換え
+            // 音声データの処理
             const audioBlob = new Blob([event.data], { type: 'audio/webm' });
             console.log('Audio data captured:', audioBlob.size, 'bytes');
             
-            // 仮の文字起こし結果を追加（実際にはVertex AIからのレスポンス）
+            // TODO: Vertex AI Speech-to-Text APIにストリーミング
+            // サンプルコードの動作確認用の仮実装
+            const timestamp = new Date().toLocaleTimeString();
             setTranscription(prev => 
-              prev + "音声認識テスト。この部分は実際のVertex AIからの応答に置き換わります。\n"
+              `${prev}[${timestamp}] Transcription: 音声データを受信しました (${audioBlob.size} bytes)\n`
             );
+
           } catch (error) {
-            console.error('音声認識エラー:', error);
+            console.error('Speech-to-Text Error:', error);
           }
         }
       };
 
-      mediaRecorder.start(1000); // 1秒ごとにデータを送信
+      // 1秒ごとにデータを送信（Googleのサンプルコードと同じ間隔）
+      mediaRecorder.start(1000);
       setIsRecording(true);
+
+      console.log('Listening, press stop button to stop.');
+
     } catch (error) {
-      console.error('マイク使用エラー:', error);
+      console.error('Error initializing recording:', error);
     }
   };
 
@@ -58,6 +87,7 @@ export default function AudioRecorder() {
       // すべてのトラックを停止
       mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
       setIsRecording(false);
+      console.log('Recording stopped.');
     }
   };
 
