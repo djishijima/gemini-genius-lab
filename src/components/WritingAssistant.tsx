@@ -272,30 +272,59 @@ const WritingAssistant: React.FC<WritingAssistantProps> = ({ apiKey }) => {
     }
   };
 
+  const handleCommand = async (command: string) => {
+    const normalizedCommand = command.toLowerCase();
+
+    if (normalizedCommand.includes('pdf') || normalizedCommand.includes('原稿') || normalizedCommand.includes('読み込')) {
+      fileInputRef.current?.click();
+    } else if (normalizedCommand.includes('要約')) {
+      handleAnalyze('summary');
+    } else if (normalizedCommand.includes('修正指示')) {
+      handleAnalyze('suggestions');
+    } else if (normalizedCommand.includes('句読点')) {
+      checkPunctuation();
+    } else if (normalizedCommand.includes('確認') || normalizedCommand.includes('チェック')) {
+      handleAnalyze('keywords');
+    } else {
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+
+      const prompt = `
+      あなたは印刷原稿のアシスタントです。以下のユーザーからの指示に対して、
+      適切な対応を提案してください。可能な操作は：
+      - PDFファイルの読み込み
+      - 原稿の要約
+      - 修正指示の整理
+      - 句読点のチェック
+      - 確認ポイントの抽出
+      です。
+
+      ユーザーの指示: ${command}
+      `;
+
+      try {
+        const result = await model.generateContent(prompt);
+        const response = result.response.text();
+        setAnalysis(response);
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle>印刷用原稿アシスタント</CardTitle>
-            <div className="flex items-center gap-2">
-              <input
-                type="file"
-                accept=".pdf"
-                onChange={handlePdfUpload}
-                className="hidden"
-                ref={fileInputRef}
-              />
-              <Button
-                variant="outline"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isLoading}
-                className="gap-2"
-              >
-                <BookOpen className="w-4 h-4" />
-                原稿PDFをアップロード
-              </Button>
-            </div>
+            <input
+              type="file"
+              accept=".pdf"
+              onChange={handlePdfUpload}
+              className="hidden"
+              ref={fileInputRef}
+            />
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-6">
@@ -312,27 +341,8 @@ const WritingAssistant: React.FC<WritingAssistantProps> = ({ apiKey }) => {
                       <History className="w-4 h-4" />
                       現在の状態を保存
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowPdfPreview(!showPdfPreview)}
-                      className="gap-2"
-                    >
-                      <BookOpen className="w-4 h-4" />
-                      {showPdfPreview ? "プレビューを隠す" : "プレビューを表示"}
-                      {showPdfPreview ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                    </Button>
                   </div>
                 </div>
-                {showPdfPreview && pdfText && (
-                  <Card className="p-4">
-                    <div className="prose max-w-none">
-                      <pre className="whitespace-pre-wrap text-sm bg-muted p-4 rounded-lg overflow-auto max-h-[200px]">
-                        {pdfText}
-                      </pre>
-                    </div>
-                  </Card>
-                )}
                 <Textarea
                   ref={textareaRef}
                   value={content}
@@ -341,66 +351,6 @@ const WritingAssistant: React.FC<WritingAssistantProps> = ({ apiKey }) => {
                   placeholder="PDFファイルをアップロードすると、ここにテキストが表示されます..."
                   className="min-h-[400px] font-mono text-base"
                 />
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    onClick={() => handleAnalyze("summary")}
-                    disabled={analyzing}
-                    className="gap-2"
-                  >
-                    <Search className="w-4 h-4" />
-                    全体の要約
-                  </Button>
-                  <Button
-                    onClick={() => handleAnalyze("suggestions")}
-                    disabled={analyzing}
-                    className="gap-2"
-                  >
-                    <Wand2 className="w-4 h-4" />
-                    修正指示の整理
-                  </Button>
-                  <Button
-                    onClick={() => handleAnalyze("keywords")}
-                    disabled={analyzing}
-                    className="gap-2"
-                  >
-                    <MessagesSquare className="w-4 h-4" />
-                    確認ポイント抽出
-                  </Button>
-                  <Button
-                    onClick={checkPunctuation}
-                    disabled={analyzing}
-                    className="gap-2"
-                  >
-                    <Check className="w-4 h-4" />
-                    句読点チェック
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">分析結果</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {analyzing ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        分析中...
-                      </div>
-                    ) : analysis ? (
-                      <div className="prose max-w-none">
-                        <pre className="whitespace-pre-wrap text-sm">
-                          {analysis}
-                        </pre>
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground">
-                        テキストを選択して分析ボタンをクリックしてください
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-lg">バージョン履歴</CardTitle>
@@ -442,23 +392,13 @@ const WritingAssistant: React.FC<WritingAssistantProps> = ({ apiKey }) => {
                     )}
                   </CardContent>
                 </Card>
-                
-                <div className="text-sm text-muted-foreground">
-                  <p className="font-semibold mb-2">使い方:</p>
-                  <ul className="list-disc pl-4 space-y-2">
-                    <li>クライアントから受け取った原稿PDFをアップロードしてください</li>
-                    <li>全体の内容を確認する場合は「全体の要約」を使用してください</li>
-                    <li>修正指示を整理する場合は、該当部分を選択して「修正指示の整理」をクリックしてください</li>
-                    <li>各機能の説明:
-                      <ul className="list-disc pl-4 mt-1 space-y-1">
-                        <li>全体の要約: 原稿の主要ポイントを箇条書きで表示</li>
-                        <li>修正指示の整理: 赤ペンの修正指示を整理して表示（ページ/段落ごと）</li>
-                        <li>確認ポイント抽出: 表記統一や重要な用語などを整理</li>
-                        <li>句読点チェック: 句読点や記号の使用をチェック</li>
-                      </ul>
-                    </li>
-                  </ul>
-                </div>
+              </div>
+
+              <div className="space-y-4">
+                <ChatWindow
+                  onCommand={handleCommand}
+                  isLoading={analyzing || isLoading}
+                />
               </div>
             </div>
           </CardContent>
