@@ -1,5 +1,5 @@
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 interface UseAudioRecorderProps {
   onRecordingComplete: (blob: Blob) => void;
@@ -9,11 +9,33 @@ export const useAudioRecorder = ({ onRecordingComplete }: UseAudioRecorderProps)
   const [isRecording, setIsRecording] = useState(false);
   const [audioStream, setAudioStream] = useState<MediaStream | null>(null);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [recordingTime, setRecordingTime] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<number>();
+
+  useEffect(() => {
+    if (isRecording) {
+      timerRef.current = window.setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+      setRecordingTime(0);
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [isRecording]);
 
   const startRecording = async () => {
     setAudioBlob(null);
+    setRecordingTime(0);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
@@ -63,6 +85,7 @@ export const useAudioRecorder = ({ onRecordingComplete }: UseAudioRecorderProps)
     isRecording,
     audioStream,
     audioBlob,
+    recordingTime,
     startRecording,
     stopRecording
   };

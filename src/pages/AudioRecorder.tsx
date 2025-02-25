@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,11 +38,18 @@ export default function AudioRecorder() {
     isRecording,
     audioStream,
     audioBlob,
+    recordingTime,
     startRecording,
     stopRecording
   } = useAudioRecorder({
     onRecordingComplete: handleRecordingComplete
   });
+
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
 
   const handleStartRecording = () => {
     if (!apiKey) {
@@ -135,9 +143,14 @@ export default function AudioRecorder() {
               />
 
               {isRecording && (
-                <div className="mt-4">
-                  <AudioWaveform stream={audioStream} isRecording={isRecording} />
-                </div>
+                <>
+                  <div className="text-center text-xl font-bold">
+                    {formatTime(recordingTime)}
+                  </div>
+                  <div className="mt-4">
+                    <AudioWaveform stream={audioStream} isRecording={isRecording} />
+                  </div>
+                </>
               )}
 
               <div className="flex justify-center gap-2">
