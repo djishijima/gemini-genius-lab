@@ -66,39 +66,99 @@ export default function AudioRecorder() {
               .reduce((data, byte) => data + String.fromCharCode(byte), '')
           );
 
-          const response = await fetch(
-            `https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                config: {
-                  encoding: 'WEBM_OPUS',
-                  sampleRateHertz: 48000,
-                  languageCode: 'ja-JP',
+          const audioContext = new AudioContext();
+          const audioBuffer = await audioContext.decodeAudioData(buffer);
+          const durationInSeconds = audioBuffer.duration;
+
+          let transcriptText = '';
+          
+          if (durationInSeconds > 60) {
+            const response = await fetch(
+              `https://speech.googleapis.com/v1/speech:longrunningrecognize?key=${apiKey}`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
                 },
-                audio: {
-                  content: base64Data
-                }
-              })
+                body: JSON.stringify({
+                  config: {
+                    encoding: 'WEBM_OPUS',
+                    sampleRateHertz: 48000,
+                    languageCode: 'ja-JP',
+                  },
+                  audio: {
+                    content: base64Data
+                  }
+                })
+              }
+            );
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(`Speech-to-Text API error: ${JSON.stringify(errorData)}`);
             }
+
+            const operationData = await response.json();
+            
+            const checkOperation = async (operationName: string) => {
+              const operationResponse = await fetch(
+                `https://speech.googleapis.com/v1/operations/${operationName}?key=${apiKey}`
+              );
+              const operationStatus = await operationResponse.json();
+              
+              if (operationStatus.done) {
+                if (operationStatus.response?.results) {
+                  return operationStatus.response.results
+                    .map((result: any) => result.alternatives[0].transcript)
+                    .join('\n');
+                }
+                return '';
+              }
+              
+              await new Promise(resolve => setTimeout(resolve, 10000));
+              return checkOperation(operationName);
+            };
+
+            transcriptText = await checkOperation(operationData.name);
+          } else {
+            const response = await fetch(
+              `https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  config: {
+                    encoding: 'WEBM_OPUS',
+                    sampleRateHertz: 48000,
+                    languageCode: 'ja-JP',
+                  },
+                  audio: {
+                    content: base64Data
+                  }
+                })
+              }
+            );
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(`Speech-to-Text API error: ${JSON.stringify(errorData)}`);
+            }
+
+            const data = await response.json();
+            if (data.results) {
+              transcriptText = data.results
+                .map((result: any) => result.alternatives[0].transcript)
+                .join('\n');
+            }
+          }
+
+          const timestamp = new Date().toLocaleTimeString();
+          setTranscription(prev => 
+            prev + `[${timestamp}] ${transcriptText}\n`
           );
 
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Speech-to-Text API error: ${JSON.stringify(errorData)}`);
-          }
-
-          const data = await response.json();
-          if (data.results && data.results[0]) {
-            const newTranscript = data.results[0].alternatives[0].transcript;
-            const timestamp = new Date().toLocaleTimeString();
-            setTranscription(prev => 
-              prev + `[${timestamp}] ${newTranscript}\n`
-            );
-          }
         } catch (error) {
           console.error('Speech-to-Text Error:', error);
           setTranscription(prev => 
@@ -112,7 +172,7 @@ export default function AudioRecorder() {
 
     } catch (error) {
       console.error('Error initializing recording:', error);
-      alert('録音の初期��中にエラーが発生しました');
+      alert('録音の初期化中にエラーが発生しました');
     }
   };
 
