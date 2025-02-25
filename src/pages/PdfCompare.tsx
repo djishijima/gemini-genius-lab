@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,7 +16,6 @@ import * as pdfjsLib from 'pdfjs-dist';
 import * as DiffLib from 'diff';
 import Joyride, { Step } from 'react-joyride';
 
-// PDFワーカーの設定を変更
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.js',
   import.meta.url
@@ -193,6 +191,21 @@ export default function PdfCompare() {
     if (fileInput2Ref.current) fileInput2Ref.current.value = "";
   };
 
+  const splitDifferences = useCallback(() => {
+    const removed: DiffLib.Change[] = [];
+    const added: DiffLib.Change[] = [];
+    
+    differences.forEach((diff) => {
+      if (diff.removed) {
+        removed.push(diff);
+      } else if (diff.added) {
+        added.push(diff);
+      }
+    });
+
+    return { removed, added };
+  }, [differences]);
+
   return (
     <div className="container mx-auto p-6">
       <Joyride
@@ -337,23 +350,37 @@ export default function PdfCompare() {
             <CardHeader>
               <CardTitle>比較結果</CardTitle>
               <CardDescription>
-                2つのPDFファイル間の違いを表示しています
+                左側が削除された内容、右側が追加された内容を表示しています
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="bg-muted p-4 rounded-lg overflow-auto max-h-[600px] text-sm">
-                {differences.map((diff, index) => (
-                  <span
-                    key={index}
-                    className={
-                      diff.added ? 'text-green-500 bg-green-50 px-1 mx-1 rounded' :
-                      diff.removed ? 'text-red-500 bg-red-50 px-1 mx-1 rounded line-through' :
-                      'text-foreground'
-                    }
-                  >
-                    {diff.value}
-                  </span>
-                ))}
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold text-red-600 mb-2">削除された内容</h3>
+                  <div className="bg-red-50 p-4 rounded-lg overflow-auto max-h-[400px]">
+                    {splitDifferences().removed.map((diff, index) => (
+                      <span
+                        key={`removed-${index}`}
+                        className="text-red-600 bg-red-100/50 px-1 mx-1 rounded line-through block mb-2"
+                      >
+                        {diff.value}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold text-green-600 mb-2">追加された内容</h3>
+                  <div className="bg-green-50 p-4 rounded-lg overflow-auto max-h-[400px]">
+                    {splitDifferences().added.map((diff, index) => (
+                      <span
+                        key={`added-${index}`}
+                        className="text-green-600 bg-green-100/50 px-1 mx-1 rounded block mb-2"
+                      >
+                        {diff.value}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
