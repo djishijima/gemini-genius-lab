@@ -6,7 +6,10 @@ import { Mic, Square, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Editor } from '@tinymce/tinymce-react';
+import FroalaEditor from 'react-froala-wysiwyg';
+import 'froala-editor/css/froala_style.min.css';
+import 'froala-editor/css/froala_editor.pkgd.min.css';
+import 'froala-editor/js/languages/ja';
 
 export default function AudioRecorder() {
   const [isRecording, setIsRecording] = useState(false);
@@ -114,6 +117,35 @@ export default function AudioRecorder() {
     }
   };
 
+  const froalaConfig = {
+    language: 'ja',
+    height: 300,
+    toolbarButtons: {
+      moreText: {
+        buttons: ['bold', 'italic', 'underline', 'strikeThrough', 'subscript', 'superscript', 'fontSize', 'textColor', 'backgroundColor', 'clearFormatting'],
+        align: 'left',
+        buttonsVisible: 3
+      },
+      moreParagraph: {
+        buttons: ['alignLeft', 'alignCenter', 'alignRight', 'alignJustify', 'formatOL', 'formatUL', 'paragraphFormat', 'lineHeight', 'outdent', 'indent'],
+        align: 'left',
+        buttonsVisible: 3
+      },
+      moreRich: {
+        buttons: ['insertTable', 'emoticons', 'specialCharacters', 'embedly', 'insertHR'],
+        align: 'left',
+        buttonsVisible: 3
+      },
+      moreMisc: {
+        buttons: ['undo', 'redo', 'print', 'getPDF', 'help'],
+        align: 'right',
+        buttonsVisible: 2
+      }
+    },
+    readOnly: true,
+    charCounterCount: true
+  };
+
   return (
     <div className="container mx-auto p-6">
       <Button 
@@ -180,39 +212,11 @@ export default function AudioRecorder() {
 
               <div className="space-y-2">
                 <h3 className="font-medium">文字起こし結果</h3>
-                <Editor
-                  value={transcription}
-                  onEditorChange={(content) => setTranscription(content)}
-                  apiKey="wnbdf6jfr1lii0g2xzm7bfmuhbxlt6xj7sjvk41g9ebf0j85"
-                  init={{
-                    height: 300,
-                    menubar: false,
-                    language: 'ja',
-                    plugins: [
-                      'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
-                      'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-                      'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount',
-                      'checklist', 'mediaembed', 'casechange', 'export', 'formatpainter', 
-                      'pageembed', 'a11ychecker', 'tinymcespellchecker', 'permanentpen', 
-                      'powerpaste', 'advtable', 'advcode', 'editimage', 'advtemplate', 
-                      'ai', 'mentions', 'tinycomments', 'tableofcontents', 'footnotes', 
-                      'mergetags', 'autocorrect', 'typography', 'inlinecss', 'markdown',
-                      'importword', 'exportword', 'exportpdf'
-                    ],
-                    toolbar: 'undo redo | 書式 | ' +
-                      '太字 斜体 背景色 | 左揃え 中央揃え ' +
-                      '右揃え 均等揃え | 箇条書き 番号付き 字下げ 字上げ | ' +
-                      'ai | 書式削除 | ヘルプ',
-                    ai_request: (request, respondWith) => respondWith.string(() => Promise.reject('AI Assistant の実装については、ドキュメントを参照してください')),
-                    tinycomments_mode: 'embedded',
-                    tinycomments_author: 'Author name',
-                    mergetags_list: [
-                      { value: 'First.Name', title: 'First Name' },
-                      { value: 'Email', title: 'Email' },
-                    ],
-                    content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 14px }',
-                    readonly: true
-                  }}
+                <FroalaEditor
+                  tag="textarea"
+                  model={transcription}
+                  onModelChange={(model) => setTranscription(model)}
+                  config={froalaConfig}
                 />
               </div>
             </div>
