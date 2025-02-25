@@ -191,12 +191,25 @@ export default function AudioRecorder() {
                     plugins: [
                       'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
                       'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-                      'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount'
+                      'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount',
+                      'checklist', 'mediaembed', 'casechange', 'export', 'formatpainter', 
+                      'pageembed', 'a11ychecker', 'tinymcespellchecker', 'permanentpen', 
+                      'powerpaste', 'advtable', 'advcode', 'editimage', 'advtemplate', 
+                      'ai', 'mentions', 'tinycomments', 'tableofcontents', 'footnotes', 
+                      'mergetags', 'autocorrect', 'typography', 'inlinecss', 'markdown',
+                      'importword', 'exportword', 'exportpdf'
                     ],
                     toolbar: 'undo redo | 書式 | ' +
                       '太字 斜体 背景色 | 左揃え 中央揃え ' +
                       '右揃え 均等揃え | 箇条書き 番号付き 字下げ 字上げ | ' +
-                      '書式削除 | ヘルプ',
+                      'ai | 書式削除 | ヘルプ',
+                    ai_request: (request, respondWith) => respondWith.string(() => Promise.reject('AI Assistant の実装については、ドキュメントを参照してください')),
+                    tinycomments_mode: 'embedded',
+                    tinycomments_author: 'Author name',
+                    mergetags_list: [
+                      { value: 'First.Name', title: 'First Name' },
+                      { value: 'Email', title: 'Email' },
+                    ],
                     content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 14px }',
                     readonly: true
                   }}
