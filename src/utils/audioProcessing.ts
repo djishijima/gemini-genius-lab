@@ -51,26 +51,29 @@ export function createWavHeader(channels: number, sampleRate: number, dataLength
   return new Uint8Array(buffer);
 }
 
+function convertToMono(buffer: AudioBuffer): Float32Array {
+  const monoData = new Float32Array(buffer.length);
+  
+  // Mix all channels to mono
+  for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
+    const channelData = buffer.getChannelData(channel);
+    for (let i = 0; i < buffer.length; i++) {
+      monoData[i] += channelData[i] / buffer.numberOfChannels;
+    }
+  }
+  
+  return monoData;
+}
+
 export async function convertAudioToWav(audioBlob: Blob): Promise<Blob> {
   const audioContext = new AudioContext();
   const arrayBuffer = await audioBlob.arrayBuffer();
   
   return new Promise((resolve, reject) => {
     audioContext.decodeAudioData(arrayBuffer, (buffer) => {
-      const numberOfChannels = buffer.numberOfChannels;
-      const length = buffer.length;
-      const sampleRate = buffer.sampleRate;
-      
-      const data = new Float32Array(length * numberOfChannels);
-      for (let channel = 0; channel < numberOfChannels; channel++) {
-        const channelData = buffer.getChannelData(channel);
-        for (let i = 0; i < length; i++) {
-          data[i * numberOfChannels + channel] = channelData[i];
-        }
-      }
-      
-      const wavBytes = floatTo16BitPCM(data);
-      const wavHeader = createWavHeader(numberOfChannels, sampleRate, length);
+      const monoData = convertToMono(buffer);
+      const wavBytes = floatTo16BitPCM(monoData);
+      const wavHeader = createWavHeader(1, buffer.sampleRate, monoData.length);
       const wavBuffer = new Uint8Array(wavHeader.byteLength + wavBytes.byteLength);
       wavBuffer.set(wavHeader, 0);
       wavBuffer.set(new Uint8Array(wavBytes.buffer), wavHeader.byteLength);
