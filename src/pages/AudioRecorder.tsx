@@ -138,27 +138,27 @@ export default function AudioRecorder() {
       <Button 
         variant="ghost" 
         onClick={() => navigate("/")}
-        className="mb-4" // 余白を減らす
+        className="mb-6"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
         戻る
       </Button>
 
-      <div className="max-w-2xl mx-auto space-y-4"> {/* space-yを6から4に減らす */}
-        <Card className="shadow-sm"> {/* カードの影を軽くする */}
-          <CardHeader className="py-3"> {/* パディングを減らす */}
-            <CardTitle className="text-lg">音声録音とリアルタイム文字起こし</CardTitle> {/* フォントサイズを小さく */}
+      <div className="max-w-2xl mx-auto space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>音声録音とリアルタイム文字起こし</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3"> {/* space-yを4から3に減らす */}
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <Label htmlFor="apiKey" className="text-sm">Google Cloud APIキー</Label>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="apiKey">Google Cloud APIキー</Label>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6" // ボタンサイズを小さく
+                    className="h-6 w-6"
                     onClick={() => setShowApiKey(!showApiKey)}
                   >
                     {showApiKey ? (
@@ -179,7 +179,7 @@ export default function AudioRecorder() {
 
               <div className="flex justify-center">
                 <Button
-                  size="default" // サイズを通常に変更
+                  size="lg"
                   variant={isRecording ? "destructive" : "default"}
                   onClick={isRecording ? stopRecording : startRecording}
                 >
@@ -198,13 +198,13 @@ export default function AudioRecorder() {
               </div>
 
               <div className="space-y-2">
-                <h3 className="font-medium text-sm">文字起こし結果</h3>
+                <h3 className="font-medium">文字起こし結果</h3>
                 <Editor
                   value={transcription}
                   onEditorChange={(content) => setTranscription(content)}
                   apiKey="wnbdf6jfr1lii0g2xzm7bfmuhbxlt6xj7sjvk41g9ebf0j85"
                   init={{
-                    height: 400, // エディターの高さを増加
+                    height: 300,
                     menubar: true,
                     language: 'ja',
                     plugins: [
