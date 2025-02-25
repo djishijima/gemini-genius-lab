@@ -48,8 +48,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ onCommand, isLoading }) => {
   };
 
   return (
-    <Card className="h-full flex flex-col">
-      <ScrollArea className="flex-1 p-4 h-[600px]">
+    <Card className="h-[calc(100vh-10rem)] flex flex-col">
+      <ScrollArea className="flex-1 p-4">
         <div className="space-y-4">
           {messages.map((message, index) => (
             <div

@@ -6,9 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Wand2, MessagesSquare, Search, ChevronDown, ChevronUp, BookOpen, History, Check } from "lucide-react";
+import { History } from "lucide-react";
 import * as pdfjsLib from 'pdfjs-dist';
-import ChatWindow from './ChatWindow';  // ChatWindowコンポーネントをインポート
+import ChatWindow from "./ChatWindow";
 
 interface TextVersion {
   content: string;
@@ -316,20 +316,20 @@ const WritingAssistant: React.FC<WritingAssistantProps> = ({ apiKey }) => {
 
   return (
     <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle>印刷用原稿アシスタント</CardTitle>
-            <input
-              type="file"
-              accept=".pdf"
-              onChange={handlePdfUpload}
-              className="hidden"
-              ref={fileInputRef}
-            />
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <CardTitle>印刷用原稿アシスタント</CardTitle>
+              <input
+                type="file"
+                accept=".pdf"
+                onChange={handlePdfUpload}
+                className="hidden"
+                ref={fileInputRef}
+              />
+            </CardHeader>
+            <CardContent className="space-y-6">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold">原稿テキスト</h3>
@@ -353,58 +353,58 @@ const WritingAssistant: React.FC<WritingAssistantProps> = ({ apiKey }) => {
                   placeholder="PDFファイルをアップロードすると、ここにテキストが表示されます..."
                   className="min-h-[400px] font-mono text-base"
                 />
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">バージョン履歴</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {versions.length === 0 ? (
-                      <div className="text-center py-4 text-muted-foreground">
-                        まだ保存されたバージョンはありません
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {versions.map((version, index) => (
-                          <div key={index} className="space-y-2">
-                            <Button
-                              variant="outline"
-                              className="w-full justify-between"
-                              onClick={() => handleVersionSelect(index)}
-                            >
-                              <span>{version.description}</span>
-                              <span className="text-sm text-muted-foreground">
-                                {version.timestamp.toLocaleString()}
-                              </span>
-                            </Button>
-                            {selectedVersionIndex === index && (
-                              <Card className="p-2">
-                                <pre className="text-sm whitespace-pre-wrap">
-                                  {index > 0
-                                    ? `前のバージョンとの差分:\n${getTextDiff(
-                                        versions[index - 1].content,
-                                        version.content
-                                      )}`
-                                    : "最初のバージョン"}
-                                </pre>
-                              </Card>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
               </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">バージョン履歴</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {versions.length === 0 ? (
+                    <div className="text-center py-4 text-muted-foreground">
+                      まだ保存されたバージョンはありません
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {versions.map((version, index) => (
+                        <div key={index} className="space-y-2">
+                          <Button
+                            variant="outline"
+                            className="w-full justify-between"
+                            onClick={() => handleVersionSelect(index)}
+                          >
+                            <span>{version.description}</span>
+                            <span className="text-sm text-muted-foreground">
+                              {version.timestamp.toLocaleString()}
+                            </span>
+                          </Button>
+                          {selectedVersionIndex === index && (
+                            <Card className="p-2">
+                              <pre className="text-sm whitespace-pre-wrap">
+                                {index > 0
+                                  ? `前のバージョンとの差分:\n${getTextDiff(
+                                      versions[index - 1].content,
+                                      version.content
+                                    )}`
+                                  : "最初のバージョン"}
+                              </pre>
+                            </Card>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </CardContent>
+          </Card>
 
-              <div className="space-y-4">
-                <ChatWindow
-                  onCommand={handleCommand}
-                  isLoading={analyzing || isLoading}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          <div className="h-screen sticky top-6">
+            <ChatWindow
+              onCommand={handleCommand}
+              isLoading={analyzing || isLoading}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
