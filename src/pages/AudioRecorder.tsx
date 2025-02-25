@@ -17,18 +17,8 @@ export default function AudioRecorder() {
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioStream, setAudioStream] = useState<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
   const navigate = useNavigate();
-
-  const config = {
-    encoding: 'LINEAR16',
-    sampleRateHertz: 16000,
-    languageCode: 'ja-JP',
-  };
-
-  const request = {
-    config,
-    interimResults: true,
-  };
 
   useEffect(() => {
     return () => {
@@ -56,73 +46,70 @@ export default function AudioRecorder() {
       });
       
       setAudioStream(stream);
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus',
-      });
+      const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
+      chunksRef.current = [];
 
-      let chunks: BlobPart[] = [];
-      mediaRecorder.ondataavailable = async (event) => {
+      mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
-          chunks.push(event.data);
-          try {
-            const newAudioBlob = new Blob(chunks, { type: 'audio/webm' });
-            setAudioBlob(newAudioBlob);
-            console.log('Audio data captured:', newAudioBlob.size, 'bytes');
-            
-            // Google Cloud Speech-to-Text APIの要求形式に合わせる
-            const requestBody = {
-              config: {
-                encoding: 'WEBM_OPUS',
-                sampleRateHertz: 16000,
-                languageCode: 'ja-JP',
+          chunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        setAudioBlob(audioBlob);
+        
+        try {
+          // Base64エンコーディング
+          const buffer = await audioBlob.arrayBuffer();
+          const base64Data = btoa(
+            new Uint8Array(buffer)
+              .reduce((data, byte) => data + String.fromCharCode(byte), '')
+          );
+
+          const response = await fetch(
+            `https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
               },
-              audio: {
-                content: await newAudioBlob.arrayBuffer().then(buffer => 
-                  Buffer.from(buffer).toString('base64')
-                )
-              }
-            };
-
-            const response = await fetch(
-              `https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`,
-              {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
+              body: JSON.stringify({
+                config: {
+                  encoding: 'WEBM_OPUS',
+                  sampleRateHertz: 16000,
+                  languageCode: 'ja-JP',
                 },
-                body: JSON.stringify(requestBody)
-              }
-            );
-
-            if (!response.ok) {
-              const errorData = await response.json();
-              throw new Error(`Speech-to-Text API error: ${JSON.stringify(errorData)}`);
+                audio: {
+                  content: base64Data
+                }
+              })
             }
+          );
 
-            const data = await response.json();
-            if (data.results && data.results[0]) {
-              const newTranscript = data.results[0].alternatives[0].transcript;
-              const timestamp = new Date().toLocaleTimeString();
-              setTranscription(prev => 
-                prev + `[${timestamp}] ${newTranscript}\n`
-              );
-              console.log('Transcription:', newTranscript);
-            }
+          if (!response.ok) {
+            throw new Error(`Speech-to-Text API error: ${response.statusText}`);
+          }
 
-          } catch (error) {
-            console.error('Speech-to-Text Error:', error);
+          const data = await response.json();
+          if (data.results && data.results[0]) {
+            const newTranscript = data.results[0].alternatives[0].transcript;
+            const timestamp = new Date().toLocaleTimeString();
             setTranscription(prev => 
-              prev + `[ERROR] Speech-to-Text処理エラー: ${error}\n`
+              prev + `[${timestamp}] ${newTranscript}\n`
             );
           }
-          chunks = []; // Clear chunks after processing
+        } catch (error) {
+          console.error('Speech-to-Text Error:', error);
+          setTranscription(prev => 
+            prev + `[ERROR] Speech-to-Text処理エラー: ${error}\n`
+          );
         }
       };
 
       mediaRecorder.start(1000);
       setIsRecording(true);
-      console.log('Recording started...');
 
     } catch (error) {
       console.error('Error initializing recording:', error);
@@ -136,7 +123,6 @@ export default function AudioRecorder() {
       mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
       setIsRecording(false);
       setAudioStream(null);
-      console.log('Recording stopped.');
     }
   };
 
@@ -192,6 +178,7 @@ export default function AudioRecorder() {
                   id="apiKey"
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
+                  type={showApiKey ? "text" : "password"}
                   placeholder="Google Cloud APIキーを入力してください"
                   className="min-h-[40px] max-h-[40px] font-mono text-sm resize-none"
                 />
@@ -243,37 +230,24 @@ export default function AudioRecorder() {
                     menubar: true,
                     language: 'ja',
                     plugins: [
-                      // Core editing features
                       'anchor', 'autolink', 'charmap', 'codesample', 'emoticons', 
                       'image', 'link', 'lists', 'media', 'searchreplace', 'table', 
                       'visualblocks', 'wordcount',
-                      // Premium features
                       'checklist', 'mediaembed', 'casechange', 'export', 
                       'formatpainter', 'pageembed', 'a11ychecker', 
                       'tinymcespellchecker', 'permanentpen', 'powerpaste', 
                       'advtable', 'advcode', 'editimage', 'advtemplate', 'ai', 
                       'mentions', 'tinycomments', 'tableofcontents', 'footnotes', 
-                      'mergetags', 'autocorrect', 'typography', 'inlinecss', 
-                      'markdown', 'importword', 'exportword', 'exportpdf'
+                      'mergetags', 'autocorrect', 'typography', 'inlinecss'
                     ],
-                    toolbar: 'ai | undo redo | ' +
-                      'ai_ask ai_randomize ai_assist ai_summarize ai_translate | ' +
+                    toolbar: 'undo redo | ' +
                       'blocks fontfamily fontsize | bold italic underline | ' +
                       'alignment | checklist numlist bullist | emoticons charmap | ' +
-                      'link image media table mergetags | spellcheckdialog',
+                      'link image media table mergetags',
                     content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 14px }',
                     readonly: false,
                     branding: false,
                     promotion: false,
-                    tinycomments_mode: 'embedded',
-                    tinycomments_author: 'User',
-                    mergetags_list: [
-                      { value: 'First.Name', title: 'First Name' },
-                      { value: 'Email', title: 'Email' },
-                    ],
-                    ai_request: (request: any, respondWith: any) => {
-                      respondWith.string(() => Promise.resolve('This is a mock AI response'));
-                    }
                   }}
                 />
               </div>
