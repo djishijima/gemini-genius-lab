@@ -10,6 +10,17 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function Transcription() {
   const [manuscriptText, setManuscriptText] = useState("");
+  const [scriptPreview, setScriptPreview] = useState(`#target "InDesign"
+// 基本設定
+app.scriptPreferences.userInteractionLevel = UserInteractionLevels.NEVER_INTERACT;
+app.scriptPreferences.enableRedraw = false;
+
+// 新規ドキュメント作成
+var doc = app.documents.add();
+doc.documentPreferences.pageSize = "A4";
+doc.documentPreferences.facingPages = false;
+
+// ... スクリプトの内容がここに表示されます ...`);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -23,7 +34,6 @@ export default function Transcription() {
         const text = await file.text();
         setManuscriptText(text);
       } else if (file.type === "application/pdf") {
-        // TODO: PDF解析ライブラリを使用して実装
         toast({
           title: "PDF対応予定",
           description: "PDFからのテキスト抽出は現在開発中です",
@@ -46,19 +56,8 @@ export default function Transcription() {
     }
   };
 
-  const handleDownloadScript = () => {
-    try {
-      if (!manuscriptText.trim()) {
-        toast({
-          title: "エラー",
-          description: "テキストが入力されていません",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const script = `
-#target "InDesign"
+  const generateScript = () => {
+    const script = `#target "InDesign"
 // 基本設定
 app.scriptPreferences.userInteractionLevel = UserInteractionLevels.NEVER_INTERACT;
 app.scriptPreferences.enableRedraw = false;
@@ -105,9 +104,24 @@ text.appliedFont = "Hiragino Kaku Gothic ProN";
 text.pointSize = 10.5;
 text.leading = 16;
 
-app.scriptPreferences.enableRedraw = true;
-      `;
+app.scriptPreferences.enableRedraw = true;`;
 
+    setScriptPreview(script);
+    return script;
+  };
+
+  const handleDownloadScript = () => {
+    try {
+      if (!manuscriptText.trim()) {
+        toast({
+          title: "エラー",
+          description: "テキストが入力されていません",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const script = generateScript();
       const blob = new Blob([script], { type: 'application/javascript' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -143,40 +157,61 @@ app.scriptPreferences.enableRedraw = true;
         戻る
       </Button>
 
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="grid md:grid-cols-2 gap-6">
+        {/* 左カラム：原稿入力 */}
         <Card>
           <CardHeader>
-            <CardTitle>原稿テキスト入力</CardTitle>
+            <CardTitle>原稿入力</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-4">
-                  <Input
-                    type="file"
-                    accept=".txt,.pdf"
-                    onChange={handleFileUpload}
-                    className="w-64"
-                  />
-                  <Button 
-                    variant="secondary"
-                    className="w-48"
-                    onClick={handleDownloadScript}
-                  >
-                    InDesignスクリプト出力
-                  </Button>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    テキストファイルをアップロードするか、下のテキストエリアに直接コピー&ペーストしてください。
-                  </p>
-                  <Textarea
-                    value={manuscriptText}
-                    onChange={(e) => setManuscriptText(e.target.value)}
-                    placeholder="ここに原稿テキストを入力してください..."
-                    className="min-h-[400px]"
-                  />
-                </div>
+              <Input
+                type="file"
+                accept=".txt,.pdf"
+                onChange={handleFileUpload}
+                className="w-full"
+              />
+              <p className="text-sm text-muted-foreground">
+                テキストファイルをアップロードするか、下のテキストエリアに直接コピー&ペーストしてください。
+              </p>
+              <Textarea
+                value={manuscriptText}
+                onChange={(e) => {
+                  setManuscriptText(e.target.value);
+                  if (e.target.value.trim()) {
+                    generateScript();
+                  }
+                }}
+                placeholder="ここに原稿テキストを入力してください..."
+                className="min-h-[600px]"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 右カラム：スクリプトプレビューとダウンロード */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex justify-between items-center">
+              <span>InDesignスクリプト</span>
+              <Button 
+                variant="secondary"
+                onClick={handleDownloadScript}
+                className="ml-4"
+              >
+                スクリプトをダウンロード
+              </Button>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="bg-muted p-4 rounded-md">
+                <p className="text-sm text-muted-foreground mb-2">
+                  スクリプトプレビュー:
+                </p>
+                <pre className="text-xs overflow-auto whitespace-pre-wrap bg-background p-4 rounded border min-h-[600px]">
+                  {scriptPreview}
+                </pre>
               </div>
             </div>
           </CardContent>
