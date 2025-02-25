@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,7 +37,7 @@ export default function AudioRecorder() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
-          sampleRate: 48000, // 48kHzに変更
+          sampleRate: 48000,
           channelCount: 1,
           echoCancellation: true,
           noiseSuppression: true,
@@ -77,7 +76,7 @@ export default function AudioRecorder() {
               body: JSON.stringify({
                 config: {
                   encoding: 'WEBM_OPUS',
-                  sampleRateHertz: 48000, // 48kHzに変更
+                  sampleRateHertz: 48000,
                   languageCode: 'ja-JP',
                 },
                 audio: {
@@ -174,14 +173,15 @@ export default function AudioRecorder() {
                     )}
                   </Button>
                 </div>
-                <Textarea
-                  id="apiKey"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  type={showApiKey ? "text" : "password"}
-                  placeholder="Google Cloud APIキーを入力してください"
-                  className="min-h-[40px] max-h-[40px] font-mono text-sm resize-none"
-                />
+                <div className={showApiKey ? "" : "password-input"}>
+                  <Textarea
+                    id="apiKey"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder="Google Cloud APIキーを入力してください"
+                    className="min-h-[40px] max-h-[40px] font-mono text-sm resize-none"
+                  />
+                </div>
               </div>
 
               {isRecording && (
@@ -232,13 +232,7 @@ export default function AudioRecorder() {
                     plugins: [
                       'anchor', 'autolink', 'charmap', 'codesample', 'emoticons', 
                       'image', 'link', 'lists', 'media', 'searchreplace', 'table', 
-                      'visualblocks', 'wordcount',
-                      'checklist', 'mediaembed', 'casechange', 'export', 
-                      'formatpainter', 'pageembed', 'a11ychecker', 
-                      'tinymcespellchecker', 'permanentpen', 'powerpaste', 
-                      'advtable', 'advcode', 'editimage', 'advtemplate', 'ai', 
-                      'mentions', 'tinycomments', 'tableofcontents', 'footnotes', 
-                      'mergetags', 'autocorrect', 'typography', 'inlinecss'
+                      'visualblocks', 'wordcount'
                     ],
                     toolbar: 'undo redo | ' +
                       'blocks fontfamily fontsize | bold italic underline | ' +
@@ -255,6 +249,13 @@ export default function AudioRecorder() {
           </CardContent>
         </Card>
       </div>
+
+      <style jsx>{`
+        .password-input textarea {
+          -webkit-text-security: disc;
+          text-security: disc;
+        }
+      `}</style>
     </div>
   );
 }
