@@ -38,7 +38,7 @@ export default function AudioRecorder() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
-          sampleRate: 16000,
+          sampleRate: 48000, // 48kHzに変更
           channelCount: 1,
           echoCancellation: true,
           noiseSuppression: true,
@@ -61,7 +61,6 @@ export default function AudioRecorder() {
         setAudioBlob(audioBlob);
         
         try {
-          // Base64エンコーディング
           const buffer = await audioBlob.arrayBuffer();
           const base64Data = btoa(
             new Uint8Array(buffer)
@@ -78,7 +77,7 @@ export default function AudioRecorder() {
               body: JSON.stringify({
                 config: {
                   encoding: 'WEBM_OPUS',
-                  sampleRateHertz: 16000,
+                  sampleRateHertz: 48000, // 48kHzに変更
                   languageCode: 'ja-JP',
                 },
                 audio: {
@@ -89,7 +88,8 @@ export default function AudioRecorder() {
           );
 
           if (!response.ok) {
-            throw new Error(`Speech-to-Text API error: ${response.statusText}`);
+            const errorData = await response.json();
+            throw new Error(`Speech-to-Text API error: ${JSON.stringify(errorData)}`);
           }
 
           const data = await response.json();
