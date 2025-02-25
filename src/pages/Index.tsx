@@ -1,81 +1,45 @@
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileAudio, Mic } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { FileText, Mic, FileCompare } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export default function Index() {
   const navigate = useNavigate();
-
+  
   return (
-    <div className="container mx-auto p-6 min-h-screen">
-      <div className="max-w-4xl mx-auto space-y-8">
-        <div className="text-center space-y-2">
-          <h1 className="text-3xl font-bold">文字起こしツール</h1>
-          <p className="text-muted-foreground">音声の文字起こしやInDesignドキュメントの作成を支援します</p>
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-6">
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Mic className="h-5 w-5" />
-                <span>音声入力文字起こし</span>
-              </CardTitle>
-              <CardDescription>
-                音声を録音して文字に起こします
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  • 音声の録音
-                  <br />
-                  • 自動文字起こし
-                  <br />
-                  • テキストの編集と保存
-                </p>
-                <Button 
-                  className="w-full"
-                  onClick={() => navigate("/audio-recorder")}
-                >
-                  <Mic className="mr-2 h-4 w-4" />
-                  録音開始
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileAudio className="h-5 w-5" />
-                <span>テキスト変換</span>
-              </CardTitle>
-              <CardDescription>
-                原稿をInDesign用に変換
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  • テキストファイルの読み込み
-                  <br />
-                  • InDesignスクリプト生成
-                  <br />
-                  • ドキュメント設定の自動化
-                </p>
-                <Button 
-                  className="w-full"
-                  onClick={() => navigate("/transcription")}
-                >
-                  <FileAudio className="mr-2 h-4 w-4" />
-                  テキスト入力
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+    <div className="container mx-auto p-6">
+      <h1 className="text-4xl font-bold mb-8">ツール一覧</h1>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Button
+          variant="outline"
+          className="h-32"
+          onClick={() => navigate("/audio-recorder")}
+        >
+          <div className="flex flex-col items-center gap-2">
+            <Mic className="h-6 w-6" />
+            <span>音声入力</span>
+          </div>
+        </Button>
+        <Button
+          variant="outline"
+          className="h-32"
+          onClick={() => navigate("/transcription")}
+        >
+          <div className="flex flex-col items-center gap-2">
+            <FileText className="h-6 w-6" />
+            <span>InDesign スクリプト生成</span>
+          </div>
+        </Button>
+        <Button
+          variant="outline"
+          className="h-32"
+          onClick={() => navigate("/pdf-compare")}
+        >
+          <div className="flex flex-col items-center gap-2">
+            <FileCompare className="h-6 w-6" />
+            <span>PDF比較ツール</span>
+          </div>
+        </Button>
       </div>
     </div>
   );
