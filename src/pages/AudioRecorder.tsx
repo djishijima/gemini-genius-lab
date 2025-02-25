@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -140,7 +141,6 @@ export default function AudioRecorder() {
                     onChange={(e) => setApiKey(e.target.value)}
                     placeholder="Google Cloud APIキーを入力してください"
                     className="min-h-[60px] max-h-[100px] font-mono text-sm"
-                    type={showApiKey ? "text" : "password"}
                   />
                   <Button
                     type="button"
@@ -186,17 +186,26 @@ export default function AudioRecorder() {
                   apiKey="wnbdf6jfr1lii0g2xzm7bfmuhbxlt6xj7sjvk41g9ebf0j85"
                   init={{
                     height: 300,
-                    menubar: false,
+                    menubar: true,
                     language: 'ja',
                     plugins: [
-                      'advlist', 'autolink', 'lists', 'link', 'charmap', 'preview',
+                      'ai', 'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
                       'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-                      'insertdatetime', 'media', 'table', 'help', 'wordcount'
+                      'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount',
+                      'accordion', 'emoticons', 'importcss', 'searchreplace',
+                      'textpattern', 'visualchars', 'wordcount', 'quickbars'
                     ],
-                    toolbar: 'blocks | bold italic backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat',
+                    toolbar: 'undo redo | styles | ai aiproofreader aitranslate | ' +
+                      'bold italic backcolor | alignleft aligncenter alignright alignjustify | ' +
+                      'bullist numlist outdent indent | image media table emoticons | ' +
+                      'removeformat help',
                     content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 14px }',
-                    readonly: true,
-                    branding: false
+                    readonly: false,
+                    branding: false,
+                    promotion: false,
+                    ai_request: (request: any, respondWith: any) => {
+                      respondWith.string(() => Promise.resolve('This is a mock AI response'));
+                    }
                   }}
                 />
               </div>
