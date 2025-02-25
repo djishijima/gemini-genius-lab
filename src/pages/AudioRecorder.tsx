@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mic, Square, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import { Mic, Square, ArrowLeft, Eye, EyeOff, Download } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -13,6 +13,7 @@ export default function AudioRecorder() {
   const [transcription, setTranscription] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const navigate = useNavigate();
 
@@ -41,6 +42,7 @@ export default function AudioRecorder() {
       return;
     }
 
+    setAudioBlob(null); // 新しい録音を開始する時に前の録音データをクリア
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
@@ -61,8 +63,9 @@ export default function AudioRecorder() {
         if (event.data.size > 0) {
           chunks.push(event.data);
           try {
-            const audioBlob = new Blob(chunks, { type: 'audio/webm' });
-            console.log('Audio data captured:', audioBlob.size, 'bytes');
+            const newAudioBlob = new Blob(chunks, { type: 'audio/webm' });
+            setAudioBlob(newAudioBlob); // 録音データを保存
+            console.log('Audio data captured:', newAudioBlob.size, 'bytes');
             
             // Google Cloud Speech-to-Text APIの要求形式に合わせる
             const requestBody = {
@@ -133,6 +136,19 @@ export default function AudioRecorder() {
     }
   };
 
+  const exportAudio = () => {
+    if (audioBlob) {
+      const url = URL.createObjectURL(audioBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `recording-${new Date().toISOString()}.webm`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  };
+
   return (
     <div className="container mx-auto p-6">
       <Button 
@@ -177,7 +193,7 @@ export default function AudioRecorder() {
                 />
               </div>
 
-              <div className="flex justify-center">
+              <div className="flex justify-center gap-2">
                 <Button
                   size="lg"
                   variant={isRecording ? "destructive" : "default"}
@@ -194,6 +210,15 @@ export default function AudioRecorder() {
                       録音を開始
                     </>
                   )}
+                </Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  onClick={exportAudio}
+                  disabled={isRecording || !audioBlob}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  音声をエクスポート
                 </Button>
               </div>
 
