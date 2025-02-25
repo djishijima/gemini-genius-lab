@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -5,6 +6,7 @@ import { Mic, Square, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Editor } from '@tinymce/tinymce-react';
 
 export default function AudioRecorder() {
   const [isRecording, setIsRecording] = useState(false);
@@ -22,7 +24,7 @@ export default function AudioRecorder() {
 
   const request = {
     config,
-    interimResults: true, // 中間結果を有効化
+    interimResults: true,
   };
 
   useEffect(() => {
@@ -133,18 +135,31 @@ export default function AudioRecorder() {
               <div className="space-y-2">
                 <Label htmlFor="apiKey">Google Cloud APIキー</Label>
                 <div className="relative">
-                  <Textarea
+                  <Editor
                     id="apiKey"
                     value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    placeholder="Google Cloud APIキーを入力してください"
-                    className="min-h-[100px] font-mono text-sm"
+                    onEditorChange={(content) => setApiKey(content)}
+                    apiKey="wnbdf6jfr1lii0g2xzm7bfmuhbxlt6xj7sjvk41g9ebf0j85"
+                    init={{
+                      height: 200,
+                      menubar: false,
+                      plugins: [
+                        'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+                        'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+                        'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount'
+                      ],
+                      toolbar: 'undo redo | formatselect | ' +
+                        'bold italic backcolor | alignleft aligncenter ' +
+                        'alignright alignjustify | bullist numlist outdent indent | ' +
+                        'removeformat | help',
+                      content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 14px }'
+                    }}
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="absolute right-2 top-2"
+                    className="absolute right-2 top-2 z-10"
                     onClick={() => setShowApiKey(!showApiKey)}
                   >
                     {showApiKey ? (
