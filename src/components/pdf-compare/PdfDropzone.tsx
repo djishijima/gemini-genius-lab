@@ -8,17 +8,22 @@ interface PdfDropzoneProps {
   fileName: string;
   areaClassName: string;
   placeholder: string;
-  accept?: Record<string, string[]>;
 }
 
-export function PdfDropzone({ onDrop, fileName, areaClassName, placeholder, accept }: PdfDropzoneProps) {
-  const {getRootProps, getInputProps, isDragActive} = useDropzone({onDrop, accept});
+export function PdfDropzone({ onDrop, fileName, areaClassName, placeholder }: PdfDropzoneProps) {
+  const {getRootProps, getInputProps, isDragActive} = useDropzone({
+    onDrop,
+    accept: {
+      'application/pdf': ['.pdf'],
+      'text/plain': ['.txt'],
+    }
+  });
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>PDF {fileName ? fileName : ''}</CardTitle>
-        <CardDescription>比較するPDFをここにアップロード</CardDescription>
+        <CardTitle>{fileName ? fileName : 'ファイル'}</CardTitle>
+        <CardDescription>PDFまたはテキストファイルをここにアップロード</CardDescription>
       </CardHeader>
       <CardContent>
         <div 

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { diffWords } from 'diff';
 import { Button } from "@/components/ui/button";
@@ -26,7 +25,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Progress } from "@/components/ui/progress";
 
-// PDF.jsの設定
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
 
 export default function PdfCompare() {
@@ -41,48 +39,63 @@ export default function PdfCompare() {
   const [tourState, setTourState] = useState<TourState>({ run: false, steps: tourSteps });
   const { toast } = useToast();
 
-  const extractTextFromPdf = async (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = async (event: any) => {
-        try {
-          const typedArray = new Uint8Array(event.target.result);
-          const pdf = await pdfjsLib.getDocument(typedArray).promise;
-          let fullText = '';
-
-          for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const textContent = await page.getTextContent();
-            const pageText = textContent.items.map((item: any) => item.str).join(' ');
-            fullText += pageText + '\n';
+  const extractFileContent = async (file: File): Promise<string> => {
+    if (file.type === 'text/plain') {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (event.target?.result) {
+            resolve(event.target.result as string);
+          } else {
+            reject(new Error('Failed to read text file'));
           }
+        };
+        reader.onerror = (error) => reject(error);
+        reader.readAsText(file);
+      });
+    } else {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async (event: any) => {
+          try {
+            const typedArray = new Uint8Array(event.target.result);
+            const pdf = await pdfjsLib.getDocument(typedArray).promise;
+            let fullText = '';
 
-          resolve(fullText);
-        } catch (error) {
-          console.error("PDF parsing error:", error);
+            for (let i = 1; i <= pdf.numPages; i++) {
+              const page = await pdf.getPage(i);
+              const textContent = await page.getTextContent();
+              const pageText = textContent.items.map((item: any) => item.str).join(' ');
+              fullText += pageText + '\n';
+            }
+
+            resolve(fullText);
+          } catch (error) {
+            console.error("PDF parsing error:", error);
+            reject(error);
+          }
+        };
+
+        reader.onerror = (error) => {
+          console.error("File reading error:", error);
           reject(error);
-        }
-      };
+        };
 
-      reader.onerror = (error) => {
-        console.error("File reading error:", error);
-        reject(error);
-      };
-
-      reader.readAsArrayBuffer(file);
-    });
+        reader.readAsArrayBuffer(file);
+      });
+    }
   };
 
   const onDrop1 = async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     setPdf1Name(file.name);
     try {
-      const text = await extractTextFromPdf(file);
+      const text = await extractFileContent(file);
       setPdf1Text(text);
     } catch (error) {
       toast({
-        title: "PDFの読み込みに失敗しました。",
-        description: "PDFファイルが壊れているか、形式が正しくありません。",
+        title: "ファイルの読み込みに失敗しました。",
+        description: "ファイルが壊れているか、形式が正しくありません。",
         variant: "destructive",
       });
     }
@@ -92,12 +105,12 @@ export default function PdfCompare() {
     const file = acceptedFiles[0];
     setPdf2Name(file.name);
     try {
-      const text = await extractTextFromPdf(file);
+      const text = await extractFileContent(file);
       setPdf2Text(text);
     } catch (error) {
       toast({
-        title: "PDFの読み込みに失敗しました。",
-        description: "PDFファイルが壊れているか、形式が正しくありません。",
+        title: "ファイルの読み込みに失敗しました。",
+        description: "ファイルが壊れているか、形式が正しくありません。",
         variant: "destructive",
       });
     }
@@ -149,15 +162,13 @@ export default function PdfCompare() {
             onDrop={onDrop1}
             fileName={pdf1Name}
             areaClassName="upload-area-1"
-            placeholder="ここに元のPDFファイルをドロップまたはクリックして選択"
-            accept={{ 'application/pdf': ['.pdf'] }}
+            placeholder="ここにPDFまたはテキストファイルをドロップまたはクリックして選択"
           />
           <PdfDropzone
             onDrop={onDrop2}
             fileName={pdf2Name}
             areaClassName="upload-area-2"
-            placeholder="ここに比較対象のPDFファイルをドロップまたはクリックして選択"
-            accept={{ 'application/pdf': ['.pdf'] }}
+            placeholder="ここに比較対象のPDFまたはテキストファイルをドロップまたはクリックして選択"
           />
         </div>
 
