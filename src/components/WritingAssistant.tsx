@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Button } from "@/components/ui/button";
@@ -331,7 +332,7 @@ const WritingAssistant: React.FC<WritingAssistantProps> = ({ apiKey }) => {
             <div className="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-6">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">原稿テキスト��</h3>
+                  <h3 className="text-lg font-semibold">原稿テキスト</h3>
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
