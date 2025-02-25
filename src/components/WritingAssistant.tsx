@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Button } from "@/components/ui/button";
@@ -126,16 +125,47 @@ const WritingAssistant: React.FC<WritingAssistantProps> = ({ apiKey }) => {
           prompt = "以下のテキストの要約を箇条書きで作成してください：\n\n";
           break;
         case "suggestions":
-          prompt = "原稿に対する改善点や修正指示を箇条書きで整理し、以下のフォーマットで出力してください：\n\n【ページ/段落】\n- 修正内容\n- 修正理由\n\n対象テキスト：\n\n";
+          prompt = "原稿に対する赤ペンの修正指示を以下のフォーマットで整理し、赤ペンの意図を明確に説明してください：\n\n" +
+                  "【ページ/段落】\n" +
+                  "- 修正内容\n" +
+                  "- 修正理由\n" +
+                  "- 編集者の意図\n\n" +
+                  "以下の点に注意して分析してください：\n" +
+                  "1. 表記の統一に関する指示\n" +
+                  "2. 文章の流れや構成に関する指示\n" +
+                  "3. 専門用語や固有名詞の修正\n" +
+                  "4. デザイン・レイアウトに関する指示\n\n" +
+                  "対象テキスト：\n\n";
           break;
         case "keywords":
-          prompt = "印刷物として重要な確認ポイントを以下のカテゴリごとに抽出してください：\n\n1. 表記の統一\n2. 専門用語\n3. 重要な数値\n4. 固有名詞\n\n対象テキスト：\n\n";
+          prompt = "印刷物として重要な確認ポイントを以下のカテゴリごとに抽出してください：\n\n" +
+                  "1. 表記の統一\n" +
+                  "   - 漢字/かな表記\n" +
+                  "   - 英数字の表記\n" +
+                  "   - 記号の使用\n\n" +
+                  "2. 専門用語\n" +
+                  "   - 業界用語\n" +
+                  "   - 技術用語\n\n" +
+                  "3. 重要な数値\n" +
+                  "   - 日付・時間\n" +
+                  "   - 金額・数量\n" +
+                  "   - 規格・寸法\n\n" +
+                  "4. 固有名詞\n" +
+                  "   - 人名・社名\n" +
+                  "   - 商品名・ブランド名\n" +
+                  "   - 地名・施設名\n\n" +
+                  "対象テキスト：\n\n";
           break;
       }
 
       const result = await model.generateContent(prompt + textToAnalyze);
       const analysisText = result.response.text();
       setAnalysis(analysisText);
+
+      toast({
+        title: "分析完了",
+        description: type === "suggestions" ? "修正指示を整理しました" : "分析が完了しました",
+      });
 
     } catch (error) {
       toast({
