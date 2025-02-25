@@ -179,12 +179,8 @@ export default function AudioRecorder() {
                   onChange={(e) => setApiKey(e.target.value)}
                   placeholder="Google Cloud APIキーを入力してください"
                   className={`min-h-[40px] max-h-[40px] font-mono text-sm resize-none ${
-                    showApiKey ? "" : "password-input"
+                    !showApiKey ? "password-input" : ""
                   }`}
-                  style={{
-                    WebkitTextSecurity: showApiKey ? "none" : "disc",
-                    textSecurity: showApiKey ? "none" : "disc"
-                  }}
                 />
               </div>
 
