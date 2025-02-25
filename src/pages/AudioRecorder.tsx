@@ -6,10 +6,7 @@ import { Mic, Square, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import FroalaEditor from 'react-froala-wysiwyg';
-import 'froala-editor/css/froala_style.min.css';
-import 'froala-editor/css/froala_editor.pkgd.min.css';
-import 'froala-editor/js/languages/ja';
+import { Editor } from '@tinymce/tinymce-react';
 
 export default function AudioRecorder() {
   const [isRecording, setIsRecording] = useState(false);
@@ -212,11 +209,26 @@ export default function AudioRecorder() {
 
               <div className="space-y-2">
                 <h3 className="font-medium">文字起こし結果</h3>
-                <FroalaEditor
-                  tag="textarea"
-                  model={transcription}
-                  onModelChange={(model) => setTranscription(model)}
-                  config={froalaConfig}
+                <Editor
+                  value={transcription}
+                  onEditorChange={(content) => setTranscription(content)}
+                  apiKey="wnbdf6jfr1lii0g2xzm7bfmuhbxlt6xj7sjvk41g9ebf0j85"
+                  init={{
+                    height: 300,
+                    menubar: false,
+                    language: 'ja',
+                    plugins: [
+                      'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+                      'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+                      'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount'
+                    ],
+                    toolbar: 'undo redo | 書式 | ' +
+                      '太字 斜体 背景色 | 左揃え 中央揃え ' +
+                      '右揃え 均等揃え | 箇条書き 番号付き 字下げ 字上げ | ' +
+                      '書式削除 | ヘルプ',
+                    content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 14px }',
+                    readonly: true
+                  }}
                 />
               </div>
             </div>
