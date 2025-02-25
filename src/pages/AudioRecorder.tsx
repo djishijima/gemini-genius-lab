@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,7 +41,7 @@ export default function AudioRecorder() {
       return;
     }
 
-    setAudioBlob(null); // 新しい録音を開始する時に前の録音データをクリア
+    setAudioBlob(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
@@ -64,7 +63,7 @@ export default function AudioRecorder() {
           chunks.push(event.data);
           try {
             const newAudioBlob = new Blob(chunks, { type: 'audio/webm' });
-            setAudioBlob(newAudioBlob); // 録音データを保存
+            setAudioBlob(newAudioBlob);
             console.log('Audio data captured:', newAudioBlob.size, 'bytes');
             
             // Google Cloud Speech-to-Text APIの要求形式に合わせる
@@ -75,7 +74,7 @@ export default function AudioRecorder() {
                 languageCode: 'ja-JP',
               },
               audio: {
-                content: await audioBlob.arrayBuffer().then(buffer => 
+                content: await newAudioBlob.arrayBuffer().then(buffer => 
                   Buffer.from(buffer).toString('base64')
                 )
               }
