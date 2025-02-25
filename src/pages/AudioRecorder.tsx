@@ -135,31 +135,18 @@ export default function AudioRecorder() {
               <div className="space-y-2">
                 <Label htmlFor="apiKey">Google Cloud APIキー</Label>
                 <div className="relative">
-                  <Editor
+                  <Textarea
                     id="apiKey"
                     value={apiKey}
-                    onEditorChange={(content) => setApiKey(content)}
-                    apiKey="wnbdf6jfr1lii0g2xzm7bfmuhbxlt6xj7sjvk41g9ebf0j85"
-                    init={{
-                      height: 200,
-                      menubar: false,
-                      plugins: [
-                        'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
-                        'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-                        'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount'
-                      ],
-                      toolbar: 'undo redo | formatselect | ' +
-                        'bold italic backcolor | alignleft aligncenter ' +
-                        'alignright alignjustify | bullist numlist outdent indent | ' +
-                        'removeformat | help',
-                      content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 14px }'
-                    }}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder="Google Cloud APIキーを入力してください"
+                    className="min-h-[100px] font-mono text-sm"
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="absolute right-2 top-2 z-10"
+                    className="absolute right-2 top-2"
                     onClick={() => setShowApiKey(!showApiKey)}
                   >
                     {showApiKey ? (
@@ -193,11 +180,25 @@ export default function AudioRecorder() {
 
               <div className="space-y-2">
                 <h3 className="font-medium">文字起こし結果</h3>
-                <Textarea
+                <Editor
                   value={transcription}
-                  readOnly
-                  className="min-h-[300px]"
-                  placeholder="録音を開始すると、ここにリアルタイムで文字起こし結果が表示されます..."
+                  onEditorChange={(content) => setTranscription(content)}
+                  apiKey="wnbdf6jfr1lii0g2xzm7bfmuhbxlt6xj7sjvk41g9ebf0j85"
+                  init={{
+                    height: 300,
+                    menubar: false,
+                    plugins: [
+                      'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+                      'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+                      'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount'
+                    ],
+                    toolbar: 'undo redo | formatselect | ' +
+                      'bold italic backcolor | alignleft aligncenter ' +
+                      'alignright alignjustify | bullist numlist outdent indent | ' +
+                      'removeformat | help',
+                    content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 14px }',
+                    readonly: true
+                  }}
                 />
               </div>
             </div>
