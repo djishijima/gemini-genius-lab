@@ -173,15 +173,19 @@ export default function AudioRecorder() {
                     )}
                   </Button>
                 </div>
-                <div className={showApiKey ? "" : "password-input"}>
-                  <Textarea
-                    id="apiKey"
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    placeholder="Google Cloud APIキーを入力してください"
-                    className="min-h-[40px] max-h-[40px] font-mono text-sm resize-none"
-                  />
-                </div>
+                <Textarea
+                  id="apiKey"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="Google Cloud APIキーを入力してください"
+                  className={`min-h-[40px] max-h-[40px] font-mono text-sm resize-none ${
+                    showApiKey ? "" : "password-input"
+                  }`}
+                  style={{
+                    WebkitTextSecurity: showApiKey ? "none" : "disc",
+                    textSecurity: showApiKey ? "none" : "disc"
+                  }}
+                />
               </div>
 
               {isRecording && (
@@ -249,13 +253,6 @@ export default function AudioRecorder() {
           </CardContent>
         </Card>
       </div>
-
-      <style jsx>{`
-        .password-input textarea {
-          -webkit-text-security: disc;
-          text-security: disc;
-        }
-      `}</style>
     </div>
   );
 }
