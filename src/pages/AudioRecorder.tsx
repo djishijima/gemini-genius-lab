@@ -56,10 +56,12 @@ export default function AudioRecorder() {
       });
       mediaRecorderRef.current = mediaRecorder;
 
+      let chunks: BlobPart[] = [];
       mediaRecorder.ondataavailable = async (event) => {
         if (event.data.size > 0) {
+          chunks.push(event.data);
           try {
-            const audioBlob = new Blob([event.data], { type: 'audio/webm' });
+            const audioBlob = new Blob(chunks, { type: 'audio/webm' });
             console.log('Audio data captured:', audioBlob.size, 'bytes');
             
             const formData = new FormData();
@@ -80,28 +82,31 @@ export default function AudioRecorder() {
 
             const data = await response.json();
             if (data.results && data.results[0]) {
+              const newTranscript = data.results[0].alternatives[0].transcript;
               const timestamp = new Date().toLocaleTimeString();
               setTranscription(prev => 
-                `${prev}[${timestamp}] ${data.results[0].alternatives[0].transcript}\n`
+                prev + `[${timestamp}] ${newTranscript}\n`
               );
+              console.log('Transcription:', newTranscript);
             }
 
           } catch (error) {
             console.error('Speech-to-Text Error:', error);
             setTranscription(prev => 
-              `${prev}[ERROR] Speech-to-Text処理エラー: ${error}\n`
+              prev + `[ERROR] Speech-to-Text処理エラー: ${error}\n`
             );
           }
+          chunks = []; // Clear chunks after processing
         }
       };
 
       mediaRecorder.start(1000);
       setIsRecording(true);
-
-      console.log('Listening, press stop button to stop.');
+      console.log('Recording started...');
 
     } catch (error) {
       console.error('Error initializing recording:', error);
+      alert('録音の初期化中にエラーが発生しました');
     }
   };
 
