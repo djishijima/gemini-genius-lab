@@ -11,6 +11,7 @@ import {
 import { ArrowLeft, RefreshCcw, Upload, FileDiff, Loader2, Percent } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import * as pdfjsLib from 'pdfjs-dist';
 import * as DiffLib from 'diff';
@@ -107,7 +108,9 @@ export default function PdfCompare() {
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, isPdf1: boolean) => {
     const file = event.target.files?.[0];
-    if (!file || file.type !== "application/pdf") {
+    if (!file) return;
+
+    if (file.type !== "application/pdf") {
       toast({
         title: "エラー",
         description: "PDFファイルを選択してください。",
@@ -141,11 +144,20 @@ export default function PdfCompare() {
     }
   };
 
+  const handleTextChange = (event: React.ChangeEvent<HTMLTextAreaElement>, isPdf1: boolean) => {
+    const text = event.target.value;
+    if (isPdf1) {
+      setPdf1Text(text);
+    } else {
+      setPdf2Text(text);
+    }
+  };
+
   const comparePdfs = useCallback(() => {
     if (!pdf1Text || !pdf2Text) {
       toast({
         title: "エラー",
-        description: "2つのPDFファイルをアップロードしてください。",
+        description: "2つのテキストを入力またはPDFをアップロードしてください。",
         variant: "destructive"
       });
       return;
@@ -177,6 +189,8 @@ export default function PdfCompare() {
     setPdf2Text("");
     setDifferences([]);
     setDiffStats(null);
+    if (fileInput1Ref.current) fileInput1Ref.current.value = "";
+    if (fileInput2Ref.current) fileInput2Ref.current.value = "";
   };
 
   return (
@@ -213,31 +227,47 @@ export default function PdfCompare() {
           <CardHeader>
             <CardTitle>PDF比較ツール</CardTitle>
             <CardDescription>
-              2つのPDFファイルをアップロードして内容を比較します
+              2つのPDFファイルをアップロードまたはテキストを入力して内容を比較します
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
-              <div className="upload-section-1">
-                <label className="text-sm font-medium mb-2 block">PDF 1</label>
-                <Input
-                  type="file"
-                  accept=".pdf"
-                  onChange={(e) => handleFileUpload(e, true)}
-                  disabled={loading}
-                  className="w-full"
-                  ref={fileInput1Ref}
+              <div className="upload-section-1 space-y-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">PDF 1</label>
+                  <Input
+                    type="file"
+                    accept=".pdf"
+                    onChange={(e) => handleFileUpload(e, true)}
+                    disabled={loading}
+                    className="w-full"
+                    ref={fileInput1Ref}
+                  />
+                </div>
+                <Textarea
+                  value={pdf1Text}
+                  onChange={(e) => handleTextChange(e, true)}
+                  placeholder="テキストを直接入力するか、PDFをアップロードしてください..."
+                  className="min-h-[200px]"
                 />
               </div>
-              <div className="upload-section-2">
-                <label className="text-sm font-medium mb-2 block">PDF 2</label>
-                <Input
-                  type="file"
-                  accept=".pdf"
-                  onChange={(e) => handleFileUpload(e, false)}
-                  disabled={loading}
-                  className="w-full"
-                  ref={fileInput2Ref}
+              <div className="upload-section-2 space-y-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">PDF 2</label>
+                  <Input
+                    type="file"
+                    accept=".pdf"
+                    onChange={(e) => handleFileUpload(e, false)}
+                    disabled={loading}
+                    className="w-full"
+                    ref={fileInput2Ref}
+                  />
+                </div>
+                <Textarea
+                  value={pdf2Text}
+                  onChange={(e) => handleTextChange(e, false)}
+                  placeholder="テキストを直接入力するか、PDFをアップロードしてください..."
+                  className="min-h-[200px]"
                 />
               </div>
             </div>
