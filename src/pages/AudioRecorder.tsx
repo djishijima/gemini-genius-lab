@@ -202,11 +202,11 @@ export default function AudioRecorder() {
                       'mergetags', 'autocorrect', 'typography', 'inlinecss', 
                       'markdown', 'importword', 'exportword', 'exportpdf'
                     ],
-                    toolbar: 'undo redo | blocks fontfamily fontsize | ' +
-                      'bold italic underline strikethrough | link image media table mergetags | ' +
-                      'addcomment showcomments | spellcheckdialog a11ycheck typography | ' +
-                      'align lineheight | checklist numlist bullist indent outdent | ' +
-                      'emoticons charmap | removeformat',
+                    toolbar: 'ai | undo redo | ' +
+                      'ai_ask ai_randomize ai_assist ai_summarize ai_translate | ' +
+                      'blocks fontfamily fontsize | bold italic underline | ' +
+                      'alignment | checklist numlist bullist | emoticons charmap | ' +
+                      'link image media table mergetags | spellcheckdialog',
                     content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 14px }',
                     readonly: false,
                     branding: false,
