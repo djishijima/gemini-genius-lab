@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -22,10 +21,28 @@ doc.documentPreferences.pageSize = "A4";
 doc.documentPreferences.facingPages = false;
 
 // ... スクリプトの内容がここに表示されます ...`);
+  const [layoutPreview] = useState(`
+╔════════════════════════════════╗
+║            A4サイズ            ║
+║  ┌──────────────────────────┐  ║
+║  │                          │  ║
+║  │    明朝体               │  ║
+║  │    10.5pt              │  ║
+║  │                        │  ║
+║  │    縦                  │  ║
+║  │    書                  │  ║
+║  │    き                  │  ║
+║  │                        │  ║
+║  │    本                  │  ║
+║  │    文                  │  ║
+║  │                        │  ║
+║  └──────────────────────────┘  ║
+║                                ║
+╚════════════════════════════════╝
+  `);
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // ファイルアップロード処理
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -58,7 +75,6 @@ doc.documentPreferences.facingPages = false;
   };
 
   const generateScript = () => {
-    // この部分は後でAIによる生成に置き換えることができます
     const script = `#target "InDesign"
 // 基本設定
 app.scriptPreferences.userInteractionLevel = UserInteractionLevels.NEVER_INTERACT;
@@ -163,7 +179,6 @@ app.scriptPreferences.enableRedraw = true;`;
       </Button>
 
       <div className="grid gap-6">
-        {/* リソースリンク */}
         <Card>
           <CardHeader>
             <CardTitle>InDesignリソース</CardTitle>
@@ -205,7 +220,6 @@ app.scriptPreferences.enableRedraw = true;`;
         </Card>
 
         <div className="grid md:grid-cols-2 gap-6">
-          {/* 左カラム：原稿入力 */}
           <Card>
             <CardHeader>
               <CardTitle>原稿入力</CardTitle>
@@ -262,58 +276,75 @@ app.scriptPreferences.enableRedraw = true;`;
             </CardContent>
           </Card>
 
-          {/* 右カラム：スクリプトプレビューとダウンロード */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex justify-between items-center">
-                <span>InDesignスクリプト</span>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="secondary"
-                    onClick={() => {
-                      if (manuscriptText.trim()) {
-                        generateScript();
-                      }
-                    }}
-                  >
-                    <Wand2 className="mr-2 h-4 w-4" />
-                    スクリプト生成
-                  </Button>
-                  <Button 
-                    variant="default"
-                    onClick={handleDownloadScript}
-                  >
-                    <Upload className="mr-2 h-4 w-4" />
-                    ダウンロード
-                  </Button>
-                </div>
-              </CardTitle>
-              <CardDescription>
-                生成されたスクリプトをダウンロードしてInDesignで実行できます
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>レイアウトプレビュー</CardTitle>
+                <CardDescription>
+                  生成されるInDesignレイアウトのプレビュー
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
                 <div className="bg-muted p-4 rounded-md">
-                  <p className="text-sm text-muted-foreground mb-2">
-                    スクリプトプレビュー:
-                  </p>
-                  <pre className="text-xs overflow-auto whitespace-pre-wrap bg-background p-4 rounded border min-h-[600px]">
-                    {scriptPreview}
+                  <pre className="font-mono text-xs leading-relaxed whitespace-pre overflow-x-auto">
+                    {layoutPreview}
                   </pre>
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  <p>スクリプトの使い方:</p>
-                  <ol className="list-decimal list-inside space-y-1 mt-2">
-                    <li>スクリプトをダウンロード</li>
-                    <li>InDesignを起動</li>
-                    <li>ファイル &gt; スクリプト &gt; スクリプトを実行</li>
-                    <li>ダウンロードしたスクリプトを選択</li>
-                  </ol>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex justify-between items-center">
+                  <span>InDesignスクリプト</span>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="secondary"
+                      onClick={() => {
+                        if (manuscriptText.trim()) {
+                          generateScript();
+                        }
+                      }}
+                    >
+                      <Wand2 className="mr-2 h-4 w-4" />
+                      スクリプト生成
+                    </Button>
+                    <Button 
+                      variant="default"
+                      onClick={handleDownloadScript}
+                    >
+                      <Upload className="mr-2 h-4 w-4" />
+                      ダウンロード
+                    </Button>
+                  </div>
+                </CardTitle>
+                <CardDescription>
+                  生成されたスクリプトをダウンロードしてInDesignで実行できます
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="bg-muted p-4 rounded-md">
+                    <p className="text-sm text-muted-foreground mb-2">
+                      スクリプトプレビュー:
+                    </p>
+                    <pre className="text-xs overflow-auto whitespace-pre-wrap bg-background p-4 rounded border min-h-[400px]">
+                      {scriptPreview}
+                    </pre>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    <p>スクリプトの使い方:</p>
+                    <ol className="list-decimal list-inside space-y-1 mt-2">
+                      <li>スクリプトをダウンロード</li>
+                      <li>InDesignを起動</li>
+                      <li>ファイル &gt; スクリプト &gt; スクリプトを実行</li>
+                      <li>ダウンロードしたスクリプトを選択</li>
+                    </ol>
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>
