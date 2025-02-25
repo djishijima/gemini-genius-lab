@@ -6,6 +6,9 @@ import { Mic, Square, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Textarea } from "@/components/ui/textarea";
 
+// Google Cloud Speech-to-Text API用の設定
+const GOOGLE_CLOUD_API_KEY = 'YOUR_API_KEY'; // ここに実際のAPIキーを設定
+
 export default function AudioRecorder() {
   const [isRecording, setIsRecording] = useState(false);
   const [transcription, setTranscription] = useState("");
@@ -57,15 +60,36 @@ export default function AudioRecorder() {
             const audioBlob = new Blob([event.data], { type: 'audio/webm' });
             console.log('Audio data captured:', audioBlob.size, 'bytes');
             
-            // TODO: Vertex AI Speech-to-Text APIにストリーミング
-            // サンプルコードの動作確認用の仮実装
-            const timestamp = new Date().toLocaleTimeString();
-            setTranscription(prev => 
-              `${prev}[${timestamp}] Transcription: 音声データを受信しました (${audioBlob.size} bytes)\n`
+            // Google Cloud Speech-to-Text APIにリクエストを送信
+            const formData = new FormData();
+            formData.append('audio', audioBlob);
+            formData.append('config', JSON.stringify(config));
+
+            const response = await fetch(
+              `https://speech.googleapis.com/v1/speech:recognize?key=${GOOGLE_CLOUD_API_KEY}`,
+              {
+                method: 'POST',
+                body: formData,
+              }
             );
+
+            if (!response.ok) {
+              throw new Error('Speech-to-Text API request failed');
+            }
+
+            const data = await response.json();
+            if (data.results && data.results[0]) {
+              const timestamp = new Date().toLocaleTimeString();
+              setTranscription(prev => 
+                `${prev}[${timestamp}] ${data.results[0].alternatives[0].transcript}\n`
+              );
+            }
 
           } catch (error) {
             console.error('Speech-to-Text Error:', error);
+            setTranscription(prev => 
+              `${prev}[ERROR] Speech-to-Text処理エラー: ${error}\n`
+            );
           }
         }
       };
