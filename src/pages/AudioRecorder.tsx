@@ -129,28 +129,11 @@ export default function AudioRecorder() {
 
               <div className="space-y-2">
                 <h3 className="font-medium">文字起こし結果</h3>
-                <Editor
+                <textarea
                   value={transcription}
-                  onEditorChange={(content) => setTranscription(content)}
-                  apiKey="wnbdf6jfr1lii0g2xzm7bfmuhbxlt6xj7sjvk41g9ebf0j85"
-                  init={{
-                    height: 300,
-                    menubar: true,
-                    language: 'ja',
-                    plugins: [
-                      'anchor', 'autolink', 'charmap', 'codesample', 'emoticons', 
-                      'image', 'link', 'lists', 'media', 'searchreplace', 'table', 
-                      'visualblocks', 'wordcount'
-                    ],
-                    toolbar: 'undo redo | ' +
-                      'blocks fontfamily fontsize | bold italic underline | ' +
-                      'alignment | checklist numlist bullist | emoticons charmap | ' +
-                      'link image media table mergetags',
-                    content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 14px }',
-                    readonly: false,
-                    branding: false,
-                    promotion: false,
-                  }}
+                  onChange={(e) => setTranscription(e.target.value)}
+                  className="w-full h-[300px] p-2 border rounded resize-none"
+                  readOnly={false}
                 />
               </div>
             </div>
