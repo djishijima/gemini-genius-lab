@@ -1,170 +1,126 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { ArrowLeft, RefreshCcw, Upload, Wand2, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import * as pdfjsLib from 'pdfjs-dist';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 export default function Transcription() {
   const [manuscriptText, setManuscriptText] = useState("");
   const [prompt, setPrompt] = useState("A4サイズの縦書き、明朝体で本文を組んでください。");
-  const [scriptPreview, setScriptPreview] = useState(`#target "InDesign"
-// 基本設定
-app.scriptPreferences.userInteractionLevel = UserInteractionLevels.NEVER_INTERACT;
-app.scriptPreferences.enableRedraw = false;
-
-// 新規ドキュメント作成
-var doc = app.documents.add();
-doc.documentPreferences.pageSize = "A4";
-doc.documentPreferences.facingPages = false;
-
-// ... スクリプトの内容がここに表示されます ...`);
-  const [layoutPreview] = useState(`
-╔════════════════════════════════╗
-║            A4サイズ            ║
-║  ┌──────────────────────────┐  ║
-║  │                          │  ║
-║  │    明朝体               │  ║
-║  │    10.5pt              │  ║
-║  │                        │  ║
-║  │    縦                  │  ║
-║  │    書                  │  ║
-║  │    き                  │  ║
-║  │                        │  ║
-║  │    本                  │  ║
-║  │    文                  │  ║
-║  │                        │  ║
-║  └──────────────────────────┘  ║
-║                                ║
-╚════════════════════════════════╝
-  `);
+  const [generatedScript, setGeneratedScript] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const generateScript = useCallback(async () => {
+    if (!manuscriptText.trim()) {
+      toast({
+        title: "エラー",
+        description: "原稿テキストを入力してください。",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Replace this with your actual script generation logic
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const mockScript = `// Generated InDesign Script
+// Prompt: ${prompt}
+
+// Manuscript:
+${manuscriptText}
+
+// Add your InDesign scripting code here based on the prompt and manuscript.`;
+      
+      setGeneratedScript(mockScript);
+      toast({
+        title: "成功",
+        description: "スクリプトを生成しました。",
+      });
+    } catch (error) {
+      console.error("Error generating script:", error);
+      toast({
+        title: "エラー",
+        description: "スクリプトの生成に失敗しました。",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [manuscriptText, prompt, toast]);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    try {
-      if (file.type === "text/plain") {
-        const text = await file.text();
-        setManuscriptText(text);
-      } else if (file.type === "application/pdf") {
-        toast({
-          title: "PDF対応予定",
-          description: "PDFからのテキスト抽出は現在開発中です",
-          variant: "destructive"
-        });
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const fileContent = e.target?.result;
+      let text = "";
+
+      if (file.type === "application/pdf") {
+        try {
+          const pdfData = new Uint8Array(fileContent as ArrayBuffer);
+          const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+          const maxPages = pdf.numPages;
+          for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
+            const page = await pdf.getPage(pageNum);
+            const content = await page.getTextContent();
+            const strings = content.items.map((item: any) => item.str);
+            text += strings.join(" ") + "\n";
+          }
+        } catch (error) {
+          console.error("Error reading PDF:", error);
+          toast({
+            title: "エラー",
+            description: "PDFファイルの読み込みに失敗しました。",
+            variant: "destructive"
+          });
+          return;
+        }
       } else {
-        toast({
-          title: "エラー",
-          description: "TXTまたはPDFファイルをアップロードしてください",
-          variant: "destructive"
-        });
+        text = fileContent as string;
       }
-    } catch (error) {
-      console.error("ファイル読み込みエラー:", error);
+
+      setManuscriptText(text);
+      if (prompt.trim()) {
+        generateScript();
+      }
+    };
+
+    reader.onerror = () => {
       toast({
         title: "エラー",
-        description: "ファイルの読み込みに失敗しました",
+        description: "ファイルの読み込みに失敗しました。",
         variant: "destructive"
       });
+    };
+
+    if (file.type === "application/pdf") {
+      reader.readAsArrayBuffer(file);
+    } else {
+      reader.readAsText(file);
     }
   };
 
-  const generateScript = () => {
-    const script = `#target "InDesign"
-// 基本設定
-app.scriptPreferences.userInteractionLevel = UserInteractionLevels.NEVER_INTERACT;
-app.scriptPreferences.enableRedraw = false;
-
-// 新規ドキュメント作成 (${prompt} に基づく設定)
-var doc = app.documents.add();
-doc.documentPreferences.pageSize = "A4";
-doc.documentPreferences.facingPages = false;
-
-// マージン設定
-doc.documentPreferences.pageWidth = "210mm";
-doc.documentPreferences.pageHeight = "297mm";
-doc.marginPreferences.top = "20mm";
-doc.marginPreferences.bottom = "20mm";
-doc.marginPreferences.left = "20mm";
-doc.marginPreferences.right = "20mm";
-
-// マスターページ設定
-var master = doc.masterSpreads.item(0);
-var masterTextFrame = master.pages.item(0).textFrames.add({
-    geometricBounds: [
-        doc.marginPreferences.top,
-        doc.marginPreferences.left,
-        doc.documentPreferences.pageHeight - doc.marginPreferences.bottom,
-        doc.documentPreferences.pageWidth - doc.marginPreferences.right
-    ]
-});
-
-// 本文ページ設定
-var page = doc.pages.item(0);
-var textFrame = page.textFrames.add({
-    geometricBounds: [
-        doc.marginPreferences.top,
-        doc.marginPreferences.left,
-        doc.documentPreferences.pageHeight - doc.marginPreferences.bottom,
-        doc.documentPreferences.pageWidth - doc.marginPreferences.right
-    ]
-});
-
-// テキストの設定 (プロンプトに基づく設定)
-textFrame.contents = "${manuscriptText.replace(/"/g, '\\"').replace(/\n/g, '\\r')}";
-var text = textFrame.texts[0];
-text.appliedFont = "Hiragino Mincho ProN"; // プロンプトに基づいて変更
-text.pointSize = 10.5;
-text.leading = 16;
-text.verticalScale = 100;
-text.composer = "Japanese Composer";
-text.writingDirection = WritingDirectionValues.VERTICAL; // プロンプトに基づいて変更
-
-app.scriptPreferences.enableRedraw = true;`;
-
-    setScriptPreview(script);
-    return script;
-  };
-
-  const handleDownloadScript = () => {
-    try {
-      if (!manuscriptText.trim()) {
-        toast({
-          title: "エラー",
-          description: "テキストが入力されていません",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const script = generateScript();
-      const blob = new Blob([script], { type: 'application/javascript' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'create_document.jsx';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      toast({
-        title: "成功",
-        description: "InDesignスクリプトのダウンロードが完了しました",
-      });
-    } catch (error) {
-      console.error("スクリプト生成エラー:", error);
-      toast({
-        title: "エラー",
-        description: "スクリプトの生成に失敗しました",
-        variant: "destructive"
-      });
-    }
+  const handleReset = () => {
+    setManuscriptText("");
+    setPrompt("");
+    setGeneratedScript("");
   };
 
   return (
@@ -220,25 +176,28 @@ app.scriptPreferences.enableRedraw = true;`;
         </Card>
 
         <div className="grid md:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>原稿入力</CardTitle>
-              <CardDescription>
-                テキストファイルをアップロードするか、直接入力してください
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <Input
-                  type="file"
-                  accept=".txt,.pdf"
-                  onChange={handleFileUpload}
-                  className="w-full"
-                />
-                <p className="text-sm text-muted-foreground">
-                  テキストファイルをアップロードするか、下のテキストエリアに直接コピー&ペーストしてください。
-                </p>
-                <div className="space-y-2">
+          <div className="grid gap-6">
+            <Card className="h-[800px] flex flex-col">
+              <CardHeader>
+                <CardTitle>原稿入力</CardTitle>
+                <CardDescription>
+                  テキストファイルをアップロードするか、直接入力してください
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex-1 flex flex-col gap-4">
+                <div className="flex-none">
+                  <Input
+                    type="file"
+                    accept=".txt,.pdf"
+                    onChange={handleFileUpload}
+                    className="w-full"
+                  />
+                  <p className="text-sm text-muted-foreground mt-2">
+                    テキストファイルをアップロードするか、下のテキストエリアに直接コピー&ペーストしてください。
+                  </p>
+                </div>
+
+                <div className="flex-none space-y-2">
                   <label className="text-sm font-medium">AIプロンプト</label>
                   <Textarea
                     value={prompt}
@@ -249,7 +208,7 @@ app.scriptPreferences.enableRedraw = true;`;
                       }
                     }}
                     placeholder="例: A4サイズの縦書き、明朝体で本文を組んでください。"
-                    className="min-h-[100px]"
+                    className="h-[100px] resize-none"
                   />
                   <p className="text-sm text-muted-foreground">
                     プロンプトの例:
@@ -261,89 +220,66 @@ app.scriptPreferences.enableRedraw = true;`;
                     • 見開きページで、外側のマージンを広めに設定してください
                   </p>
                 </div>
+
+                <div className="flex-1">
+                  <Textarea
+                    value={manuscriptText}
+                    onChange={(e) => {
+                      setManuscriptText(e.target.value);
+                      if (e.target.value.trim()) {
+                        generateScript();
+                      }
+                    }}
+                    placeholder="ここに原稿テキストを入力してください..."
+                    className="h-full resize-none"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid gap-6">
+            <Card className="h-[800px] flex flex-col">
+              <CardHeader>
+                <CardTitle>InDesign スクリプトプレビュー</CardTitle>
+                <CardDescription>
+                  生成されたスクリプトのプレビュー
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex-1 flex flex-col">
                 <Textarea
-                  value={manuscriptText}
-                  onChange={(e) => {
-                    setManuscriptText(e.target.value);
-                    if (e.target.value.trim()) {
-                      generateScript();
-                    }
-                  }}
-                  placeholder="ここに原稿テキストを入力してください..."
-                  className="min-h-[400px]"
+                  value={generatedScript}
+                  readOnly
+                  placeholder="スクリプトはここに表示されます..."
+                  className="h-full resize-none"
                 />
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>レイアウトプレビュー</CardTitle>
-                <CardDescription>
-                  生成されるInDesignレイアウトのプレビュー
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-muted p-4 rounded-md">
-                  <pre className="font-mono text-xs leading-relaxed whitespace-pre overflow-x-auto">
-                    {layoutPreview}
-                  </pre>
-                </div>
               </CardContent>
             </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex justify-between items-center">
-                  <span>InDesignスクリプト</span>
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="secondary"
-                      onClick={() => {
-                        if (manuscriptText.trim()) {
-                          generateScript();
-                        }
-                      }}
-                    >
-                      <Wand2 className="mr-2 h-4 w-4" />
-                      スクリプト生成
-                    </Button>
-                    <Button 
-                      variant="default"
-                      onClick={handleDownloadScript}
-                    >
-                      <Upload className="mr-2 h-4 w-4" />
-                      ダウンロード
-                    </Button>
-                  </div>
-                </CardTitle>
-                <CardDescription>
-                  生成されたスクリプトをダウンロードしてInDesignで実行できます
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="bg-muted p-4 rounded-md">
-                    <p className="text-sm text-muted-foreground mb-2">
-                      スクリプトプレビュー:
-                    </p>
-                    <pre className="text-xs overflow-auto whitespace-pre-wrap bg-background p-4 rounded border min-h-[400px]">
-                      {scriptPreview}
-                    </pre>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    <p>スクリプトの使い方:</p>
-                    <ol className="list-decimal list-inside space-y-1 mt-2">
-                      <li>スクリプトをダウンロード</li>
-                      <li>InDesignを起動</li>
-                      <li>ファイル &gt; スクリプト &gt; スクリプトを実行</li>
-                      <li>ダウンロードしたスクリプトを選択</li>
-                    </ol>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="flex justify-between">
+              <Button
+                variant="secondary"
+                onClick={handleReset}
+              >
+                <RefreshCcw className="mr-2 h-4 w-4" />
+                リセット
+              </Button>
+              <Button
+                onClick={generateScript}
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Wand2 className="mr-2 h-4 w-4 animate-spin" />
+                    生成中...
+                  </>
+                ) : (
+                  <>
+                    <Wand2 className="mr-2 h-4 w-4" />
+                    スクリプト生成
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </div>
