@@ -1,4 +1,6 @@
 
+import { convertAudioToWav } from './audioProcessing';
+
 interface GeminiResponse {
   candidates: Array<{
     content: {
@@ -17,7 +19,8 @@ async function splitAudioIntoChunks(audioBlob: Blob, chunkDuration: number = 45)
   for (let start = 0; start < audioBlob.size; start += chunkSize) {
     const end = Math.min(start + chunkSize, audioBlob.size);
     const chunk = audioBlob.slice(start, end);
-    chunks.push(chunk);
+    const wavChunk = await convertAudioToWav(chunk);
+    chunks.push(wavChunk);
   }
 
   return chunks;
@@ -44,7 +47,7 @@ export async function transcribeAudio(audioBlob: Blob, apiKey: string): Promise<
           },
           body: JSON.stringify({
             config: {
-              encoding: 'WEBM_OPUS',
+              encoding: 'LINEAR16',
               sampleRateHertz: 48000,
               languageCode: 'ja-JP',
               enableAutomaticPunctuation: true,
