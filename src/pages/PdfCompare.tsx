@@ -35,6 +35,7 @@ export default function PdfCompare() {
   const [diffStats, setDiffStats] = useState<DiffStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [runTutorial, setRunTutorial] = useState(true);
+  const [selectedDiffIndex, setSelectedDiffIndex] = useState<number | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const fileInput1Ref = useRef<HTMLInputElement>(null);
@@ -111,7 +112,7 @@ export default function PdfCompare() {
     if (file.type !== "application/pdf") {
       toast({
         title: "エラー",
-        description: "PDFファイルを選択してください。",
+        description: "PDFファイ��を選択してください。",
         variant: "destructive"
       });
       return;
@@ -205,6 +206,21 @@ export default function PdfCompare() {
 
     return { removed, added };
   }, [differences]);
+
+  const synchronizedScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    const scrollContainer = event.currentTarget;
+    const pair = scrollContainer.className.includes('left') 
+      ? document.querySelector('.right-content')
+      : document.querySelector('.left-content');
+    
+    if (pair instanceof HTMLElement) {
+      pair.scrollTop = scrollContainer.scrollTop;
+    }
+  };
+
+  const jumpToDiff = (index: number) => {
+    setSelectedDiffIndex(index);
+  };
 
   return (
     <div className="container mx-auto p-6">
@@ -309,81 +325,129 @@ export default function PdfCompare() {
           </CardContent>
         </Card>
 
-        {diffStats && (
-          <Card>
-            <CardHeader>
-              <CardTitle>類似度分析</CardTitle>
-              <CardDescription>
-                2つのPDFファイル間の類似度を表示しています
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div className="bg-blue-50 p-4 rounded-lg text-center">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <Percent className="h-5 w-5 text-blue-600" />
-                    <span className="font-medium text-blue-600">類似度</span>
-                  </div>
-                  <p className="text-2xl font-bold text-blue-600">
-                    {diffStats.similarity.toFixed(1)}%
-                  </p>
-                </div>
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <p className="text-sm text-green-600 font-medium">追加</p>
-                  <p className="text-2xl font-bold text-green-600">{diffStats.additions}</p>
-                </div>
-                <div className="bg-red-50 p-4 rounded-lg">
-                  <p className="text-sm text-red-600 font-medium">削除</p>
-                  <p className="text-2xl font-bold text-red-600">{diffStats.deletions}</p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <p className="text-sm text-gray-600 font-medium">不変</p>
-                  <p className="text-2xl font-bold text-gray-600">{diffStats.unchanged}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {differences.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>比較結果</CardTitle>
-              <CardDescription>
-                左側が削除された内容、右側が追加された内容を表示しています
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <h3 className="text-lg font-semibold text-red-600 mb-2">削除された内容</h3>
-                  <div className="bg-red-50 p-4 rounded-lg overflow-auto max-h-[400px]">
-                    {splitDifferences().removed.map((diff, index) => (
-                      <span
-                        key={`removed-${index}`}
-                        className="text-red-600 bg-red-100/50 px-1 mx-1 rounded line-through block mb-2"
-                      >
-                        {diff.value}
-                      </span>
-                    ))}
+          <div className="grid gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>PDF比較ビュー</CardTitle>
+                <CardDescription>
+                  左側が元のPDF、右側が新しいPDFの内容です。変更箇所は色分けされています。
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-semibold text-gray-700 mb-2">元のPDF</h3>
+                    <div 
+                      className="left-content bg-gray-50 p-4 rounded-lg overflow-auto max-h-[600px]"
+                      onScroll={synchronizedScroll}
+                    >
+                      {pdf1Text.split('\n').map((line, index) => {
+                        const isDiffStart = differences.some((diff, diffIndex) => 
+                          diff.removed && pdf1Text.indexOf(diff.value, line.indexOf(diff.value)) !== -1
+                        );
+                        return (
+                          <div 
+                            key={`original-${index}`}
+                            className={`mb-2 ${isDiffStart ? 'bg-red-100 p-2 rounded' : ''}`}
+                          >
+                            {line}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-semibold text-gray-700 mb-2">新しいPDF</h3>
+                    <div 
+                      className="right-content bg-gray-50 p-4 rounded-lg overflow-auto max-h-[600px]"
+                      onScroll={synchronizedScroll}
+                    >
+                      {pdf2Text.split('\n').map((line, index) => {
+                        const isDiffStart = differences.some((diff, diffIndex) => 
+                          diff.added && pdf2Text.indexOf(diff.value, line.indexOf(diff.value)) !== -1
+                        );
+                        return (
+                          <div 
+                            key={`new-${index}`}
+                            className={`mb-2 ${isDiffStart ? 'bg-green-100 p-2 rounded' : ''}`}
+                          >
+                            {line}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <h3 className="text-lg font-semibold text-green-600 mb-2">追加された内容</h3>
-                  <div className="bg-green-50 p-4 rounded-lg overflow-auto max-h-[400px]">
-                    {splitDifferences().added.map((diff, index) => (
-                      <span
-                        key={`added-${index}`}
-                        className="text-green-600 bg-green-100/50 px-1 mx-1 rounded block mb-2"
-                      >
-                        {diff.value}
-                      </span>
-                    ))}
-                  </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>変更箇所一覧</CardTitle>
+                <CardDescription>
+                  クリックすると該当箇所にジャンプします
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {differences.map((diff, index) => (
+                    <div 
+                      key={index}
+                      onClick={() => jumpToDiff(index)}
+                      className={`
+                        p-3 rounded-lg cursor-pointer transition-colors
+                        ${diff.added ? 'bg-green-50 hover:bg-green-100' : 
+                          diff.removed ? 'bg-red-50 hover:bg-red-100' : 'bg-gray-50 hover:bg-gray-100'}
+                      `}
+                    >
+                      <div className="flex items-center gap-2">
+                        {diff.added && <span className="text-green-600 font-semibold">追加:</span>}
+                        {diff.removed && <span className="text-red-600 font-semibold">削除:</span>}
+                        <span className="text-sm truncate">{diff.value}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+
+            {diffStats && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>類似度分析</CardTitle>
+                  <CardDescription>
+                    2つのPDFファイル間の類似度を表示しています
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div className="bg-blue-50 p-4 rounded-lg text-center">
+                      <div className="flex items-center justify-center gap-2 mb-2">
+                        <Percent className="h-5 w-5 text-blue-600" />
+                        <span className="font-medium text-blue-600">類似度</span>
+                      </div>
+                      <p className="text-2xl font-bold text-blue-600">
+                        {diffStats.similarity.toFixed(1)}%
+                      </p>
+                    </div>
+                    <div className="bg-green-50 p-4 rounded-lg">
+                      <p className="text-sm text-green-600 font-medium">追加</p>
+                      <p className="text-2xl font-bold text-green-600">{diffStats.additions}</p>
+                    </div>
+                    <div className="bg-red-50 p-4 rounded-lg">
+                      <p className="text-sm text-red-600 font-medium">削除</p>
+                      <p className="text-2xl font-bold text-red-600">{diffStats.deletions}</p>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <p className="text-sm text-gray-600 font-medium">不変</p>
+                      <p className="text-2xl font-bold text-gray-600">{diffStats.unchanged}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         )}
       </div>
     </div>
