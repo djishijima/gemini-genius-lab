@@ -1,3 +1,4 @@
+
 import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import * as pdfjsLib from 'pdfjs-dist';
+import { generateInDesignScript, parsePromptForOptions } from "@/utils/indesignScriptGenerator";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
@@ -36,17 +38,9 @@ export default function Transcription() {
 
     setLoading(true);
     try {
-      // Replace this with your actual script generation logic
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      const mockScript = `// Generated InDesign Script
-// Prompt: ${prompt}
-
-// Manuscript:
-${manuscriptText}
-
-// Add your InDesign scripting code here based on the prompt and manuscript.`;
-      
-      setGeneratedScript(mockScript);
+      const options = parsePromptForOptions(prompt);
+      const script = generateInDesignScript(manuscriptText, prompt, options);
+      setGeneratedScript(script);
       toast({
         title: "成功",
         description: "スクリプトを生成しました。",
@@ -271,7 +265,7 @@ ${manuscriptText}
                   value={generatedScript}
                   readOnly
                   placeholder="スクリプトはここに表示されます..."
-                  className="h-full resize-none"
+                  className="h-full resize-none font-mono text-sm"
                 />
               </CardContent>
             </Card>
@@ -283,22 +277,38 @@ ${manuscriptText}
                 <RefreshCcw className="mr-2 h-4 w-4" />
                 リセット
               </Button>
-              <Button
-                onClick={generateScript}
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <Wand2 className="mr-2 h-4 w-4 animate-spin" />
-                    生成中...
-                  </>
-                ) : (
-                  <>
-                    <Wand2 className="mr-2 h-4 w-4" />
-                    スクリプト生成
-                  </>
+              <div className="flex gap-2">
+                <Button
+                  onClick={generateScript}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Wand2 className="mr-2 h-4 w-4 animate-spin" />
+                      生成中...
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="mr-2 h-4 w-4" />
+                      スクリプト生成
+                    </>
+                  )}
+                </Button>
+                {generatedScript && (
+                  <Button 
+                    variant="outline"
+                    asChild
+                  >
+                    <a
+                      href={`data:text/plain;charset=utf-8,${encodeURIComponent(generatedScript)}`}
+                      download="indesign_script.jsx"
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      ダウンロード
+                    </a>
+                  </Button>
                 )}
-              </Button>
+              </div>
             </div>
           </div>
         </div>
