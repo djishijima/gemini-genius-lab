@@ -2,31 +2,46 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Upload } from "lucide-react";
+import { ArrowLeft, RefreshCcw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Textarea } from "@/components/ui/textarea";
+import { useQuery } from "@tanstack/react-query";
 
 export default function Transcription() {
   const [transcribedText, setTranscribedText] = useState("");
   const [tasks, setTasks] = useState<string[]>([]);
   const navigate = useNavigate();
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  // APIからファイルリストを取得する例
+  const { data: files, isLoading, refetch } = useQuery({
+    queryKey: ['manuscript-files'],
+    queryFn: async () => {
+      // TODO: 実際のAPIエンドポイントに置き換え
+      const response = await fetch('YOUR_API_ENDPOINT/files');
+      const data = await response.json();
+      return data;
+    },
+    enabled: false, // 手動で実行するようにする
+  });
 
-    // TODO: OCR処理の実装
-    // 1. 画像からテキストを抽出
-    // 2. テキストの自動チェック
-    // 3. 修正タスクの生成
-    
-    // とりあえずデモとしてダミーデータを設定
-    setTranscribedText("手書き原稿のテキストがここに表示されます...");
-    setTasks([
-      "漢字の誤字を修正してください",
-      "句読点の位置を確認してください",
-      "段落の区切りを見直してください"
-    ]);
+  // Vertex AIでテキスト認識を行う関数
+  const processWithVertexAI = async (fileUrl: string) => {
+    try {
+      // TODO: Vertex AI APIを呼び出す処理
+      // 1. 画像からテキストを抽出
+      // 2. テキストの自動チェック
+      // 3. 修正タスクの生成
+      
+      // デモ用のダミーレスポンス
+      setTranscribedText("Vertex AIで認識されたテキストがここに表示されます...");
+      setTasks([
+        "漢字の誤字を修正してください",
+        "句読点の位置を確認してください",
+        "段落の区切りを見直してください"
+      ]);
+    } catch (error) {
+      console.error("Vertex AI処理エラー:", error);
+    }
   };
 
   const handleExportToInDesign = () => {
@@ -53,15 +68,13 @@ export default function Transcription() {
           <CardContent>
             <div className="space-y-4">
               <div className="flex justify-center gap-4">
-                <Button className="w-48">
-                  <Upload className="mr-2 h-4 w-4" />
-                  手書き原稿をアップロード
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleFileUpload}
-                  />
+                <Button 
+                  onClick={() => refetch()}
+                  className="w-48"
+                  disabled={isLoading}
+                >
+                  <RefreshCcw className="mr-2 h-4 w-4" />
+                  原稿ファイル更新
                 </Button>
                 <Button 
                   variant="secondary"
