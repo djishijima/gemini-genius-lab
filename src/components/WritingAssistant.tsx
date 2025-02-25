@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Wand2, MessagesSquare, Search, ChevronDown, ChevronUp, BookOpen, History, Check } from "lucide-react";
 import * as pdfjsLib from 'pdfjs-dist';
+import ChatWindow from './ChatWindow';  // ChatWindowコンポーネントをインポート
 
 interface TextVersion {
   content: string;
@@ -330,7 +331,7 @@ const WritingAssistant: React.FC<WritingAssistantProps> = ({ apiKey }) => {
             <div className="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-6">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold">原稿テキスト</h3>
+                  <h3 className="text-lg font-semibold">原稿テキスト��</h3>
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
