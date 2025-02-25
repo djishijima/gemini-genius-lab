@@ -1,23 +1,64 @@
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mic, Square, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function AudioRecorder() {
   const [isRecording, setIsRecording] = useState(false);
-  const [recordings, setRecordings] = useState<string[]>([]);
+  const [transcription, setTranscription] = useState("");
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const navigate = useNavigate();
 
-  const startRecording = () => {
-    setIsRecording(true);
-    // TODO: 録音機能の実装
+  useEffect(() => {
+    // コンポーネントのクリーンアップ時に録音を停止
+    return () => {
+      if (mediaRecorderRef.current && isRecording) {
+        mediaRecorderRef.current.stop();
+      }
+    };
+  }, [isRecording]);
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = async (event) => {
+        if (event.data.size > 0) {
+          // 音声データをVertex AIに送信（仮実装）
+          try {
+            // TODO: 実際のVertex AI APIエンドポイントに置き換え
+            const audioBlob = new Blob([event.data], { type: 'audio/webm' });
+            console.log('Audio data captured:', audioBlob.size, 'bytes');
+            
+            // 仮の文字起こし結果を追加（実際にはVertex AIからのレスポンス）
+            setTranscription(prev => 
+              prev + "音声認識テスト。この部分は実際のVertex AIからの応答に置き換わります。\n"
+            );
+          } catch (error) {
+            console.error('音声認識エラー:', error);
+          }
+        }
+      };
+
+      mediaRecorder.start(1000); // 1秒ごとにデータを送信
+      setIsRecording(true);
+    } catch (error) {
+      console.error('マイク使用エラー:', error);
+    }
   };
 
   const stopRecording = () => {
-    setIsRecording(false);
-    // TODO: 録音の停止と保存
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      // すべてのトラックを停止
+      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      setIsRecording(false);
+    }
   };
 
   return (
@@ -34,7 +75,7 @@ export default function AudioRecorder() {
       <div className="max-w-2xl mx-auto space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>音声録音</CardTitle>
+            <CardTitle>音声録音とリアルタイム文字起こし</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -57,18 +98,16 @@ export default function AudioRecorder() {
                   )}
                 </Button>
               </div>
-              {recordings.length > 0 && (
-                <div className="mt-6">
-                  <h3 className="text-lg font-semibold mb-2">録音一覧</h3>
-                  <div className="space-y-2">
-                    {recordings.map((recording, index) => (
-                      <div key={index} className="p-2 bg-muted rounded-lg">
-                        録音 {index + 1}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+
+              <div className="space-y-2">
+                <h3 className="font-medium">文字起こし結果</h3>
+                <Textarea
+                  value={transcription}
+                  readOnly
+                  className="min-h-[300px]"
+                  placeholder="録音を開始すると、ここにリアルタイムで文字起こし結果が表示されます..."
+                />
+              </div>
             </div>
           </CardContent>
         </Card>
