@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -114,35 +113,6 @@ export default function AudioRecorder() {
     }
   };
 
-  const froalaConfig = {
-    language: 'ja',
-    height: 300,
-    toolbarButtons: {
-      moreText: {
-        buttons: ['bold', 'italic', 'underline', 'strikeThrough', 'subscript', 'superscript', 'fontSize', 'textColor', 'backgroundColor', 'clearFormatting'],
-        align: 'left',
-        buttonsVisible: 3
-      },
-      moreParagraph: {
-        buttons: ['alignLeft', 'alignCenter', 'alignRight', 'alignJustify', 'formatOL', 'formatUL', 'paragraphFormat', 'lineHeight', 'outdent', 'indent'],
-        align: 'left',
-        buttonsVisible: 3
-      },
-      moreRich: {
-        buttons: ['insertTable', 'emoticons', 'specialCharacters', 'embedly', 'insertHR'],
-        align: 'left',
-        buttonsVisible: 3
-      },
-      moreMisc: {
-        buttons: ['undo', 'redo', 'print', 'getPDF', 'help'],
-        align: 'right',
-        buttonsVisible: 2
-      }
-    },
-    readOnly: true,
-    charCounterCount: true
-  };
-
   return (
     <div className="container mx-auto p-6">
       <Button 
@@ -170,6 +140,7 @@ export default function AudioRecorder() {
                     onChange={(e) => setApiKey(e.target.value)}
                     placeholder="Google Cloud APIキーを入力してください"
                     className="min-h-[60px] max-h-[100px] font-mono text-sm"
+                    type={showApiKey ? "text" : "password"}
                   />
                   <Button
                     type="button"
@@ -218,16 +189,14 @@ export default function AudioRecorder() {
                     menubar: false,
                     language: 'ja',
                     plugins: [
-                      'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+                      'advlist', 'autolink', 'lists', 'link', 'charmap', 'preview',
                       'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-                      'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount'
+                      'insertdatetime', 'media', 'table', 'help', 'wordcount'
                     ],
-                    toolbar: 'undo redo | 書式 | ' +
-                      '太字 斜体 背景色 | 左揃え 中央揃え ' +
-                      '右揃え 均等揃え | 箇条書き 番号付き 字下げ 字上げ | ' +
-                      '書式削除 | ヘルプ',
+                    toolbar: 'blocks | bold italic backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat',
                     content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 14px }',
-                    readonly: true
+                    readonly: true,
+                    branding: false
                   }}
                 />
               </div>
