@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +12,7 @@ export default function AudioRecorder() {
   const [transcription, setTranscription] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [projectId, setProjectId] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
@@ -113,10 +113,20 @@ export default function AudioRecorder() {
       <div className="max-w-5xl mx-auto space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>音声録音とリアルタイム文字起こし</CardTitle>
+            <CardTitle>Gemini 1.5 Pro による音声文字起こし</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="projectId">Google Cloud Project ID</Label>
+                <Input
+                  id="projectId"
+                  value={projectId}
+                  onChange={(e) => setProjectId(e.target.value)}
+                  placeholder="your-project-id"
+                />
+              </div>
+
               <ApiKeyInput
                 apiKey={apiKey}
                 onChange={setApiKey}
@@ -133,7 +143,7 @@ export default function AudioRecorder() {
                   size="lg"
                   variant={isRecording ? "destructive" : "default"}
                   onClick={isRecording ? stopRecording : handleStartRecording}
-                  disabled={isProcessing}
+                  disabled={isProcessing || !projectId}
                 >
                   {isRecording ? (
                     <>
@@ -167,7 +177,7 @@ export default function AudioRecorder() {
                   size="lg"
                   variant="secondary"
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={isRecording || isProcessing}
+                  disabled={isRecording || isProcessing || !projectId}
                 >
                   <Upload className="mr-2 h-4 w-4" />
                   音声ファイルを選択
