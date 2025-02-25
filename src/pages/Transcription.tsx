@@ -8,7 +8,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { ArrowLeft, RefreshCcw, Upload, Wand2, ExternalLink } from "lucide-react";
+import { ArrowLeft, RefreshCcw, Upload, Wand2, ExternalLink, Download } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
