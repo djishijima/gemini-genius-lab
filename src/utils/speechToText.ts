@@ -1,4 +1,3 @@
-
 export async function transcribeAudio(audioBlob: Blob, apiKey: string): Promise<string> {
   try {
     const buffer = await audioBlob.arrayBuffer();
@@ -104,4 +103,27 @@ async function handleShortAudio(base64Data: string, apiKey: string): Promise<str
       .join('\n');
   }
   return '';
+}
+
+export async function processAudioFile(file: File, apiKey: string): Promise<string> {
+  try {
+    const buffer = await file.arrayBuffer();
+    const base64Data = btoa(
+      new Uint8Array(buffer)
+        .reduce((data, byte) => data + String.fromCharCode(byte), '')
+    );
+
+    const audioContext = new AudioContext();
+    const audioBuffer = await audioContext.decodeAudioData(buffer);
+    const durationInSeconds = audioBuffer.duration;
+
+    if (durationInSeconds > 60) {
+      return await handleLongAudio(base64Data, apiKey);
+    } else {
+      return await handleShortAudio(base64Data, apiKey);
+    }
+  } catch (error) {
+    console.error('Audio File Processing Error:', error);
+    throw error;
+  }
 }

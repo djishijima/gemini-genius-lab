@@ -1,18 +1,19 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mic, Square, ArrowLeft, Download } from "lucide-react";
+import { Mic, Square, ArrowLeft, Download, Upload } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Editor } from '@tinymce/tinymce-react';
 import { AudioWaveform } from "@/components/AudioWaveform";
 import { ApiKeyInput } from "@/components/ApiKeyInput";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
-import { transcribeAudio } from "@/utils/speechToText";
+import { transcribeAudio, processAudioFile } from "@/utils/speechToText";
 
 export default function AudioRecorder() {
   const [transcription, setTranscription] = useState("");
   const [apiKey, setApiKey] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   const handleRecordingComplete = async (blob: Blob) => {
@@ -61,6 +62,35 @@ export default function AudioRecorder() {
     }
   };
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!apiKey) {
+      alert('APIキーを入力してください');
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      const transcriptText = await processAudioFile(file, apiKey);
+      const timestamp = new Date().toLocaleTimeString();
+      setTranscription(prev => 
+        prev + `[${timestamp}] ${file.name}の文字起こし結果:\n${transcriptText}\n`
+      );
+    } catch (error) {
+      console.error('File Processing Error:', error);
+      setTranscription(prev => 
+        prev + `[ERROR] ファイル処理エラー: ${error}\n`
+      );
+    } finally {
+      setIsProcessing(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   useEffect(() => {
     return () => {
       if (isRecording) {
@@ -103,6 +133,7 @@ export default function AudioRecorder() {
                   size="lg"
                   variant={isRecording ? "destructive" : "default"}
                   onClick={isRecording ? stopRecording : handleStartRecording}
+                  disabled={isProcessing}
                 >
                   {isRecording ? (
                     <>
@@ -120,10 +151,26 @@ export default function AudioRecorder() {
                   size="lg"
                   variant="outline"
                   onClick={exportAudio}
-                  disabled={isRecording || !audioBlob}
+                  disabled={isRecording || !audioBlob || isProcessing}
                 >
                   <Download className="mr-2 h-4 w-4" />
                   音声をエクスポート
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="audio/*"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+                <Button
+                  size="lg"
+                  variant="secondary"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isRecording || isProcessing}
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  音声ファイルを選択
                 </Button>
               </div>
 
