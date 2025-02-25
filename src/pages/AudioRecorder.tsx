@@ -140,7 +140,7 @@ export default function AudioRecorder() {
                     value={apiKey}
                     onChange={(e) => setApiKey(e.target.value)}
                     placeholder="Google Cloud APIキーを入力してください"
-                    className="min-h-[100px] font-mono text-sm"
+                    className="min-h-[60px] max-h-[100px] font-mono text-sm"
                   />
                   <Button
                     type="button"
@@ -187,15 +187,16 @@ export default function AudioRecorder() {
                   init={{
                     height: 300,
                     menubar: false,
+                    language: 'ja',
                     plugins: [
                       'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
                       'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
                       'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount'
                     ],
-                    toolbar: 'undo redo | formatselect | ' +
-                      'bold italic backcolor | alignleft aligncenter ' +
-                      'alignright alignjustify | bullist numlist outdent indent | ' +
-                      'removeformat | help',
+                    toolbar: 'undo redo | 書式 | ' +
+                      '太字 斜体 背景色 | 左揃え 中央揃え ' +
+                      '右揃え 均等揃え | 箇条書き 番号付き 字下げ 字上げ | ' +
+                      '書式削除 | ヘルプ',
                     content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 14px }',
                     readonly: true
                   }}
