@@ -154,7 +154,7 @@ export default function AudioRecorder() {
   };
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="p-6">
       <Button 
         variant="ghost" 
         onClick={() => navigate("/")}
@@ -164,7 +164,7 @@ export default function AudioRecorder() {
         戻る
       </Button>
 
-      <div className="max-w-2xl mx-auto space-y-6">
+      <div className="max-w-5xl mx-auto space-y-6">
         <Card>
           <CardHeader>
             <CardTitle>音声録音とリアルタイム文字起こし</CardTitle>
