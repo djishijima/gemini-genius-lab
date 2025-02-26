@@ -163,7 +163,7 @@ export default function Transcription() {
                 type="file"
                 accept=".txt,.pdf"
                 onChange={handleFileUpload}
-                className="w-full border-2 border-border/60 bg-background/50 hover:border-primary/50 focus:border-primary shadow-sm"
+                className="w-full border-2 border-border/60 bg-background/50 hover:border-primary/50 focus:border-primary shadow-sm [&::file-selector-button]:bg-[#FEF7CD] [&::file-selector-button]:text-gray-700 [&::file-selector-button]:border-0"
               />
             </div>
 
@@ -178,7 +178,7 @@ export default function Transcription() {
                   }
                 }}
                 placeholder="例: A4サイズの縦書き、明朝体で本文を組んでください。"
-                className="min-h-[80px] resize-none border-2 border-border/60 bg-background/50 hover:border-primary/50 focus:border-primary shadow-sm"
+                className="min-h-[80px] resize-none border-2 border-border/60 bg-background/50 hover:border-primary/50 focus:border-primary shadow-sm placeholder:text-[#FEF7CD]"
               />
               <p className="text-sm text-muted-foreground">
                 プロンプトの例:
@@ -202,7 +202,7 @@ export default function Transcription() {
                   }
                 }}
                 placeholder="ここに原稿テキストを入力するか、ファイルをアップロードしてください..."
-                className="min-h-[200px] border-2 border-border/60 bg-background/50 hover:border-primary/50 focus:border-primary shadow-sm"
+                className="min-h-[200px] border-2 border-border/60 bg-background/50 hover:border-primary/50 focus:border-primary shadow-sm placeholder:text-[#FEF7CD]"
               />
             </div>
 
@@ -256,7 +256,7 @@ export default function Transcription() {
                 value={generatedScript}
                 readOnly
                 placeholder="スクリプトはここに表示されます..."
-                className="min-h-[200px] font-mono text-sm border-2 border-border/60 bg-muted/20 hover:border-primary/50 focus:border-primary shadow-sm"
+                className="min-h-[200px] font-mono text-sm border-2 border-border/60 bg-muted/20 hover:border-primary/50 focus:border-primary shadow-sm placeholder:text-[#FEF7CD]"
               />
             </div>
           </CardContent>
