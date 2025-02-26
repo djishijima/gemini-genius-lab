@@ -297,19 +297,19 @@ export default function PdfCompare() {
                             </CardHeader>
                         </Card>
 
-                        <div className="grid md:grid-cols-2 gap-6">
-                            <Card className="bg-slate-800 border border-slate-700">
+                        <div className="grid grid-cols-12 gap-6 h-[calc(100vh-28rem)]">
+                            <Card className="col-span-4 bg-slate-800 border border-slate-700">
                                 <CardHeader className="border-b border-slate-700">
-                                    <CardTitle className="text-slate-100">
-                                        参照ファイル
-                                        {pdf1 && <span className="block text-sm text-slate-400 mt-1">
-                                            ファイル名: {pdf1.name}
+                                    <CardTitle className="text-slate-100 flex items-center justify-between">
+                                        <span>参照ファイル</span>
+                                        {pdf1 && <span className="text-sm text-slate-400">
+                                            {pdf1.name}
                                         </span>}
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent>
+                                <CardContent className="p-0 h-full">
                                     <ScrollArea 
-                                        className="h-[500px] w-full rounded-md border border-slate-700"
+                                        className="h-full rounded-md"
                                         ref={leftScrollRef}
                                         onWheel={(e) => handleScroll(e, 'left')}
                                     >
@@ -327,7 +327,7 @@ export default function PdfCompare() {
                                                             削除
                                                         </div>
                                                     )}
-                                                    <span className="block">{part.value}</span>
+                                                    <span className="block break-words whitespace-pre-wrap text-slate-200">{part.value}</span>
                                                 </div>
                                             ))}
                                         </div>
@@ -335,18 +335,54 @@ export default function PdfCompare() {
                                 </CardContent>
                             </Card>
 
-                            <Card className="bg-slate-800 border border-slate-700">
+                            <Card className="col-span-4 bg-slate-800 border border-slate-700">
                                 <CardHeader className="border-b border-slate-700">
-                                    <CardTitle className="text-slate-100">
-                                        比較するファイル
-                                        {pdf2 && <span className="block text-sm text-slate-400 mt-1">
-                                            ファイル名: {pdf2.name}
+                                    <CardTitle className="text-slate-100">変更点一覧</CardTitle>
+                                    <CardDescription className="text-slate-400">クリックで該当箇所にジャンプ</CardDescription>
+                                </CardHeader>
+                                <CardContent className="p-0 h-full">
+                                    <ScrollArea className="h-full rounded-md">
+                                        <div className="p-4 space-y-2">
+                                            {differences.map((diff, index) => {
+                                                if (!diff.added && !diff.removed) return null;
+                                                return (
+                                                    <div
+                                                        key={`diff-${index}`}
+                                                        onClick={() => jumpToDiff(index)}
+                                                        className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                                                            diff.added ? 'bg-emerald-600/20 hover:bg-emerald-600/30 border-l-4 border-emerald-500' : 
+                                                            diff.removed ? 'bg-red-600/20 hover:bg-red-600/30 border-l-4 border-red-500' : 
+                                                            'bg-slate-700 hover:bg-slate-600'
+                                                        }`}
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={`font-semibold ${diff.added ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                                {diff.added ? '追加' : '削除'}
+                                                            </span>
+                                                            <div className="overflow-hidden">
+                                                                <span className="text-sm text-slate-200 block break-words whitespace-pre-wrap">{diff.value}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </ScrollArea>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="col-span-4 bg-slate-800 border border-slate-700">
+                                <CardHeader className="border-b border-slate-700">
+                                    <CardTitle className="text-slate-100 flex items-center justify-between">
+                                        <span>比較するファイル</span>
+                                        {pdf2 && <span className="text-sm text-slate-400">
+                                            {pdf2.name}
                                         </span>}
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent>
+                                <CardContent className="p-0 h-full">
                                     <ScrollArea 
-                                        className="h-[500px] w-full rounded-md border border-slate-700"
+                                        className="h-full rounded-md"
                                         ref={rightScrollRef}
                                         onWheel={(e) => handleScroll(e, 'right')}
                                     >
@@ -364,7 +400,7 @@ export default function PdfCompare() {
                                                             追加
                                                         </div>
                                                     )}
-                                                    <span className="block">{part.value}</span>
+                                                    <span className="block break-words whitespace-pre-wrap text-slate-200">{part.value}</span>
                                                 </div>
                                             ))}
                                         </div>
@@ -372,40 +408,6 @@ export default function PdfCompare() {
                                 </CardContent>
                             </Card>
                         </div>
-
-                        <Card className="bg-slate-800 border border-slate-700">
-                            <CardHeader className="border-b border-slate-700">
-                                <CardTitle className="text-slate-100">変更点一覧</CardTitle>
-                                <CardDescription className="text-slate-400">クリックで該当箇所にジャンプ</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-2">
-                                    {differences.map((diff, index) => {
-                                        if (!diff.added && !diff.removed) return null;
-                                        return (
-                                            <div
-                                                key={`diff-${index}`}
-                                                onClick={() => jumpToDiff(index)}
-                                                className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                                                    diff.added ? 'bg-emerald-600/20 hover:bg-emerald-600/30 border-l-4 border-emerald-500' : 
-                                                    diff.removed ? 'bg-red-600/20 hover:bg-red-600/30 border-l-4 border-red-500' : 
-                                                    'bg-slate-700 hover:bg-slate-600'
-                                                }`}
-                                            >
-                                                <div className="flex items-center gap-2">
-                                                    <span className={`font-semibold ${diff.added ? 'text-emerald-400' : 'text-red-400'}`}>
-                                                        {diff.added ? '追加' : '削除'}
-                                                    </span>
-                                                    <div className="overflow-hidden">
-                                                        <span className="text-sm text-slate-200 block truncate">{diff.value}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </CardContent>
-                        </Card>
                     </div>
                 )}
             </div>
