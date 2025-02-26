@@ -1,40 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { jsPDF } from 'jspdf';
-import { Document, Page, pdfjs } from 'react-pdf';
-import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
-import 'react-pdf/dist/esm/Page/TextLayer.css';
+import React, { useState } from 'react';
 import { diffWords } from 'diff';
-import Joyride, { ACTIONS, EVENTS, STATUS } from 'react-joyride';
-import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Progress } from "@/components/ui/progress"
-import { useToast } from "@/hooks/use-toast";
-import { PdfDropzone } from '@/components/pdf-compare/PdfDropzone';
-import { ComparisonView } from '@/components/pdf-compare/ComparisonView';
-import { DifferencesList } from '@/components/pdf-compare/DifferencesList';
-import { tourSteps } from '@/config/tour-steps';
-import type { Difference, SimilarityStats, TourState } from '@/types/pdf-compare';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import Joyride, { STATUS } from 'react-joyride';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import * as pdfjsLib from 'pdfjs-dist';
+import 'pdfjs-dist/build/pdf.worker.entry';
 
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
 
 interface Difference {
   value: string;
@@ -74,8 +49,6 @@ export default function PdfCompare() {
     },
   ]);
 
-  const { toast } = useToast();
-
   const handleJoyrideCallback = (data: any) => {
     const { status, type } = data;
 
@@ -85,7 +58,6 @@ export default function PdfCompare() {
 
     console.log(data)
   };
-
 
   const handlePdf1Change = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
@@ -100,7 +72,6 @@ export default function PdfCompare() {
   };
 
   const extractFileContent = async (file: File): Promise<string> => {
-    // テキストファイルの場合
     if (file.type === 'text/plain') {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -115,13 +86,12 @@ export default function PdfCompare() {
         reader.readAsText(file);
       });
     }
-    // PDFファイルの場合
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = async function () {
         try {
           const typedArray = new Uint8Array(reader.result as ArrayBuffer);
-          const pdf = await pdfjs.getDocument(typedArray).promise;
+          const pdf = await pdfjsLib.getDocument(typedArray).promise;
           let fullText = '';
           for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
@@ -156,7 +126,6 @@ export default function PdfCompare() {
       const diffResult = diffWords(text1, text2);
       setDifferences(diffResult);
 
-      // 類似度スコアの計算
       const unchangedLength = diffResult.filter(part => !part.added && !part.removed).reduce((sum, part) => sum + part.value.length, 0);
       const totalLength = Math.max(text1.length, text2.length);
       const score = totalLength === 0 ? 0 : (unchangedLength / totalLength) * 100;
@@ -196,7 +165,6 @@ export default function PdfCompare() {
         inline: 'nearest',
       });
 
-      //  ハイライトを当てる
       diffElement.classList.add('bg-yellow-200');
       setTimeout(() => {
         diffElement.classList.remove('bg-yellow-200');
@@ -210,7 +178,7 @@ export default function PdfCompare() {
     let accumulatedLength = 0;
 
     for (let i = 0; i < lines.length; i++) {
-      const lineLength = lines[i].length + 1; // +1 for the newline character
+      const lineLength = lines[i].length + 1;
       if (accumulatedLength + lineLength > text.indexOf(diffValue)) {
         lineNumber = i + 1;
         break;
@@ -316,7 +284,6 @@ export default function PdfCompare() {
                       onScroll={synchronizedScroll}
                     >
                       {pdf1Text.split('\n').map((line, index) => {
-                        // 各行に対して、differenceに含まれているかを判定する
                         const isDiffPresent = differences.some(diff =>
                           diff.removed && line.includes(diff.value)
                         );
@@ -339,7 +306,6 @@ export default function PdfCompare() {
                       onScroll={synchronizedScroll}
                     >
                       {pdf2Text.split('\n').map((line, index) => {
-                        // 各行に対して、differenceに含まれているかを判定する
                         const isDiffPresent = differences.some(diff =>
                           diff.added && line.includes(diff.value)
                         );
@@ -369,7 +335,6 @@ export default function PdfCompare() {
               <CardContent>
                 <div className="space-y-4">
                   {differences.map((diff, index) => {
-                    // 変更が起きた行番号を計算
                     const lineNumber = diff.added ? calculateDiffLineNumber(pdf2Text, diff.value) : calculateDiffLineNumber(pdf1Text, diff.value);
 
                     return (
