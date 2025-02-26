@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { FileText, Mic, FileDiff } from "lucide-react";
+import { FileText, Mic, FileDiff, Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export default function Index() {
@@ -38,6 +38,16 @@ export default function Index() {
           <div className="flex flex-col items-center gap-2">
             <FileDiff className="h-6 w-6" />
             <span>PDF比較ツール</span>
+          </div>
+        </Button>
+        <Button
+          variant="outline"
+          className="h-32"
+          onClick={() => navigate("/settings")}
+        >
+          <div className="flex flex-col items-center gap-2">
+            <Settings className="h-6 w-6" />
+            <span>設定</span>
           </div>
         </Button>
       </div>
