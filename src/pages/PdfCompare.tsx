@@ -1,11 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { jsPDF } from 'jspdf';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
+import 'react-pdf/dist/esm/Page/TextLayer.css';
 import { diffWords } from 'diff';
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Slider } from "@/components/ui/slider";
-import * as pdfjsLib from 'pdfjs-dist';
-import 'pdfjs-dist/build/pdf.worker.entry';
-import Joyride, { EVENTS, STATUS } from 'react-joyride';
+import Joyride, { ACTIONS, EVENTS, STATUS } from 'react-joyride';
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Progress } from "@/components/ui/progress"
 import { useToast } from "@/hooks/use-toast";
 import { PdfDropzone } from '@/components/pdf-compare/PdfDropzone';
 import { ComparisonView } from '@/components/pdf-compare/ComparisonView';
@@ -23,23 +33,74 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Progress } from "@/components/ui/progress";
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
+
+interface Difference {
+  value: string;
+  added?: boolean;
+  removed?: boolean;
+}
 
 export default function PdfCompare() {
-  const [pdf1Text, setPdf1Text] = useState('');
-  const [pdf2Text, setPdf2Text] = useState('');
+  const [pdf1, setPdf1] = useState<File | null>(null);
+  const [pdf2, setPdf2] = useState<File | null>(null);
+  const [pdf1Text, setPdf1Text] = useState<string>('');
+  const [pdf2Text, setPdf2Text] = useState<string>('');
   const [differences, setDifferences] = useState<Difference[]>([]);
-  const [similarityStats, setSimilarityStats] = useState<SimilarityStats | null>(null);
-  const [isComparing, setIsComparing] = useState(false);
-  const [pdf1Name, setPdf1Name] = useState('');
-  const [pdf2Name, setPdf2Name] = useState('');
-  const [selectedDiffIndex, setSelectedDiffIndex] = useState<number | null>(null);
-  const [tourState, setTourState] = useState<TourState>({ run: false, steps: tourSteps });
+  const [similarityScore, setSimilarityScore] = useState<number>(0);
+  const [loading, setLoading] = useState(false);
+
+  const [numPages1, setNumPages1] = useState<number | null>(null);
+  const [numPages2, setNumPages2] = useState<number | null>(null);
+
+  const [run, setRun] = useState(false);
+  const [steps, setSteps] = useState([
+    {
+      target: '.upload-section-1',
+      content: 'ここに最初のPDFファイルをアップロードします。',
+    },
+    {
+      target: '.upload-section-2',
+      content: 'ここに2番目のPDFファイルをアップロードします。',
+    },
+    {
+      target: '.compare-button',
+      content: 'ファイルをアップロードしたら、このボタンをクリックして比較を開始します。',
+    },
+    {
+      target: '.comparison-result',
+      content: '比較結果がここに表示されます。変更箇所は色分けされ、一覧で確認できます。',
+    },
+  ]);
+
   const { toast } = useToast();
 
+  const handleJoyrideCallback = (data: any) => {
+    const { status, type } = data;
+
+    if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status)) {
+      setRun(false);
+    }
+
+    console.log(data)
+  };
+
+
+  const handlePdf1Change = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      setPdf1(event.target.files[0]);
+    }
+  };
+
+  const handlePdf2Change = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      setPdf2(event.target.files[0]);
+    }
+  };
+
   const extractFileContent = async (file: File): Promise<string> => {
+    // テキストファイルの場合
     if (file.type === 'text/plain') {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -47,101 +108,69 @@ export default function PdfCompare() {
           if (event.target?.result) {
             resolve(event.target.result as string);
           } else {
-            reject(new Error('Failed to read text file'));
+            reject(new Error('テキストファイルの読み込みに失敗しました'));
           }
         };
         reader.onerror = (error) => reject(error);
         reader.readAsText(file);
       });
-    } else {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = async (event: any) => {
-          try {
-            const typedArray = new Uint8Array(event.target.result);
-            const pdf = await pdfjsLib.getDocument(typedArray).promise;
-            let fullText = '';
-
-            for (let i = 1; i <= pdf.numPages; i++) {
-              const page = await pdf.getPage(i);
-              const textContent = await page.getTextContent();
-              const pageText = textContent.items.map((item: any) => item.str).join(' ');
-              fullText += pageText + '\n';
-            }
-
-            resolve(fullText);
-          } catch (error) {
-            console.error("PDF parsing error:", error);
-            reject(error);
+    }
+    // PDFファイルの場合
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = async function () {
+        try {
+          const typedArray = new Uint8Array(reader.result as ArrayBuffer);
+          const pdf = await pdfjs.getDocument(typedArray).promise;
+          let fullText = '';
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map(item => item.str).join(' ');
+            fullText += pageText + '\n';
           }
-        };
-
-        reader.onerror = (error) => {
-          console.error("File reading error:", error);
+          resolve(fullText);
+        } catch (error) {
           reject(error);
-        };
-
-        reader.readAsArrayBuffer(file);
-      });
-    }
+        }
+      };
+      reader.onerror = (error) => reject(error);
+      reader.readAsArrayBuffer(file);
+    });
   };
 
-  const onDrop1 = async (acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    setPdf1Name(file.name);
+  const comparePdfs = async () => {
+    if (!pdf1 || !pdf2) {
+      alert('ファイルを両方アップロードしてください。');
+      return;
+    }
+
+    setLoading(true);
     try {
-      const text = await extractFileContent(file);
-      setPdf1Text(text);
+      const text1 = await extractFileContent(pdf1);
+      const text2 = await extractFileContent(pdf2);
+
+      setPdf1Text(text1);
+      setPdf2Text(text2);
+
+      const diffResult = diffWords(text1, text2);
+      setDifferences(diffResult);
+
+      // 類似度スコアの計算
+      const unchangedLength = diffResult.filter(part => !part.added && !part.removed).reduce((sum, part) => sum + part.value.length, 0);
+      const totalLength = Math.max(text1.length, text2.length);
+      const score = totalLength === 0 ? 0 : (unchangedLength / totalLength) * 100;
+      setSimilarityScore(parseFloat(score.toFixed(2)));
+
     } catch (error) {
-      toast({
-        title: "ファイルの読み込みに失敗しました。",
-        description: "ファイルが壊れているか、形式が正しくありません。",
-        variant: "destructive",
-      });
+      console.error("ファイルの比較中にエラーが発生しました:", error);
+      alert('ファイルの比較中にエラーが発生しました。');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const onDrop2 = async (acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    setPdf2Name(file.name);
-    try {
-      const text = await extractFileContent(file);
-      setPdf2Text(text);
-    } catch (error) {
-      toast({
-        title: "ファイルの読み込みに失敗しました。",
-        description: "ファイルが壊れているか、形式が正しくありません。",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const comparePDFs = () => {
-    setIsComparing(true);
-    setTimeout(() => {
-      const diff = diffWords(pdf1Text, pdf2Text);
-      setDifferences(diff);
-
-      const addedLines = diff.filter(part => part.added).reduce((count, part) => count + (part.count || 0), 0);
-      const removedLines = diff.filter(part => part.removed).reduce((count, part) => count + (part.count || 0), 0);
-      
-      const unchangedWords = diff.filter(part => !part.added && !part.removed).length;
-      const totalWords = pdf1Text.split(/\s+/).length + pdf2Text.split(/\s+/).length;
-      const similarity = totalWords > 0 ? (unchangedWords * 2) / totalWords * 100 : 0;
-
-      setSimilarityStats({
-        addedLines,
-        removedLines,
-        similarityPercentage: similarity,
-      });
-
-      setIsComparing(false);
-      toast({
-        title: "比較完了!",
-        description: "PDFの比較が完了しました。",
-      });
-    }, 50);
-  };
+  const [selectedDiffIndex, setSelectedDiffIndex] = useState<number | null>(null);
 
   const synchronizedScroll = (event: React.UIEvent<HTMLDivElement>) => {
     const scrollContainer = event.currentTarget;
@@ -154,76 +183,230 @@ export default function PdfCompare() {
     }
   };
 
+  const jumpToDiff = (index: number) => {
+    setSelectedDiffIndex(index);
+
+    const diffElementId = `diff-${index}`;
+    const diffElement = document.getElementById(diffElementId);
+
+    if (diffElement) {
+      diffElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+        inline: 'nearest',
+      });
+
+      //  ハイライトを当てる
+      diffElement.classList.add('bg-yellow-200');
+      setTimeout(() => {
+        diffElement.classList.remove('bg-yellow-200');
+      }, 1000);
+    }
+  };
+
+  const calculateDiffLineNumber = (text: string, diffValue: string): number => {
+    const lines = text.split('\n');
+    let lineNumber = 0;
+    let accumulatedLength = 0;
+
+    for (let i = 0; i < lines.length; i++) {
+      const lineLength = lines[i].length + 1; // +1 for the newline character
+      if (accumulatedLength + lineLength > text.indexOf(diffValue)) {
+        lineNumber = i + 1;
+        break;
+      }
+      accumulatedLength += lineLength;
+    }
+
+    return lineNumber;
+  };
+
   return (
     <div className="container mx-auto p-6">
+
+      <Joyride
+        steps={steps}
+        run={run}
+        continuous={true}
+        callback={handleJoyrideCallback}
+        showSkipButton={true}
+        styles={{
+          options: {
+            arrowColor: '#fff',
+            primaryColor: '#4ade80',
+            textColor: '#374151',
+            width: 500,
+            zIndex: 1000,
+          }
+        }}
+      />
+
+      <Button onClick={() => setRun(true)}>
+        チュートリアルを開始する
+      </Button>
+
       <div className="grid gap-6">
+
         <div className="grid md:grid-cols-2 gap-4">
-          <PdfDropzone
-            onDrop={onDrop1}
-            fileName={pdf1Name}
-            areaClassName="upload-area-1"
-            placeholder="ここにPDFまたはテキストファイルをドロップまたはクリックして選択"
-          />
-          <PdfDropzone
-            onDrop={onDrop2}
-            fileName={pdf2Name}
-            areaClassName="upload-area-2"
-            placeholder="ここに比較対象のPDFまたはテキストファイルをドロップまたはクリックして選択"
-          />
+          <div className="upload-section-1">
+            <Card>
+              <CardHeader>
+                <CardTitle>元のファイルをアップロード</CardTitle>
+                <CardDescription>比較の基準となるPDFまたはテキストファイルを選択してください。</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center space-x-4">
+                  <Label htmlFor="pdf1">ファイルを選択:</Label>
+                  <Input 
+                    type="file" 
+                    id="pdf1" 
+                    accept=".pdf,.txt,application/pdf,text/plain" 
+                    onChange={handlePdf1Change} 
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="upload-section-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>新しいファイルをアップロード</CardTitle>
+                <CardDescription>変更を比較するPDFまたはテキストファイルを選択してください。</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center space-x-4">
+                  <Label htmlFor="pdf2">ファイルを選択:</Label>
+                  <Input 
+                    type="file" 
+                    id="pdf2" 
+                    accept=".pdf,.txt,application/pdf,text/plain" 
+                    onChange={handlePdf2Change} 
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button className="compare-button" disabled={isComparing || !pdf1Text || !pdf2Text}>
-              {isComparing ? (
-                <>
-                  比較中...
-                  <Progress className="w-[100px] ml-2" value={50} />
-                </>
-              ) : 'PDFを比較する'}
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>本当に比較しますか？</AlertDialogTitle>
-              <AlertDialogDescription>
-                PDFの比較を開始します。比較には時間がかかる場合があります。
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>キャンセル</AlertDialogCancel>
-              <AlertDialogAction onClick={comparePDFs}>比較する</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <Button className="compare-button" onClick={comparePdfs} disabled={loading}>
+          {loading ? (
+            <>
+              比較中...
+              <Progress value={50} className="mt-2" />
+            </>
+          ) : 'PDFを比較する'}
+        </Button>
 
         {differences.length > 0 && (
-          <div className="grid gap-6">
-            <ComparisonView
-              pdf1Text={pdf1Text}
-              pdf2Text={pdf2Text}
-              differences={differences}
-              onScroll={synchronizedScroll}
-            />
-            <DifferencesList
-              differences={differences}
-              onDiffClick={setSelectedDiffIndex}
-            />
-            {similarityStats && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>類似度統計</CardTitle>
-                  <CardDescription>PDF間の類似度に関する統計情報です。</CardDescription>
-                </CardHeader>
-                <CardContent>
+          <div className="grid gap-6 comparison-result">
+            <Card>
+              <CardHeader>
+                <CardTitle>PDF比較ビュー</CardTitle>
+                <CardDescription>
+                  左側が元のPDF、右側が新しいPDFの内容です。変更箇所は色分けされています。
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <p>追加された行数: {similarityStats.addedLines}</p>
-                    <p>削除された行数: {similarityStats.removedLines}</p>
-                    <p>類似度: {similarityStats.similarityPercentage.toFixed(2)}%</p>
+                    <h3 className="text-lg font-semibold text-gray-700 mb-2">元のPDF</h3>
+                    <div
+                      className="left-content bg-gray-50 p-4 rounded-lg overflow-auto max-h-[600px]"
+                      onScroll={synchronizedScroll}
+                    >
+                      {pdf1Text.split('\n').map((line, index) => {
+                        // 各行に対して、differenceに含まれているかを判定する
+                        const isDiffPresent = differences.some(diff =>
+                          diff.removed && line.includes(diff.value)
+                        );
+
+                        return (
+                          <div
+                            key={`original-${index}`}
+                            className={`mb-2 ${isDiffPresent ? 'bg-red-100 p-2 rounded' : ''}`}
+                          >
+                            {line}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-semibold text-gray-700 mb-2">新しいPDF</h3>
+                    <div
+                      className="right-content bg-gray-50 p-4 rounded-lg overflow-auto max-h-[600px]"
+                      onScroll={synchronizedScroll}
+                    >
+                      {pdf2Text.split('\n').map((line, index) => {
+                        // 各行に対して、differenceに含まれているかを判定する
+                        const isDiffPresent = differences.some(diff =>
+                          diff.added && line.includes(diff.value)
+                        );
+
+                        return (
+                          <div
+                            key={`new-${index}`}
+                            className={`mb-2 ${isDiffPresent ? 'bg-green-100 p-2 rounded' : ''}`}
+                          >
+                            {line}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>変更箇所一覧</CardTitle>
+                <CardDescription>
+                  クリックすると該当箇所にジャンプします
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {differences.map((diff, index) => {
+                    // 変更が起きた行番号を計算
+                    const lineNumber = diff.added ? calculateDiffLineNumber(pdf2Text, diff.value) : calculateDiffLineNumber(pdf1Text, diff.value);
+
+                    return (
+                      <div
+                        key={index}
+                        id={`diff-${index}`}
+                        onClick={() => jumpToDiff(index)}
+                        className={`
+                        p-3 rounded-lg cursor-pointer transition-colors
+                        ${diff.added ? 'bg-green-50 hover:bg-green-100' :
+                            diff.removed ? 'bg-red-50 hover:bg-red-100' : 'bg-gray-50 hover:bg-gray-100'}
+                      `}
+                      >
+                        <div className="flex items-start gap-2">
+                          {diff.added && <span className="text-green-600 font-semibold">追加:</span>}
+                          {diff.removed && <span className="text-red-600 font-semibold">削除:</span>}
+                          <div>
+                            <span className="text-sm truncate">{diff.value}</span>
+                            <span className="text-xs text-gray-500 ml-2"> (Line: {lineNumber})</span>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>類似度</CardTitle>
+                <CardDescription>PDFドキュメント間の類似性の割合。</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">{similarityScore}%</p>
+              </CardContent>
+            </Card>
           </div>
         )}
       </div>
