@@ -249,60 +249,61 @@ export default function PdfCompare() {
 
                 {differences.length > 0 && (
                     <div className="grid gap-6">
+                        <div className="grid md:grid-cols-2 gap-6">
+                            <Card className="bg-slate-800 border border-slate-700">
+                                <CardHeader className="border-b border-slate-700">
+                                    <CardTitle className="text-slate-100">オリジナルテキスト</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <ScrollArea className="h-[500px] w-full rounded-md border border-slate-700">
+                                        <div className="p-4">
+                                            {differences.map((part, index) => (
+                                                <span
+                                                    key={index}
+                                                    className={`${
+                                                        part.removed ? 'bg-red-900/50 px-1 rounded border-b-2 border-red-500' : ''
+                                                    }`}
+                                                >
+                                                    {part.value}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </ScrollArea>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="bg-slate-800 border border-slate-700">
+                                <CardHeader className="border-b border-slate-700">
+                                    <CardTitle className="text-slate-100">新規テキスト</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <ScrollArea className="h-[500px] w-full rounded-md border border-slate-700">
+                                        <div className="p-4">
+                                            {differences.map((part, index) => (
+                                                <span
+                                                    key={index}
+                                                    className={`${
+                                                        part.added ? 'bg-green-900/50 px-1 rounded border-b-2 border-green-500' : ''
+                                                    }`}
+                                                >
+                                                    {part.value}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </ScrollArea>
+                                </CardContent>
+                            </Card>
+                        </div>
+
                         <Card className="bg-slate-800 border border-slate-700">
                             <CardHeader className="border-b border-slate-700">
                                 <div className="flex justify-between items-center">
-                                    <CardTitle className="text-slate-100">比較結果</CardTitle>
+                                    <CardTitle className="text-slate-100">変更点リスト</CardTitle>
                                     <div className="flex items-center gap-2">
                                         <span className="text-slate-400">類似度:</span>
                                         <span className="text-2xl font-bold text-slate-200">{similarityScore}%</span>
                                     </div>
                                 </div>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="grid md:grid-cols-2 gap-6">
-                                    <div>
-                                        <h3 className="text-lg font-semibold text-slate-200 mb-2">オリジナルテキスト</h3>
-                                        <ScrollArea className="h-[500px] w-full rounded-md border border-slate-700">
-                                            <div className="p-4">
-                                                {differences.map((part, index) => (
-                                                    <span
-                                                        key={index}
-                                                        className={`${
-                                                            part.removed ? 'bg-red-900/50 px-1 rounded border-b-2 border-red-500' : ''
-                                                        }`}
-                                                    >
-                                                        {part.value}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        </ScrollArea>
-                                    </div>
-
-                                    <div>
-                                        <h3 className="text-lg font-semibold text-slate-200 mb-2">新規テキスト</h3>
-                                        <ScrollArea className="h-[500px] w-full rounded-md border border-slate-700">
-                                            <div className="p-4">
-                                                {differences.map((part, index) => (
-                                                    <span
-                                                        key={index}
-                                                        className={`${
-                                                            part.added ? 'bg-green-900/50 px-1 rounded border-b-2 border-green-500' : ''
-                                                        }`}
-                                                    >
-                                                        {part.value}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        </ScrollArea>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                        <Card className="bg-slate-800 border border-slate-700">
-                            <CardHeader className="border-b border-slate-700">
-                                <CardTitle className="text-slate-100">変更点リスト</CardTitle>
                                 <CardDescription className="text-slate-400">クリックで該当箇所にジャンプ</CardDescription>
                             </CardHeader>
                             <CardContent>
