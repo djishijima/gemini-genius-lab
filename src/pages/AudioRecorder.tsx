@@ -33,12 +33,15 @@ export default function AudioRecorder() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [transcriptionProgress, setTranscriptionProgress] = useState(0);
   const [recordingTime, setRecordingTime] = useState(0);
+  const [amplitude, setAmplitude] = useState(0);
   const [audioStream, setAudioStream] = useState<MediaStream | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
 
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -52,6 +55,27 @@ export default function AudioRecorder() {
       const recorder = new MediaRecorder(stream);
       mediaRecorderRef.current = recorder;
       audioChunksRef.current = [];
+
+      // オーディオ解析の設定
+      const audioContext = new AudioContext();
+      const analyser = audioContext.createAnalyser();
+      const source = audioContext.createMediaStreamSource(stream);
+      source.connect(analyser);
+      analyser.fftSize = 256;
+      audioContextRef.current = audioContext;
+      analyserRef.current = analyser;
+
+      // 音量の計算
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      const calculateAmplitude = () => {
+        if (!isRecording) return;
+        analyser.getByteFrequencyData(dataArray);
+        const sum = dataArray.reduce((acc, value) => acc + value, 0);
+        const avg = sum / dataArray.length;
+        setAmplitude(avg / 128.0); // 0-1の範囲に正規化
+        requestAnimationFrame(calculateAmplitude);
+      };
+      calculateAmplitude();
 
       recorder.ondataavailable = (event) => {
         audioChunksRef.current.push(event.data);
@@ -94,6 +118,11 @@ export default function AudioRecorder() {
         audioStream.getTracks().forEach(track => track.stop());
         setAudioStream(null);
       }
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+        audioContextRef.current = null;
+      }
+      setAmplitude(0);
     }
   };
 
@@ -176,7 +205,11 @@ export default function AudioRecorder() {
                 <div className="text-center text-xl font-bold text-primary">
                   {formatTime(recordingTime)}
                 </div>
-                <AudioWaveform stream={audioStream} isRecording={isRecording} />
+                <AudioWaveform 
+                  isRecording={isRecording} 
+                  recordingTime={recordingTime}
+                  amplitude={amplitude}
+                />
                 <Button
                   size="lg"
                   variant="destructive"
