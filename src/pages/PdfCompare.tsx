@@ -186,7 +186,7 @@ export default function PdfCompare() {
                     <div className="input-section-1">
                         <Card>
                             <CardHeader>
-                                <CardTitle className="text-gray-900">元のテキスト/PDF</CardTitle>
+                                <CardTitle className="text-gray-700">元のテキスト/PDF</CardTitle>
                                 <CardDescription>テキストを入力またはPDFを選択</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
@@ -194,17 +194,17 @@ export default function PdfCompare() {
                                     placeholder="テキストを入力"
                                     value={text1}
                                     onChange={(e) => setText1(e.target.value)}
-                                    className="min-h-[200px] text-gray-900"
+                                    className="min-h-[200px] text-gray-700"
                                 />
                                 <div className="flex items-center space-x-4">
-                                    <Label htmlFor="pdf1" className="text-gray-900">またはPDFをアップロード:</Label>
+                                    <Label htmlFor="pdf1" className="text-gray-700">またはPDFをアップロード:</Label>
                                     <Input 
                                         type="file" 
                                         id="pdf1" 
                                         accept=".pdf,application/pdf" 
                                         onChange={handlePdf1Change} 
                                         ref={fileInput1Ref}
-                                        className="text-gray-900"
+                                        className="text-gray-700"
                                     />
                                 </div>
                             </CardContent>
@@ -214,7 +214,7 @@ export default function PdfCompare() {
                     <div className="input-section-2">
                         <Card>
                             <CardHeader>
-                                <CardTitle className="text-gray-900">新しいテキスト/PDF</CardTitle>
+                                <CardTitle className="text-gray-700">新しいテキスト/PDF</CardTitle>
                                 <CardDescription>テキストを入力またはPDFを選択</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
@@ -222,17 +222,17 @@ export default function PdfCompare() {
                                     placeholder="テキストを入力"
                                     value={text2}
                                     onChange={(e) => setText2(e.target.value)}
-                                    className="min-h-[200px] text-gray-900"
+                                    className="min-h-[200px] text-gray-700"
                                 />
                                 <div className="flex items-center space-x-4">
-                                    <Label htmlFor="pdf2" className="text-gray-900">またはPDFをアップロード:</Label>
+                                    <Label htmlFor="pdf2" className="text-gray-700">またはPDFをアップロード:</Label>
                                     <Input 
                                         type="file" 
                                         id="pdf2" 
                                         accept=".pdf,application/pdf" 
                                         onChange={handlePdf2Change} 
                                         ref={fileInput2Ref}
-                                        className="text-gray-900"
+                                        className="text-gray-700"
                                     />
                                 </div>
                             </CardContent>
@@ -253,7 +253,7 @@ export default function PdfCompare() {
                         <div className="left-column space-y-6">
                             <Card>
                                 <CardHeader>
-                                    <CardTitle className="text-gray-900">オリジナルテキスト</CardTitle>
+                                    <CardTitle className="text-gray-700">オリジナルテキスト</CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     <ScrollArea className="h-[500px] w-full rounded-md border">
@@ -269,7 +269,7 @@ export default function PdfCompare() {
                                                     <div
                                                         key={`original-line-${lineNumber}`}
                                                         id={`original-line-${lineNumber}`}
-                                                        className={`mb-2 text-gray-900 ${isDiffPresent ? 'bg-red-100 p-2 rounded' : ''}`}
+                                                        className={`mb-2 text-gray-700 ${isDiffPresent ? 'bg-red-100 p-2 rounded' : ''}`}
                                                     >
                                                         {line}
                                                     </div>
@@ -282,10 +282,10 @@ export default function PdfCompare() {
 
                             <Card>
                                 <CardHeader>
-                                    <CardTitle className="text-gray-900">類似度</CardTitle>
+                                    <CardTitle className="text-gray-700">類似度</CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <p className="text-2xl font-bold text-gray-900">{similarityScore}%</p>
+                                    <p className="text-2xl font-bold text-gray-700">{similarityScore}%</p>
                                 </CardContent>
                             </Card>
                         </div>
@@ -293,7 +293,7 @@ export default function PdfCompare() {
                         <div className="right-column space-y-6">
                             <Card>
                                 <CardHeader>
-                                    <CardTitle className="text-gray-900">新規テキスト</CardTitle>
+                                    <CardTitle className="text-gray-700">新規テキスト</CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     <ScrollArea className="h-[500px] w-full rounded-md border">
@@ -309,7 +309,7 @@ export default function PdfCompare() {
                                                     <div
                                                         key={`new-line-${lineNumber}`}
                                                         id={`new-line-${lineNumber}`}
-                                                        className={`mb-2 text-gray-900 ${isDiffPresent ? 'bg-green-100 p-2 rounded' : ''}`}
+                                                        className={`mb-2 text-gray-700 ${isDiffPresent ? 'bg-green-100 p-2 rounded' : ''}`}
                                                     >
                                                         {line}
                                                     </div>
@@ -322,7 +322,7 @@ export default function PdfCompare() {
 
                             <Card>
                                 <CardHeader>
-                                    <CardTitle className="text-gray-900">変更点リスト</CardTitle>
+                                    <CardTitle className="text-gray-700">変更点リスト</CardTitle>
                                     <CardDescription>クリックでジャンプ</CardDescription>
                                 </CardHeader>
                                 <CardContent>
@@ -344,7 +344,7 @@ export default function PdfCompare() {
                                                         {diff.added && <span className="text-green-600 font-semibold">追加:</span>}
                                                         {diff.removed && <span className="text-red-600 font-semibold">削除:</span>}
                                                         <div>
-                                                            <span className="text-sm text-gray-900 truncate">{diff.value}</span>
+                                                            <span className="text-sm text-gray-700 truncate">{diff.value}</span>
                                                             <span className="text-xs text-gray-500 ml-2">
                                                                 {diff.added && addedLine ? `(Line: ${addedLine})` : null}
                                                                 {diff.removed && removedLine ? `(Line: ${removedLine})` : null}
