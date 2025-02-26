@@ -279,6 +279,24 @@ export default function PdfCompare() {
 
                 {differences.length > 0 && (
                     <div className="grid gap-6">
+                        <Card className="bg-slate-800">
+                            <CardHeader>
+                                <div className="flex flex-col items-center justify-center space-y-2">
+                                    <CardTitle className="text-slate-100 text-3xl">類似度</CardTitle>
+                                    <div className="flex items-center gap-4">
+                                        <div className="text-5xl font-bold bg-gradient-to-r from-[#0EA5E9] to-[#8B5CF6] bg-clip-text text-transparent">
+                                            {similarityScore}%
+                                        </div>
+                                        <div className="h-16 w-[2px] bg-slate-700"/>
+                                        <div className="text-slate-400">
+                                            <div>追加された箇所: {differences.filter(d => d.added).length}</div>
+                                            <div>削除された箇所: {differences.filter(d => d.removed).length}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </CardHeader>
+                        </Card>
+
                         <div className="grid md:grid-cols-2 gap-6">
                             <Card className="bg-slate-800 border border-slate-700">
                                 <CardHeader className="border-b border-slate-700">
@@ -295,16 +313,22 @@ export default function PdfCompare() {
                                         ref={leftScrollRef}
                                         onWheel={(e) => handleScroll(e, 'left')}
                                     >
-                                        <div className="p-4">
+                                        <div className="p-4 space-y-2">
                                             {differences.map((part, index) => (
-                                                <span
+                                                <div 
                                                     key={index}
-                                                    className={`${
-                                                        part.removed ? 'bg-red-600/20 px-1 rounded border-l-4 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : ''
+                                                    id={`original-line-${part.lines1?.[0]}`}
+                                                    className={`relative ${
+                                                        part.removed ? 'bg-red-600/20 px-3 py-2 rounded border-l-4 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'px-3 py-2'
                                                     }`}
                                                 >
-                                                    {part.value}
-                                                </span>
+                                                    {part.removed && (
+                                                        <div className="absolute -left-8 top-1/2 -translate-y-1/2 text-red-400 text-sm">
+                                                            削除
+                                                        </div>
+                                                    )}
+                                                    <span className="block">{part.value}</span>
+                                                </div>
                                             ))}
                                         </div>
                                     </ScrollArea>
@@ -326,16 +350,22 @@ export default function PdfCompare() {
                                         ref={rightScrollRef}
                                         onWheel={(e) => handleScroll(e, 'right')}
                                     >
-                                        <div className="p-4">
+                                        <div className="p-4 space-y-2">
                                             {differences.map((part, index) => (
-                                                <span
+                                                <div 
                                                     key={index}
-                                                    className={`${
-                                                        part.added ? 'bg-emerald-600/20 px-1 rounded border-l-4 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.2)]' : ''
+                                                    id={`new-line-${part.lines2?.[0]}`}
+                                                    className={`relative ${
+                                                        part.added ? 'bg-emerald-600/20 px-3 py-2 rounded border-l-4 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.2)]' : 'px-3 py-2'
                                                     }`}
                                                 >
-                                                    {part.value}
-                                                </span>
+                                                    {part.added && (
+                                                        <div className="absolute -left-8 top-1/2 -translate-y-1/2 text-emerald-400 text-sm">
+                                                            追加
+                                                        </div>
+                                                    )}
+                                                    <span className="block">{part.value}</span>
+                                                </div>
                                             ))}
                                         </div>
                                     </ScrollArea>
@@ -345,14 +375,8 @@ export default function PdfCompare() {
 
                         <Card className="bg-slate-800 border border-slate-700">
                             <CardHeader className="border-b border-slate-700">
-                                <div className="flex justify-between items-center">
-                                    <CardTitle className="text-slate-100">変更点リスト</CardTitle>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-slate-400">類似度:</span>
-                                        <span className="text-2xl font-bold text-slate-200">{similarityScore}%</span>
-                                    </div>
-                                </div>
-                                <CardDescription className="text-slate-400">クリックで該当��所にジャンプ</CardDescription>
+                                <CardTitle className="text-slate-100">変更点一覧</CardTitle>
+                                <CardDescription className="text-slate-400">クリックで該当箇所にジャンプ</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-2">
@@ -363,13 +387,13 @@ export default function PdfCompare() {
                                                 key={`diff-${index}`}
                                                 onClick={() => jumpToDiff(index)}
                                                 className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                                                    diff.added ? 'bg-green-900/30 hover:bg-green-900/50 border-l-4 border-green-500' : 
-                                                    diff.removed ? 'bg-red-900/30 hover:bg-red-900/50 border-l-4 border-red-500' : 
+                                                    diff.added ? 'bg-emerald-600/20 hover:bg-emerald-600/30 border-l-4 border-emerald-500' : 
+                                                    diff.removed ? 'bg-red-600/20 hover:bg-red-600/30 border-l-4 border-red-500' : 
                                                     'bg-slate-700 hover:bg-slate-600'
                                                 }`}
                                             >
                                                 <div className="flex items-center gap-2">
-                                                    <span className={`font-semibold ${diff.added ? 'text-green-400' : 'text-red-400'}`}>
+                                                    <span className={`font-semibold ${diff.added ? 'text-emerald-400' : 'text-red-400'}`}>
                                                         {diff.added ? '追加' : '削除'}
                                                     </span>
                                                     <div className="overflow-hidden">
