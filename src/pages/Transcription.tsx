@@ -122,7 +122,7 @@ const Transcription = () => {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".jsx,.js,.indid"
+              accept=".jsx,.js,.indid,.indd"
               onChange={handleImportScript}
               className="hidden"
             />
