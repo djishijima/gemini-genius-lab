@@ -8,7 +8,6 @@ import { ThemeProvider } from "next-themes";
 import Index from "./pages/Index";
 import AudioRecorder from "./pages/AudioRecorder";
 import Transcription from "./pages/Transcription";
-import Settings from "./pages/Settings";
 import PdfCompare from "./pages/PdfCompare";
 import NotFound from "./pages/NotFound";
 
@@ -25,7 +24,6 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/audio-recorder" element={<AudioRecorder />} />
             <Route path="/transcription" element={<Transcription />} />
-            <Route path="/settings" element={<Settings />} />
             <Route path="/pdf-compare" element={<PdfCompare />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
