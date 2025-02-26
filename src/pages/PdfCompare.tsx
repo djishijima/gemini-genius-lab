@@ -184,27 +184,27 @@ export default function PdfCompare() {
             <div className="grid gap-6">
                 <div className="grid md:grid-cols-2 gap-4">
                     <div className="input-section-1">
-                        <Card>
+                        <Card className="bg-slate-800">
                             <CardHeader>
-                                <CardTitle className="text-gray-700">元のテキスト/PDF</CardTitle>
-                                <CardDescription>テキストを入力またはPDFを選択</CardDescription>
+                                <CardTitle className="text-slate-100">元のテキスト/PDF</CardTitle>
+                                <CardDescription className="text-slate-300">テキストを入力またはPDFを選択</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <Textarea
                                     placeholder="テキストを入力"
                                     value={text1}
                                     onChange={(e) => setText1(e.target.value)}
-                                    className="min-h-[200px] text-gray-700"
+                                    className="min-h-[200px] text-slate-200 bg-slate-700 placeholder:text-slate-400"
                                 />
                                 <div className="flex items-center space-x-4">
-                                    <Label htmlFor="pdf1" className="text-gray-700">またはPDFをアップロード:</Label>
+                                    <Label htmlFor="pdf1" className="text-slate-200">またはPDFをアップロード:</Label>
                                     <Input 
                                         type="file" 
                                         id="pdf1" 
                                         accept=".pdf,application/pdf" 
                                         onChange={handlePdf1Change} 
                                         ref={fileInput1Ref}
-                                        className="text-gray-700"
+                                        className="text-slate-200 bg-slate-700"
                                     />
                                 </div>
                             </CardContent>
@@ -212,27 +212,27 @@ export default function PdfCompare() {
                     </div>
 
                     <div className="input-section-2">
-                        <Card>
+                        <Card className="bg-slate-800">
                             <CardHeader>
-                                <CardTitle className="text-gray-700">新しいテキスト/PDF</CardTitle>
-                                <CardDescription>テキストを入力またはPDFを選択</CardDescription>
+                                <CardTitle className="text-slate-100">新しいテキスト/PDF</CardTitle>
+                                <CardDescription className="text-slate-300">テキストを入力またはPDFを選択</CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <Textarea
                                     placeholder="テキストを入力"
                                     value={text2}
                                     onChange={(e) => setText2(e.target.value)}
-                                    className="min-h-[200px] text-gray-700"
+                                    className="min-h-[200px] text-slate-200 bg-slate-700 placeholder:text-slate-400"
                                 />
                                 <div className="flex items-center space-x-4">
-                                    <Label htmlFor="pdf2" className="text-gray-700">またはPDFをアップロード:</Label>
+                                    <Label htmlFor="pdf2" className="text-slate-200">またはPDFをアップロード:</Label>
                                     <Input 
                                         type="file" 
                                         id="pdf2" 
                                         accept=".pdf,application/pdf" 
                                         onChange={handlePdf2Change} 
                                         ref={fileInput2Ref}
-                                        className="text-gray-700"
+                                        className="text-slate-200 bg-slate-700"
                                     />
                                 </div>
                             </CardContent>
@@ -241,7 +241,7 @@ export default function PdfCompare() {
                 </div>
 
                 <Button 
-                    className="compare-button" 
+                    className="compare-button w-full bg-slate-700 hover:bg-slate-600 text-slate-100" 
                     onClick={comparePdfs} 
                     disabled={loading || (!text1 && !pdf1) || (!text2 && !pdf2)}
                 >
@@ -251,12 +251,12 @@ export default function PdfCompare() {
                 {differences.length > 0 && (
                     <div className="grid md:grid-cols-2 gap-6">
                         <div className="left-column space-y-6">
-                            <Card>
+                            <Card className="bg-slate-800">
                                 <CardHeader>
-                                    <CardTitle className="text-gray-700">オリジナルテキスト</CardTitle>
+                                    <CardTitle className="text-slate-100">オリジナルテキスト</CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <ScrollArea className="h-[500px] w-full rounded-md border">
+                                    <ScrollArea className="h-[500px] w-full rounded-md border border-slate-700">
                                         <div className="p-4">
                                             {pdf1Text.split('\n').map((line, index) => {
                                                 const lineNumber = index + 1;
@@ -269,7 +269,7 @@ export default function PdfCompare() {
                                                     <div
                                                         key={`original-line-${lineNumber}`}
                                                         id={`original-line-${lineNumber}`}
-                                                        className={`mb-2 text-gray-700 ${isDiffPresent ? 'bg-red-100 p-2 rounded' : ''}`}
+                                                        className={`mb-2 text-slate-200 ${isDiffPresent ? 'bg-red-900/50 p-2 rounded' : ''}`}
                                                     >
                                                         {line}
                                                     </div>
@@ -280,23 +280,23 @@ export default function PdfCompare() {
                                 </CardContent>
                             </Card>
 
-                            <Card>
+                            <Card className="bg-slate-800">
                                 <CardHeader>
-                                    <CardTitle className="text-gray-700">類似度</CardTitle>
+                                    <CardTitle className="text-slate-100">類似度</CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <p className="text-2xl font-bold text-gray-700">{similarityScore}%</p>
+                                    <p className="text-2xl font-bold text-slate-200">{similarityScore}%</p>
                                 </CardContent>
                             </Card>
                         </div>
 
                         <div className="right-column space-y-6">
-                            <Card>
+                            <Card className="bg-slate-800">
                                 <CardHeader>
-                                    <CardTitle className="text-gray-700">新規テキスト</CardTitle>
+                                    <CardTitle className="text-slate-100">新規テキスト</CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <ScrollArea className="h-[500px] w-full rounded-md border">
+                                    <ScrollArea className="h-[500px] w-full rounded-md border border-slate-700">
                                         <div className="p-4">
                                             {pdf2Text.split('\n').map((line, index) => {
                                                 const lineNumber = index + 1;
@@ -309,7 +309,7 @@ export default function PdfCompare() {
                                                     <div
                                                         key={`new-line-${lineNumber}`}
                                                         id={`new-line-${lineNumber}`}
-                                                        className={`mb-2 text-gray-700 ${isDiffPresent ? 'bg-green-100 p-2 rounded' : ''}`}
+                                                        className={`mb-2 text-slate-200 ${isDiffPresent ? 'bg-green-900/50 p-2 rounded' : ''}`}
                                                     >
                                                         {line}
                                                     </div>
@@ -320,10 +320,10 @@ export default function PdfCompare() {
                                 </CardContent>
                             </Card>
 
-                            <Card>
+                            <Card className="bg-slate-800">
                                 <CardHeader>
-                                    <CardTitle className="text-gray-700">変更点リスト</CardTitle>
-                                    <CardDescription>クリックでジャンプ</CardDescription>
+                                    <CardTitle className="text-slate-100">変更点リスト</CardTitle>
+                                    <CardDescription className="text-slate-300">クリックでジャンプ</CardDescription>
                                 </CardHeader>
                                 <CardContent>
                                     <div className="space-y-4">
@@ -335,17 +335,17 @@ export default function PdfCompare() {
                                                     key={`diff-${index}`}
                                                     onClick={() => jumpToDiff(index)}
                                                     className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                                                        diff.added ? 'bg-green-50 hover:bg-green-100' : 
-                                                        diff.removed ? 'bg-red-50 hover:bg-red-100' : 
-                                                        'bg-gray-50 hover:bg-gray-100'
+                                                        diff.added ? 'bg-green-900/30 hover:bg-green-900/50' : 
+                                                        diff.removed ? 'bg-red-900/30 hover:bg-red-900/50' : 
+                                                        'bg-slate-700 hover:bg-slate-600'
                                                     }`}
                                                 >
                                                     <div className="flex items-start gap-2">
-                                                        {diff.added && <span className="text-green-600 font-semibold">追加:</span>}
-                                                        {diff.removed && <span className="text-red-600 font-semibold">削除:</span>}
+                                                        {diff.added && <span className="text-green-400 font-semibold">追加:</span>}
+                                                        {diff.removed && <span className="text-red-400 font-semibold">削除:</span>}
                                                         <div>
-                                                            <span className="text-sm text-gray-700 truncate">{diff.value}</span>
-                                                            <span className="text-xs text-gray-500 ml-2">
+                                                            <span className="text-sm text-slate-200 truncate">{diff.value}</span>
+                                                            <span className="text-xs text-slate-400 ml-2">
                                                                 {diff.added && addedLine ? `(Line: ${addedLine})` : null}
                                                                 {diff.removed && removedLine ? `(Line: ${removedLine})` : null}
                                                             </span>
