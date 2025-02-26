@@ -29,7 +29,6 @@ export function generateInDesignScript(manuscript: string, prompt: string, optio
   const scriptOptions = { ...DEFAULT_OPTIONS, ...options };
   const isVertical = prompt.includes("縦書き") || scriptOptions.isVertical;
 
-  // スクリプトの基本構造を作成
   return `// InDesign Script - Generated
 // Prompt: ${prompt}
 // Settings: ${JSON.stringify(scriptOptions, null, 2)}
@@ -86,17 +85,61 @@ try {
 export function parsePromptForOptions(prompt: string): Partial<ScriptOptions> {
   const options: Partial<ScriptOptions> = {};
   
-  // 縦書き・横書きの検出
   options.isVertical = prompt.includes("縦書き");
   
-  // フォントの検出
   if (prompt.includes("明朝")) {
     options.fontFamily = "KozMinPro-Regular";
   } else if (prompt.includes("ゴシック")) {
     options.fontFamily = "KozGoPro-Regular";
   }
   
-  // その他のオプションを検出...
+  // マージンの検出
+  const marginMatch = prompt.match(/マージン[上下左右\d\s]*(\d+)mm/);
+  if (marginMatch) {
+    const margin = parseInt(marginMatch[1]);
+    options.marginTop = margin;
+    options.marginBottom = margin;
+    options.marginLeft = margin;
+    options.marginRight = margin;
+  }
+  
+  return options;
+}
+
+export function analyzeScript(script: string): Partial<ScriptOptions> {
+  const options: Partial<ScriptOptions> = {};
+  
+  // 縦書きの検出
+  options.isVertical = script.includes('verticalText = true');
+  
+  // フォントの検出
+  const fontMatch = script.match(/appliedFont: "([^"]+)"/);
+  if (fontMatch) {
+    options.fontFamily = fontMatch[1];
+  }
+  
+  // フォントサイズの検出
+  const sizeMatch = script.match(/pointSize: (\d+)/);
+  if (sizeMatch) {
+    options.fontSize = parseInt(sizeMatch[1]);
+  }
+  
+  // 行送りの検出
+  const leadingMatch = script.match(/leading: (\d+)/);
+  if (leadingMatch) {
+    options.lineHeight = parseInt(leadingMatch[1]);
+  }
+  
+  // マージンの検出
+  const marginTopMatch = script.match(/marginPreferences\.top = "(\d+)mm"/);
+  const marginBottomMatch = script.match(/marginPreferences\.bottom = "(\d+)mm"/);
+  const marginLeftMatch = script.match(/marginPreferences\.left = "(\d+)mm"/);
+  const marginRightMatch = script.match(/marginPreferences\.right = "(\d+)mm"/);
+  
+  if (marginTopMatch) options.marginTop = parseInt(marginTopMatch[1]);
+  if (marginBottomMatch) options.marginBottom = parseInt(marginBottomMatch[1]);
+  if (marginLeftMatch) options.marginLeft = parseInt(marginLeftMatch[1]);
+  if (marginRightMatch) options.marginRight = parseInt(marginRightMatch[1]);
   
   return options;
 }
