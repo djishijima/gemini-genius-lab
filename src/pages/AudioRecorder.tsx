@@ -5,40 +5,44 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Mic, Square, ArrowLeft, Download, Upload } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AudioWaveform } from "@/components/AudioWaveform";
-import { ApiKeyInput } from "@/components/ApiKeyInput";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { transcribeAudio, processAudioFile } from "@/utils/speechToText";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AudioRecorder() {
   const [transcription, setTranscription] = useState("");
-  const [apiKey, setApiKey] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [transcriptionProgress, setTranscriptionProgress] = useState(0);
   const [isTranscribing, setIsTranscribing] = useState(false);
-  const [projectId, setProjectId] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  const { toast } = useToast();
+
+  // APIキーとProject IDをハードコーディング
+  const API_KEY = 'AIzaSyB3e3yEOKECnlDtivhi_jPxOpepk8wo6jE';
+  const PROJECT_ID = 'aisanbo';
 
   const handleRecordingComplete = async (blob: Blob) => {
     setIsTranscribing(true);
     setTranscriptionProgress(0);
     try {
-      const transcriptText = await transcribeAudio(blob, apiKey, (progress) => {
+      const transcriptText = await transcribeAudio(blob, API_KEY, (progress) => {
         setTranscriptionProgress(progress);
       });
       const timestamp = new Date().toLocaleTimeString();
       setTranscription(prev =>
         prev + `[$] ${timestamp}\n${transcriptText}\n`
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error('Speech-to-Text Error:', error);
-      setTranscription(prev =>
-        prev + `[ERROR] Speech-to-Text処理エラー: ${error}\n`
-      );
+      toast({
+        title: "エラー",
+        description: error.message || "文字起こしに失敗しました",
+        variant: "destructive"
+      });
     } finally {
       setIsTranscribing(false);
       setTranscriptionProgress(0);
@@ -63,14 +67,6 @@ export default function AudioRecorder() {
   };
 
   const handleStartRecording = () => {
-    if (!apiKey) {
-      alert('APIキーを入力してください');
-      return;
-    }
-    if (!projectId) {
-      alert('Project IDを入力してください');
-      return;
-    }
     startRecording();
   };
 
@@ -91,21 +87,11 @@ export default function AudioRecorder() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!apiKey) {
-      alert('APIキーを入力してください');
-      return;
-    }
-
-    if (!projectId) {
-      alert('Project IDを入力してください');
-      return;
-    }
-
     setIsProcessing(true);
     setUploadProgress(0);
     setTranscriptionProgress(0);
     try {
-      const transcriptText = await processAudioFile(file, apiKey, (upload, transcribe) => {
+      const transcriptText = await processAudioFile(file, API_KEY, (upload, transcribe) => {
         setUploadProgress(upload);
         setTranscriptionProgress(transcribe);
       });
@@ -113,11 +99,13 @@ export default function AudioRecorder() {
       setTranscription(prev =>
         prev + `[$] ${timestamp} ${file.name}の文字起こし結果:\n${transcriptText}\n`
       );
-    } catch (error) {
+    } catch (error: any) {
       console.error('File Processing Error:', error);
-      setTranscription(prev =>
-        prev + `[ERROR] ファイル処理エラー: ${error}\n`
-      );
+      toast({
+        title: "エラー",
+        description: error.message || "ファイル処理に失敗しました",
+        variant: "destructive"
+      });
     } finally {
       setIsProcessing(false);
       setUploadProgress(0);
@@ -155,28 +143,6 @@ export default function AudioRecorder() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* API Key & Project ID */}
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="projectId">Google Cloud Project ID</Label>
-              <Input
-                id="projectId"
-                value={projectId}
-                onChange={(e) => setProjectId(e.target.value)}
-                placeholder="your-project-id"
-                className="max-w-md"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Google Cloud API Key</Label>
-              <ApiKeyInput
-                apiKey={apiKey}
-                onChange={setApiKey}
-              />
-            </div>
-          </div>
-
           {/* Recording Controls */}
           <div className="flex flex-col items-center space-y-4 p-6 border rounded-lg bg-muted/10">
             {isRecording ? (
@@ -203,7 +169,7 @@ export default function AudioRecorder() {
                   variant="default"
                   onClick={handleStartRecording}
                   className="w-full max-w-md mx-auto"
-                  disabled={!apiKey || !projectId || isProcessing || isTranscribing}
+                  disabled={isProcessing || isTranscribing}
                 >
                   <Mic className="mr-2 h-5 w-5" />
                   録音を開始
@@ -225,7 +191,7 @@ export default function AudioRecorder() {
               variant="outline"
               onClick={() => fileInputRef.current?.click()}
               className="w-full"
-              disabled={isRecording || isProcessing || isTranscribing || !apiKey || !projectId}
+              disabled={isRecording || isProcessing || isTranscribing}
             >
               <Upload className="mr-2 h-4 w-4" />
               音声ファイルをアップロード
@@ -278,7 +244,6 @@ export default function AudioRecorder() {
               onChange={(e) => setTranscription(e.target.value)}
               className="w-full h-[200px] p-4 border rounded-lg font-mono text-sm resize-none bg-muted/5"
               placeholder="文字起こし結果がここに表示されます..."
-              readOnly
             />
           </div>
         </CardContent>
