@@ -266,7 +266,12 @@ export default function PdfCompare() {
                         <div className="grid md:grid-cols-2 gap-6">
                             <Card className="bg-slate-800 border border-slate-700">
                                 <CardHeader className="border-b border-slate-700">
-                                    <CardTitle className="text-slate-100">オリジナルテキスト</CardTitle>
+                                    <CardTitle className="text-slate-100">
+                                        オリジナルテキスト
+                                        {pdf1 && <span className="block text-sm text-slate-400 mt-1">
+                                            ファイル: {pdf1.name}
+                                        </span>}
+                                    </CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     <ScrollArea 
@@ -296,7 +301,12 @@ export default function PdfCompare() {
 
                             <Card className="bg-slate-800 border border-slate-700">
                                 <CardHeader className="border-b border-slate-700">
-                                    <CardTitle className="text-slate-100">新規テキスト</CardTitle>
+                                    <CardTitle className="text-slate-100">
+                                        オリジナルテキスト
+                                        {pdf2 && <span className="block text-sm text-slate-400 mt-1">
+                                            ファイル: {pdf2.name}
+                                        </span>}
+                                    </CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     <ScrollArea 
