@@ -1,4 +1,3 @@
-
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -45,6 +44,16 @@ const Transcription = () => {
     if (!file) return;
 
     try {
+      // InDesignファイル（.indd）の場合は警告を表示
+      if (file.name.toLowerCase().endsWith('.indd')) {
+        toast({
+          title: "注意",
+          description: "InDesignドキュメント（.indd）は直接読み込めません。スクリプトファイル（.jsx, .js）をインポートしてください。",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const text = await file.text();
       setImportedScript(text);
 
@@ -68,7 +77,7 @@ const Transcription = () => {
     } catch (error) {
       toast({
         title: "インポートエラー",
-        description: "スクリプトの読み込みに失敗しました。",
+        description: "スクリプトの読み込みに失敗しました。テキスト形式のスクリプトファイルのみ対応しています。",
         variant: "destructive",
       });
     }
