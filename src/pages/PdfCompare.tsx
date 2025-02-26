@@ -37,6 +37,9 @@ export default function PdfCompare() {
     const [progress, setProgress] = useState<number>(0);
     const fileInput1Ref = useRef<HTMLInputElement>(null);
     const fileInput2Ref = useRef<HTMLInputElement>(null);
+    const [synchroScroll, setSynchroScroll] = useState<boolean>(true);
+    const leftScrollRef = useRef<HTMLDivElement>(null);
+    const rightScrollRef = useRef<HTMLDivElement>(null);
 
     const handlePdf1Change = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0] || null;
@@ -173,6 +176,17 @@ export default function PdfCompare() {
         }
     };
 
+    const handleScroll = (event: React.UIEvent<HTMLDivElement>, side: 'left' | 'right') => {
+        if (!synchroScroll) return;
+        
+        const scrolledElement = event.currentTarget;
+        const targetElement = side === 'left' ? rightScrollRef.current : leftScrollRef.current;
+        
+        if (targetElement && scrolledElement) {
+            targetElement.scrollTop = scrolledElement.scrollTop;
+        }
+    };
+
     return (
         <div className="container mx-auto p-6">
             <Button variant="ghost" onClick={() => navigate("/")} className="mb-6">
@@ -255,7 +269,15 @@ export default function PdfCompare() {
                                     <CardTitle className="text-slate-100">オリジナルテキスト</CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <ScrollArea className="h-[500px] w-full rounded-md border border-slate-700">
+                                    <ScrollArea 
+                                        className="h-[500px] w-full rounded-md border border-slate-700"
+                                        ref={leftScrollRef}
+                                        onWheel={(e) => {
+                                            if (leftScrollRef.current) {
+                                                handleScroll(e as unknown as React.UIEvent<HTMLDivElement>, 'left');
+                                            }
+                                        }}
+                                    >
                                         <div className="p-4">
                                             {differences.map((part, index) => (
                                                 <span
@@ -277,7 +299,15 @@ export default function PdfCompare() {
                                     <CardTitle className="text-slate-100">新規テキスト</CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <ScrollArea className="h-[500px] w-full rounded-md border border-slate-700">
+                                    <ScrollArea 
+                                        className="h-[500px] w-full rounded-md border border-slate-700"
+                                        ref={rightScrollRef}
+                                        onWheel={(e) => {
+                                            if (rightScrollRef.current) {
+                                                handleScroll(e as unknown as React.UIEvent<HTMLDivElement>, 'right');
+                                            }
+                                        }}
+                                    >
                                         <div className="p-4">
                                             {differences.map((part, index) => (
                                                 <span
@@ -304,7 +334,7 @@ export default function PdfCompare() {
                                         <span className="text-2xl font-bold text-slate-200">{similarityScore}%</span>
                                     </div>
                                 </div>
-                                <CardDescription className="text-slate-400">クリックで該当箇所にジャンプ</CardDescription>
+                                <CardDescription className="text-slate-400">クリックで該当��所にジャンプ</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-2">
