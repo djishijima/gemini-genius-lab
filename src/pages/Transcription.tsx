@@ -138,180 +138,129 @@ export default function Transcription() {
   };
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="container mx-auto p-4">
       <Button 
         variant="ghost" 
         onClick={() => navigate("/")}
-        className="mb-6"
+        className="mb-4"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
         戻る
       </Button>
 
-      <div className="grid gap-6">
-        <Card>
+      <div className="grid gap-4">
+        <Card className="mb-4">
           <CardHeader>
-            <CardTitle>InDesignリソース</CardTitle>
+            <CardTitle>InDesign スクリプトジェネレーター</CardTitle>
             <CardDescription>
-              InDesignスクリプトの開発に役立つリソース
+              テキストファイルをアップロードして、InDesignスクリプトを生成します
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
-              <a 
-                href="https://www.adobe.com/jp/products/indesign.html" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <ExternalLink className="h-4 w-4" />
-                Adobe InDesign 公式サイト
-              </a>
-              <a 
-                href="https://www.adobe.com/jp/products/indesign/scripting.html" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <ExternalLink className="h-4 w-4" />
-                InDesignスクリプティングガイド
-              </a>
-              <a 
-                href="https://creative.adobe.com/ja/products/download/indesign" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <ExternalLink className="h-4 w-4" />
-                InDesignダウンロード
-              </a>
+          <CardContent className="grid gap-4">
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium">テキストファイルをアップロード</label>
+              <Input
+                type="file"
+                accept=".txt,.pdf"
+                onChange={handleFileUpload}
+                className="w-full"
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium">設定プロンプト</label>
+              <Textarea
+                value={prompt}
+                onChange={(e) => {
+                  setPrompt(e.target.value);
+                  if (manuscriptText.trim()) {
+                    generateScript();
+                  }
+                }}
+                placeholder="例: A4サイズの縦書き、明朝体で本文を組んでください。"
+                className="min-h-[80px] resize-none"
+              />
+              <p className="text-sm text-muted-foreground">
+                プロンプトの例:
+                <br />
+                • A4サイズの縦書き、明朝体で本文を組んでください
+                <br />
+                • B5サイズで、横書き、ゴシック体、行間を広めに設定してください
+                <br />
+                • 見開きページで、外側のマージンを広めに設定してください
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium">原稿テキスト</label>
+              <Textarea
+                value={manuscriptText}
+                onChange={(e) => {
+                  setManuscriptText(e.target.value);
+                  if (e.target.value.trim() && prompt.trim()) {
+                    generateScript();
+                  }
+                }}
+                placeholder="ここに原稿テキストを入力するか、ファイルをアップロードしてください..."
+                className="min-h-[200px]"
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <div className="flex justify-between items-center">
+                <label className="text-sm font-medium">生成されたスクリプト</label>
+                <div className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleReset}
+                  >
+                    <RefreshCcw className="mr-2 h-4 w-4" />
+                    リセット
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={generateScript}
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <>
+                        <Wand2 className="mr-2 h-4 w-4 animate-spin" />
+                        生成中...
+                      </>
+                    ) : (
+                      <>
+                        <Wand2 className="mr-2 h-4 w-4" />
+                        スクリプト生成
+                      </>
+                    )}
+                  </Button>
+                  {generatedScript && (
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      asChild
+                    >
+                      <a
+                        href={`data:text/plain;charset=utf-8,${encodeURIComponent(generatedScript)}`}
+                        download="indesign_script.jsx"
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        ダウンロード
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <Textarea
+                value={generatedScript}
+                readOnly
+                placeholder="スクリプトはここに表示されます..."
+                className="min-h-[200px] font-mono text-sm"
+              />
             </div>
           </CardContent>
         </Card>
-
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="grid gap-6">
-            <Card className="h-[800px] flex flex-col">
-              <CardHeader>
-                <CardTitle>原稿入力</CardTitle>
-                <CardDescription>
-                  テキストファイルをアップロードするか、直接入力してください
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex-1 flex flex-col gap-4">
-                <div className="flex-none">
-                  <Input
-                    type="file"
-                    accept=".txt,.pdf"
-                    onChange={handleFileUpload}
-                    className="w-full"
-                  />
-                  <p className="text-sm text-muted-foreground mt-2">
-                    テキストファイルをアップロードするか、下のテキストエリアに直接コピー&ペーストしてください。
-                  </p>
-                </div>
-
-                <div className="flex-none space-y-2">
-                  <label className="text-sm font-medium">AIプロンプト</label>
-                  <Textarea
-                    value={prompt}
-                    onChange={(e) => {
-                      setPrompt(e.target.value);
-                      if (manuscriptText.trim()) {
-                        generateScript();
-                      }
-                    }}
-                    placeholder="例: A4サイズの縦書き、明朝体で本文を組んでください。"
-                    className="h-[100px] resize-none"
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    プロンプトの例:
-                    <br />
-                    • A4サイズの縦書き、明朝体で本文を組んでください
-                    <br />
-                    • B5サイズで、横書き、ゴシック体、行間を広めに設定してください
-                    <br />
-                    • 見開きページで、外側のマージンを広めに設定してください
-                  </p>
-                </div>
-
-                <div className="flex-1">
-                  <Textarea
-                    value={manuscriptText}
-                    onChange={(e) => {
-                      setManuscriptText(e.target.value);
-                      if (e.target.value.trim()) {
-                        generateScript();
-                      }
-                    }}
-                    placeholder="ここに原稿テキストを入力してください..."
-                    className="h-full resize-none"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="grid gap-6">
-            <Card className="h-[800px] flex flex-col">
-              <CardHeader>
-                <CardTitle>InDesign スクリプトプレビュー</CardTitle>
-                <CardDescription>
-                  生成されたスクリプトのプレビュー
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex-1 flex flex-col">
-                <Textarea
-                  value={generatedScript}
-                  readOnly
-                  placeholder="スクリプトはここに表示されます..."
-                  className="h-full resize-none font-mono text-sm"
-                />
-              </CardContent>
-            </Card>
-            <div className="flex justify-between">
-              <Button
-                variant="secondary"
-                onClick={handleReset}
-              >
-                <RefreshCcw className="mr-2 h-4 w-4" />
-                リセット
-              </Button>
-              <div className="flex gap-2">
-                <Button
-                  onClick={generateScript}
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <Wand2 className="mr-2 h-4 w-4 animate-spin" />
-                      生成中...
-                    </>
-                  ) : (
-                    <>
-                      <Wand2 className="mr-2 h-4 w-4" />
-                      スクリプト生成
-                    </>
-                  )}
-                </Button>
-                {generatedScript && (
-                  <Button 
-                    variant="outline"
-                    asChild
-                  >
-                    <a
-                      href={`data:text/plain;charset=utf-8,${encodeURIComponent(generatedScript)}`}
-                      download="indesign_script.jsx"
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      ダウンロード
-                    </a>
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
