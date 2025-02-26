@@ -2,82 +2,53 @@
 import { useEffect, useRef } from 'react';
 
 interface AudioWaveformProps {
-  stream: MediaStream | null;
   isRecording: boolean;
+  recordingTime: number;
+  amplitude: number;
 }
 
-export function AudioWaveform({ stream, isRecording }: AudioWaveformProps) {
+export function AudioWaveform({ isRecording, amplitude }: AudioWaveformProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationFrameRef = useRef<number>();
-  const analyserRef = useRef<AnalyserNode | null>(null);
 
   useEffect(() => {
-    if (!stream || !isRecording || !canvasRef.current) return;
+    if (!canvasRef.current) return;
 
-    const audioContext = new AudioContext();
-    const source = audioContext.createMediaStreamSource(stream);
-    const analyser = audioContext.createAnalyser();
-    analyserRef.current = analyser;
-
-    analyser.fftSize = 2048;
-    source.connect(analyser);
-
-    const bufferLength = analyser.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
     const canvas = canvasRef.current;
-    const canvasCtx = canvas.getContext('2d')!;
+    const ctx = canvas.getContext('2d')!;
+    const width = canvas.width;
+    const height = canvas.height;
 
-    const draw = () => {
-      const width = canvas.width;
-      const height = canvas.height;
+    // Clear canvas
+    ctx.fillStyle = 'rgb(20, 20, 20)';
+    ctx.fillRect(0, 0, width, height);
 
-      analyser.getByteTimeDomainData(dataArray);
+    if (isRecording) {
+      // Draw waveform
+      const centerY = height / 2;
+      const waveHeight = height * amplitude;
 
-      canvasCtx.fillStyle = 'rgb(20, 20, 20)';
-      canvasCtx.fillRect(0, 0, width, height);
-      canvasCtx.lineWidth = 2;
-      canvasCtx.strokeStyle = 'rgb(99, 102, 241)';
-      canvasCtx.beginPath();
+      ctx.beginPath();
+      ctx.moveTo(0, centerY);
+      ctx.lineTo(width, centerY);
+      ctx.strokeStyle = 'rgb(99, 102, 241)';
+      ctx.stroke();
 
-      const sliceWidth = width / bufferLength;
-      let x = 0;
-
-      for (let i = 0; i < bufferLength; i++) {
-        const v = dataArray[i] / 128.0;
-        const y = v * height / 2;
-
-        if (i === 0) {
-          canvasCtx.moveTo(x, y);
-        } else {
-          canvasCtx.lineTo(x, y);
-        }
-
-        x += sliceWidth;
-      }
-
-      canvasCtx.lineTo(canvas.width, canvas.height / 2);
-      canvasCtx.stroke();
-
-      animationFrameRef.current = requestAnimationFrame(draw);
-    };
-
-    draw();
-
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-      source.disconnect();
-      audioContext.close();
-    };
-  }, [stream, isRecording]);
+      ctx.beginPath();
+      ctx.moveTo(0, centerY - waveHeight / 2);
+      ctx.lineTo(width, centerY - waveHeight / 2);
+      ctx.moveTo(0, centerY + waveHeight / 2);
+      ctx.lineTo(width, centerY + waveHeight / 2);
+      ctx.strokeStyle = 'rgba(99, 102, 241, 0.5)';
+      ctx.stroke();
+    }
+  }, [isRecording, amplitude]);
 
   return (
     <canvas
       ref={canvasRef}
       width={320}
       height={100}
-      className="w-full rounded-lg bg-[rgb(20,20,20)]"
+      className="w-full h-full rounded-lg bg-[rgb(20,20,20)]"
     />
   );
 }

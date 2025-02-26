@@ -14,7 +14,7 @@ const Transcription = () => {
   const [transcription, setTranscription] = useState("");
   const { toast } = useToast();
   const {
-    audioUrl,
+    audioBlob,
     isRecording,
     startRecording,
     stopRecording,
@@ -23,7 +23,7 @@ const Transcription = () => {
   } = useAudioRecorder();
 
   const handleTranscribe = async () => {
-    if (!audioUrl) {
+    if (!audioBlob) {
       toast({
         title: "エラー",
         description: "音声が録音されていません",
@@ -33,7 +33,7 @@ const Transcription = () => {
     }
 
     try {
-      const result = await processAudioForTranscription(audioUrl);
+      const result = await processAudioForTranscription(audioBlob);
       setTranscription(result);
       toast({
         title: "完了",
@@ -94,7 +94,7 @@ const Transcription = () => {
                 </>
               )}
             </Button>
-            {audioUrl && (
+            {audioBlob && (
               <Button
                 onClick={handleTranscribe}
                 variant="outline"
