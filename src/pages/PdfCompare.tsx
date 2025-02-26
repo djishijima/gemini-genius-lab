@@ -267,9 +267,9 @@ export default function PdfCompare() {
                             <Card className="bg-slate-800 border border-slate-700">
                                 <CardHeader className="border-b border-slate-700">
                                     <CardTitle className="text-slate-100">
-                                        オリジナルテキスト
+                                        参照ファイル
                                         {pdf1 && <span className="block text-sm text-slate-400 mt-1">
-                                            ファイル: {pdf1.name}
+                                            ファイル名: {pdf1.name}
                                         </span>}
                                     </CardTitle>
                                 </CardHeader>
@@ -302,9 +302,9 @@ export default function PdfCompare() {
                             <Card className="bg-slate-800 border border-slate-700">
                                 <CardHeader className="border-b border-slate-700">
                                     <CardTitle className="text-slate-100">
-                                        オリジナルテキスト
+                                        比較するファイル
                                         {pdf2 && <span className="block text-sm text-slate-400 mt-1">
-                                            ファイル: {pdf2.name}
+                                            ファイル名: {pdf2.name}
                                         </span>}
                                     </CardTitle>
                                 </CardHeader>
