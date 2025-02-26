@@ -23,6 +23,56 @@ function formatTime(seconds: number): string {
   return `${formattedMinutes}:${formattedSeconds}`;
 }
 
+// Google Cloud Speech-to-Text APIを使用する関数を追加
+async function transcribeAudio(audioBlob: Blob, apiKey: string): Promise<string> {
+  try {
+    // 音声データをBase64エンコード
+    const buffer = await audioBlob.arrayBuffer();
+    const base64Audio = btoa(
+      String.fromCharCode.apply(null, new Uint8Array(buffer) as any)
+    );
+
+    // Google Cloud Speech-to-Text APIにリクエスト
+    const response = await fetch(
+      `https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          config: {
+            encoding: 'WEBM_OPUS',
+            sampleRateHertz: 48000,
+            languageCode: 'ja-JP',
+            model: 'default',
+          },
+          audio: {
+            content: base64Audio,
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error?.message || '文字起こしに失敗しました');
+    }
+
+    const data = await response.json();
+    if (!data.results || data.results.length === 0) {
+      throw new Error('音声を認識できませんでした');
+    }
+
+    return data.results
+      .map((result: any) => result.alternatives[0].transcript)
+      .join('\n');
+  } catch (error) {
+    console.error('Transcription error:', error);
+    throw error;
+  }
+}
+
 export default function AudioRecorder() {
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
