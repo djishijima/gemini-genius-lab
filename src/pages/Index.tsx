@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { FileText, Mic, FileDiff, Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import Joyride, { CallBackProps, STATUS } from 'react-joyride';
+import Joyride, { CallBackProps } from 'react-joyride';
 import { homeSteps } from "@/config/tour-steps";
 import { useToast } from "@/components/ui/use-toast";
 import { useEffect, useState } from "react";
@@ -21,7 +21,7 @@ export default function Index() {
 
   const handleJoyrideCallback = (data: CallBackProps) => {
     const { status } = data;
-    if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status)) {
+    if (status === "finished" || status === "skipped") {
       localStorage.setItem('hasSeenHomeTour', 'true');
       toast({
         title: "チュートリアル完了",
