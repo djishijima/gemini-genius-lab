@@ -1,14 +1,19 @@
 
 import { convertAudioToWav } from './audioProcessing';
 
-interface GeminiResponse {
-  candidates: Array<{
-    content: {
-      parts: Array<{
-        text: string;
-      }>;
-    };
+interface SpeechRecognitionResult {
+  alternatives: Array<{
+    transcript: string;
+    confidence: number;
   }>;
+}
+
+interface SpeechRecognitionResponse {
+  results?: SpeechRecognitionResult[];
+  error?: {
+    code: number;
+    message: string;
+  };
 }
 
 async function splitAudioIntoChunks(audioBlob: Blob, chunkDuration: number = 45): Promise<Blob[]> {
@@ -49,8 +54,7 @@ export async function transcribeAudio(
 
       const buffer = await chunk.arrayBuffer();
       const base64Data = btoa(
-        new Uint8Array(buffer)
-          .reduce((data, byte) => data + String.fromCharCode(byte), '')
+        String.fromCharCode.apply(null, new Uint8Array(buffer) as any)
       );
       
       console.log(`チャンク ${i + 1} のAPIリクエスト送信`);
@@ -84,30 +88,28 @@ export async function transcribeAudio(
       }
 
       console.log(`チャンク ${i + 1} のAPIレスポンス受信`);
-      const data = await response.json();
+      const data: SpeechRecognitionResponse = await response.json();
       console.log('APIレスポンス:', data);
 
-      if (data.results && data.results.length > 0) {
-        const timestamp = new Date().toLocaleTimeString();
+      if (data.results?.length > 0) {
         const transcription = data.results
-          .map((result: any) => result.alternatives[0].transcript)
+          .map(result => result.alternatives[0].transcript)
           .join('\n');
         console.log(`チャンク ${i + 1} の文字起こし結果:`, transcription);
         fullTranscription += transcription + '\n';
       } else {
         console.log(`チャンク ${i + 1} の文字起こし結果が空です`);
+        throw new Error('音声認識結果が空でした。より明確な音声で再度お試しください。');
       }
 
-      // 進捗状況を更新
       if (onProgress) {
         const progress = ((i + 1) / chunks.length) * 100;
         onProgress(progress);
       }
     }
 
-    if (!fullTranscription) {
-      console.log('すべてのチャンクの文字起こしが空でした');
-      return `文字起こしに失敗しました`;
+    if (!fullTranscription.trim()) {
+      throw new Error('文字起こしに失敗しました。音声が明確でないか、ノイズが多い可能性があります。');
     }
 
     console.log('文字起こし完了:', fullTranscription);
@@ -126,16 +128,37 @@ export async function processAudioFile(
 ): Promise<string> {
   console.log('ファイル処理開始:', file.name, file.type, file.size, 'bytes');
   
-  // アップロード進捗を100%に設定
   if (onProgress) {
-    onProgress(100, 0);
+    onProgress(0, 0);
   }
   
-  const blob = new Blob([await file.arrayBuffer()], { type: file.type });
-  
-  return transcribeAudio(blob, apiKey, (progress) => {
+  try {
+    // ファイルの読み込みを進捗表示
+    const arrayBuffer = await new Promise<ArrayBuffer>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as ArrayBuffer);
+      reader.onerror = reject;
+      reader.onprogress = (event) => {
+        if (event.lengthComputable && onProgress) {
+          const progress = (event.loaded / event.total) * 100;
+          onProgress(progress, 0);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
     if (onProgress) {
-      onProgress(100, progress);
+      onProgress(100, 0);
     }
-  });
+
+    const blob = new Blob([arrayBuffer], { type: file.type });
+    return transcribeAudio(blob, apiKey, (progress) => {
+      if (onProgress) {
+        onProgress(100, progress);
+      }
+    });
+  } catch (error) {
+    console.error('File Processing Error:', error);
+    throw error;
+  }
 }
