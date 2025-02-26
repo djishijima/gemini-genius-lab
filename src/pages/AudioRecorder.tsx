@@ -18,12 +18,29 @@ export default function AudioRecorder() {
   const [transcriptionProgress, setTranscriptionProgress] = useState(0);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const transcriptionTimeoutRef = useRef<NodeJS.Timeout>();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   // APIキーとProject IDをハードコーディング
   const API_KEY = 'AIzaSyB3e3yEOKECnlDtivhi_jPxOpepk8wo6jE';
   const PROJECT_ID = 'aisanbo';
+
+  const processChunk = async (chunk: Blob) => {
+    try {
+      const transcriptText = await transcribeAudio(chunk, API_KEY, (progress) => {
+        setTranscriptionProgress(progress);
+      });
+      if (transcriptText.trim()) {
+        const timestamp = new Date().toLocaleTimeString();
+        setTranscription(prev => prev + `[$] ${timestamp}\n${transcriptText}\n`);
+      }
+    } catch (error: any) {
+      console.error('Real-time transcription error:', error);
+    }
+  };
 
   const handleRecordingComplete = async (blob: Blob) => {
     setIsTranscribing(true);
@@ -54,20 +71,63 @@ export default function AudioRecorder() {
     audioStream,
     audioBlob,
     recordingTime,
-    startRecording,
-    stopRecording
+    startRecording: startBaseRecording,
+    stopRecording: stopBaseRecording
   } = useAudioRecorder({
     onRecordingComplete: handleRecordingComplete
   });
+
+  const startRecording = async () => {
+    try {
+      await startBaseRecording();
+      if (audioStream) {
+        const mediaRecorder = new MediaRecorder(audioStream, {
+          mimeType: 'audio/webm',
+        });
+        mediaRecorderRef.current = mediaRecorder;
+        chunksRef.current = [];
+
+        mediaRecorder.ondataavailable = async (event) => {
+          if (event.data.size > 0) {
+            chunksRef.current.push(event.data);
+            // 3秒ごとに文字起こしを実行
+            if (transcriptionTimeoutRef.current) {
+              clearTimeout(transcriptionTimeoutRef.current);
+            }
+            transcriptionTimeoutRef.current = setTimeout(() => {
+              const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
+              processChunk(audioBlob);
+              chunksRef.current = [];
+            }, 3000);
+          }
+        };
+
+        mediaRecorder.start(1000); // 1秒ごとにデータを取得
+      }
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      toast({
+        title: "エラー",
+        description: "録音の開始に失敗しました",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const stopRecording = () => {
+    if (transcriptionTimeoutRef.current) {
+      clearTimeout(transcriptionTimeoutRef.current);
+    }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    stopBaseRecording();
+  };
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
-
-  const handleStartRecording = () => {
-    startRecording();
   };
 
   const exportAudio = () => {
@@ -121,8 +181,11 @@ export default function AudioRecorder() {
       if (isRecording) {
         stopRecording();
       }
+      if (transcriptionTimeoutRef.current) {
+        clearTimeout(transcriptionTimeoutRef.current);
+      }
     };
-  }, [isRecording, stopRecording]);
+  }, [isRecording]);
 
   return (
     <div className="container mx-auto p-4 max-w-3xl">
