@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,6 +13,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { AudioWaveform } from '@/components/AudioWaveform';
 import { useToast } from "@/hooks/use-toast";
+import { transcribeAudioWithGoogle } from "@/utils/speechToText";
 
 function formatTime(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
@@ -21,56 +21,6 @@ function formatTime(seconds: number): string {
   const formattedMinutes = String(minutes).padStart(2, '0');
   const formattedSeconds = String(remainingSeconds).padStart(2, '0');
   return `${formattedMinutes}:${formattedSeconds}`;
-}
-
-// Google Cloud Speech-to-Text APIを使用する関数を追加
-async function transcribeAudio(audioBlob: Blob, apiKey: string): Promise<string> {
-  try {
-    // 音声データをBase64エンコード
-    const buffer = await audioBlob.arrayBuffer();
-    const base64Audio = btoa(
-      String.fromCharCode.apply(null, new Uint8Array(buffer) as any)
-    );
-
-    // Google Cloud Speech-to-Text APIにリクエスト
-    const response = await fetch(
-      `https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          config: {
-            encoding: 'WEBM_OPUS',
-            sampleRateHertz: 48000,
-            languageCode: 'ja-JP',
-            model: 'default',
-          },
-          audio: {
-            content: base64Audio,
-          },
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error?.message || '文字起こしに失敗しました');
-    }
-
-    const data = await response.json();
-    if (!data.results || data.results.length === 0) {
-      throw new Error('音声を認識できませんでした');
-    }
-
-    return data.results
-      .map((result: any) => result.alternatives[0].transcript)
-      .join('\n');
-  } catch (error) {
-    console.error('Transcription error:', error);
-    throw error;
-  }
 }
 
 export default function AudioRecorder() {
@@ -94,7 +44,6 @@ export default function AudioRecorder() {
 
   const API_KEY = 'AIzaSyB3e3yEOKECnlDtivhi_jPxOpepk8wo6jE';
 
-  // Function to start recording
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -132,7 +81,6 @@ export default function AudioRecorder() {
     }
   };
 
-  // Function to stop recording
   const stopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
       mediaRecorderRef.current.stop();
@@ -148,14 +96,13 @@ export default function AudioRecorder() {
     }
   };
 
-  // Function to handle transcription
   const handleTranscription = async (blob: Blob) => {
     setIsTranscribing(true);
     setTranscriptionProgress(0);
     try {
-      const transcriptText = await transcribeAudio(blob, API_KEY);
+      const transcriptText = await transcribeAudioWithGoogle(blob);
       const timestamp = new Date().toLocaleTimeString();
-      setTranscription(prev => prev + `[$] ${timestamp}\n${transcriptText}\n`);
+      setTranscription(prev => prev + `[${timestamp}]\n${transcriptText}\n`);
     } catch (error: any) {
       console.error('Speech-to-Text Error:', error);
       toast({
@@ -170,7 +117,6 @@ export default function AudioRecorder() {
     }
   };
 
-  // Function to handle file upload
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -180,7 +126,6 @@ export default function AudioRecorder() {
     }
   };
 
-  // Function to handle audio export
   const handleAudioExport = () => {
     if (audioBlob) {
       const url = window.URL.createObjectURL(audioBlob);
@@ -194,7 +139,6 @@ export default function AudioRecorder() {
     }
   };
 
-  // Cleanup function
   useEffect(() => {
     return () => {
       if (isRecording) {
@@ -225,7 +169,6 @@ export default function AudioRecorder() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Recording Controls */}
           <div className="flex flex-col items-center space-y-4 p-6 border rounded-lg bg-muted/10">
             {isRecording ? (
               <div className="w-full space-y-4">
@@ -260,7 +203,6 @@ export default function AudioRecorder() {
             )}
           </div>
 
-          {/* File Upload */}
           <div className="space-y-2">
             <input
               ref={fileInputRef}
@@ -280,7 +222,6 @@ export default function AudioRecorder() {
             </Button>
           </div>
 
-          {/* Progress Indicators */}
           {(isProcessing || isTranscribing) && (
             <div className="space-y-4 p-4 border rounded-lg bg-muted/10">
               <p className="text-sm font-medium text-center">処理中...</p>
@@ -305,7 +246,6 @@ export default function AudioRecorder() {
             </div>
           )}
 
-          {/* Audio Export */}
           {audioBlob && !isRecording && (
             <Button
               variant="secondary"
@@ -318,7 +258,6 @@ export default function AudioRecorder() {
             </Button>
           )}
 
-          {/* Transcription Results */}
           <div className="space-y-2">
             <Label>文字起こし結果</Label>
             <textarea
