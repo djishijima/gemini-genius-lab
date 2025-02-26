@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { diffWords } from 'diff';
 import Joyride, { STATUS } from 'react-joyride';
@@ -9,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import * as pdfjsLib from 'pdfjs-dist';
 import { TextItem, TextMarkedContent } from 'pdfjs-dist/types/src/display/api';
+import { ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import 'pdfjs-dist/build/pdf.worker.entry';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
@@ -20,6 +21,7 @@ interface Difference {
 }
 
 export default function PdfCompare() {
+  const navigate = useNavigate();
   const [pdf1, setPdf1] = useState<File | null>(null);
   const [pdf2, setPdf2] = useState<File | null>(null);
   const [pdf1Text, setPdf1Text] = useState<string>('');
@@ -74,7 +76,6 @@ export default function PdfCompare() {
   };
 
   const extractFileContent = async (file: File): Promise<string> => {
-    // テキストファイルの場合
     if (file.type === 'text/plain') {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -89,7 +90,6 @@ export default function PdfCompare() {
         reader.readAsText(file);
       });
     }
-    // PDFファイルの場合
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = async function () {
@@ -102,7 +102,6 @@ export default function PdfCompare() {
             const textContent = await page.getTextContent();
             const pageText = textContent.items
               .map((item) => {
-                // TextItemの場合のみstrプロパティにアクセス
                 if ('str' in item) {
                   return (item as TextItem).str;
                 }
@@ -203,6 +202,14 @@ export default function PdfCompare() {
 
   return (
     <div className="container mx-auto p-6">
+      <Button 
+        variant="ghost" 
+        onClick={() => navigate("/")}
+        className="mb-6"
+      >
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        戻る
+      </Button>
 
       <Joyride
         steps={steps}
@@ -220,10 +227,6 @@ export default function PdfCompare() {
           }
         }}
       />
-
-      <Button onClick={() => setRun(true)}>
-        チュートリアルを開始する
-      </Button>
 
       <div className="grid gap-6">
 
