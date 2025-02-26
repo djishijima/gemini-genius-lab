@@ -248,114 +248,91 @@ export default function PdfCompare() {
                 </Button>
 
                 {differences.length > 0 && (
-                    <div className="grid md:grid-cols-2 gap-6">
-                        <div className="left-column space-y-6">
-                            <Card className="bg-slate-800 border border-slate-700">
-                                <CardHeader className="border-b border-slate-700">
-                                    <CardTitle className="text-slate-100">オリジナルテキスト</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <ScrollArea className="h-[500px] w-full rounded-md border border-slate-700">
-                                        <div className="p-4">
-                                            {pdf1Text.split('\n').map((line, index) => {
-                                                const lineNumber = index + 1;
-                                                const isDiffPresent = differences.some(
-                                                    diff => diff.removed && 
-                                                    diff.lines1 && 
-                                                    diff.lines1.includes(lineNumber)
-                                                );
-                                                return (
-                                                    <div
-                                                        key={`original-line-${lineNumber}`}
-                                                        id={`original-line-${lineNumber}`}
-                                                        className={`mb-2 text-slate-200 ${isDiffPresent ? 'bg-red-900/50 p-2 rounded border-l-4 border-red-500' : ''}`}
+                    <div className="grid gap-6">
+                        <Card className="bg-slate-800 border border-slate-700">
+                            <CardHeader className="border-b border-slate-700">
+                                <div className="flex justify-between items-center">
+                                    <CardTitle className="text-slate-100">比較結果</CardTitle>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-slate-400">類似度:</span>
+                                        <span className="text-2xl font-bold text-slate-200">{similarityScore}%</span>
+                                    </div>
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="grid md:grid-cols-2 gap-6">
+                                    <div>
+                                        <h3 className="text-lg font-semibold text-slate-200 mb-2">オリジナルテキスト</h3>
+                                        <ScrollArea className="h-[500px] w-full rounded-md border border-slate-700">
+                                            <div className="p-4">
+                                                {differences.map((part, index) => (
+                                                    <span
+                                                        key={index}
+                                                        className={`${
+                                                            part.removed ? 'bg-red-900/50 px-1 rounded border-b-2 border-red-500' : ''
+                                                        }`}
                                                     >
-                                                        <span className="text-slate-500 mr-2 select-none">{lineNumber}:</span>
-                                                        {line}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </ScrollArea>
-                                </CardContent>
-                            </Card>
+                                                        {part.value}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </ScrollArea>
+                                    </div>
 
-                            <Card className="bg-slate-800 border border-slate-700">
-                                <CardHeader className="border-b border-slate-700">
-                                    <CardTitle className="text-slate-100">類似度</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <p className="text-2xl font-bold text-slate-200">{similarityScore}%</p>
-                                </CardContent>
-                            </Card>
-                        </div>
-
-                        <div className="right-column space-y-6">
-                            <Card className="bg-slate-800 border border-slate-700">
-                                <CardHeader className="border-b border-slate-700">
-                                    <CardTitle className="text-slate-100">新規テキスト</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <ScrollArea className="h-[500px] w-full rounded-md border border-slate-700">
-                                        <div className="p-4">
-                                            {pdf2Text.split('\n').map((line, index) => {
-                                                const lineNumber = index + 1;
-                                                const isDiffPresent = differences.some(
-                                                    diff => diff.added && 
-                                                    diff.lines2 && 
-                                                    diff.lines2.includes(lineNumber)
-                                                );
-                                                return (
-                                                    <div
-                                                        key={`new-line-${lineNumber}`}
-                                                        id={`new-line-${lineNumber}`}
-                                                        className={`mb-2 text-slate-200 ${isDiffPresent ? 'bg-green-900/50 p-2 rounded border-l-4 border-green-500' : ''}`}
+                                    <div>
+                                        <h3 className="text-lg font-semibold text-slate-200 mb-2">新規テキスト</h3>
+                                        <ScrollArea className="h-[500px] w-full rounded-md border border-slate-700">
+                                            <div className="p-4">
+                                                {differences.map((part, index) => (
+                                                    <span
+                                                        key={index}
+                                                        className={`${
+                                                            part.added ? 'bg-green-900/50 px-1 rounded border-b-2 border-green-500' : ''
+                                                        }`}
                                                     >
-                                                        <span className="text-slate-500 mr-2 select-none">{lineNumber}:</span>
-                                                        {line}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </ScrollArea>
-                                </CardContent>
-                            </Card>
+                                                        {part.value}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </ScrollArea>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
 
-                            <Card className="bg-slate-800 border border-slate-700">
-                                <CardHeader className="border-b border-slate-700">
-                                    <CardTitle className="text-slate-100">変更点リスト</CardTitle>
-                                    <CardDescription className="text-slate-400">クリックでジャンプ</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-2">
-                                        {differences.map((diff, index) => {
-                                            if (!diff.added && !diff.removed) return null;
-                                            const addedLine = diff.added && diff.lines2?.[0];
-                                            const removedLine = diff.removed && diff.lines1?.[0];
-                                            return (
-                                                <div
-                                                    key={`diff-${index}`}
-                                                    onClick={() => jumpToDiff(index)}
-                                                    className={`p-3 rounded-lg cursor-pointer transition-colors border-l-4 ${
-                                                        diff.added ? 'bg-green-900/30 hover:bg-green-900/50 border-green-500' : 
-                                                        diff.removed ? 'bg-red-900/30 hover:bg-red-900/50 border-red-500' : 
-                                                        'bg-slate-700 hover:bg-slate-600'
-                                                    }`}
-                                                >
-                                                    <div className="flex items-start gap-2">
-                                                        {diff.added && <span className="text-green-400 font-semibold whitespace-nowrap">追加 (行: {addedLine})</span>}
-                                                        {diff.removed && <span className="text-red-400 font-semibold whitespace-nowrap">削除 (行: {removedLine})</span>}
-                                                        <div className="overflow-hidden">
-                                                            <span className="text-sm text-slate-200 block truncate">{diff.value}</span>
-                                                        </div>
+                        <Card className="bg-slate-800 border border-slate-700">
+                            <CardHeader className="border-b border-slate-700">
+                                <CardTitle className="text-slate-100">変更点リスト</CardTitle>
+                                <CardDescription className="text-slate-400">クリックで該当箇所にジャンプ</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-2">
+                                    {differences.map((diff, index) => {
+                                        if (!diff.added && !diff.removed) return null;
+                                        return (
+                                            <div
+                                                key={`diff-${index}`}
+                                                onClick={() => jumpToDiff(index)}
+                                                className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                                                    diff.added ? 'bg-green-900/30 hover:bg-green-900/50 border-l-4 border-green-500' : 
+                                                    diff.removed ? 'bg-red-900/30 hover:bg-red-900/50 border-l-4 border-red-500' : 
+                                                    'bg-slate-700 hover:bg-slate-600'
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`font-semibold ${diff.added ? 'text-green-400' : 'text-red-400'}`}>
+                                                        {diff.added ? '追加' : '削除'}
+                                                    </span>
+                                                    <div className="overflow-hidden">
+                                                        <span className="text-sm text-slate-200 block truncate">{diff.value}</span>
                                                     </div>
                                                 </div>
-                                            );
-                                        })}
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </CardContent>
+                        </Card>
                     </div>
                 )}
             </div>
