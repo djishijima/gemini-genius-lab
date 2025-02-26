@@ -1,56 +1,111 @@
-import { useState, useEffect, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Mic, Square, ArrowLeft, Download, Upload } from "lucide-react";
+
+import React, { useState, useRef, useEffect } from 'react';
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
+import { Progress } from "@/components/ui/progress"
+import {
+  ArrowLeft,
+  Download,
+  Mic,
+  Square,
+  Upload,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { AudioWaveform } from "@/components/AudioWaveform";
-import { useAudioRecorder } from "@/hooks/useAudioRecorder";
-import { transcribeAudio, processAudioFile } from "@/utils/speechToText";
-import { Progress } from "@/components/ui/progress";
-import { Label } from "@/components/ui/label";
+import { AudioWaveform } from '@/components/AudioWaveform';
 import { useToast } from "@/hooks/use-toast";
 
+function formatTime(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+  const formattedMinutes = String(minutes).padStart(2, '0');
+  const formattedSeconds = String(remainingSeconds).padStart(2, '0');
+  return `${formattedMinutes}:${formattedSeconds}`;
+}
+
 export default function AudioRecorder() {
-  const [transcription, setTranscription] = useState("");
+  const [isRecording, setIsRecording] = useState(false);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [transcription, setTranscription] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [transcriptionProgress, setTranscriptionProgress] = useState(0);
-  const [isTranscribing, setIsTranscribing] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [audioStream, setAudioStream] = useState<MediaStream | null>(null);
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const transcriptionTimeoutRef = useRef<NodeJS.Timeout>();
+  const audioChunksRef = useRef<Blob[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const API_KEY = 'AIzaSyB3e3yEOKECnlDtivhi_jPxOpepk8wo6jE';
-  const PROJECT_ID = 'aisanbo';
 
-  const processChunk = async (chunk: Blob) => {
+  // Function to start recording
+  const startRecording = async () => {
     try {
-      const transcriptText = await transcribeAudio(chunk, API_KEY, (progress) => {
-        setTranscriptionProgress(progress);
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      setAudioStream(stream);
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+      audioChunksRef.current = [];
+
+      recorder.ondataavailable = (event) => {
+        audioChunksRef.current.push(event.data);
+      };
+
+      recorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        setAudioBlob(audioBlob);
+        setIsProcessing(true);
+        handleTranscription(audioBlob);
+      };
+
+      recorder.start();
+      setIsRecording(true);
+      setRecordingTime(0);
+
+      intervalRef.current = setInterval(() => {
+        setRecordingTime((prevTime) => prevTime + 1);
+      }, 1000);
+
+    } catch (error) {
+      console.error("Error starting recording:", error);
+      toast({
+        title: "エラー",
+        description: "録音の開始に失敗しました",
+        variant: "destructive"
       });
-      if (transcriptText.trim()) {
-        const timestamp = new Date().toLocaleTimeString();
-        setTranscription(prev => prev + `[$] ${timestamp}\n${transcriptText}\n`);
-      }
-    } catch (error: any) {
-      console.error('Real-time transcription error:', error);
     }
   };
 
-  const handleRecordingComplete = async (blob: Blob) => {
+  // Function to stop recording
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      if (audioStream) {
+        audioStream.getTracks().forEach(track => track.stop());
+        setAudioStream(null);
+      }
+    }
+  };
+
+  // Function to handle transcription
+  const handleTranscription = async (blob: Blob) => {
     setIsTranscribing(true);
     setTranscriptionProgress(0);
     try {
-      const transcriptText = await transcribeAudio(blob, API_KEY, (progress) => {
-        setTranscriptionProgress(progress);
-      });
+      const transcriptText = await transcribeAudio(blob, API_KEY);
       const timestamp = new Date().toLocaleTimeString();
-      setTranscription(prev =>
-        prev + `[$] ${timestamp}\n${transcriptText}\n`
-      );
+      setTranscription(prev => prev + `[$] ${timestamp}\n${transcriptText}\n`);
     } catch (error: any) {
       console.error('Speech-to-Text Error:', error);
       toast({
@@ -60,126 +115,43 @@ export default function AudioRecorder() {
       });
     } finally {
       setIsTranscribing(false);
-      setTranscriptionProgress(0);
+      setIsProcessing(false);
+      setTranscriptionProgress(100);
     }
   };
 
-  const {
-    isRecording,
-    audioStream,
-    audioBlob,
-    recordingTime,
-    startRecording: startBaseRecording,
-    stopRecording: stopBaseRecording
-  } = useAudioRecorder({
-    onRecordingComplete: handleRecordingComplete
-  });
-
-  const startRecording = async () => {
-    try {
-      await startBaseRecording();
-      if (audioStream) {
-        const mediaRecorder = new MediaRecorder(audioStream, {
-          mimeType: 'audio/webm',
-        });
-        mediaRecorderRef.current = mediaRecorder;
-        chunksRef.current = [];
-
-        mediaRecorder.ondataavailable = async (event) => {
-          if (event.data.size > 0) {
-            chunksRef.current.push(event.data);
-            if (transcriptionTimeoutRef.current) {
-              clearTimeout(transcriptionTimeoutRef.current);
-            }
-            transcriptionTimeoutRef.current = setTimeout(() => {
-              const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
-              processChunk(audioBlob);
-              chunksRef.current = [];
-            }, 3000);
-          }
-        };
-
-        mediaRecorder.start(1000);
-      }
-    } catch (error) {
-      console.error('Error starting recording:', error);
-      toast({
-        title: "エラー",
-        description: "録音の開始に失敗しました",
-        variant: "destructive"
-      });
+  // Function to handle file upload
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setAudioBlob(file);
+      setIsProcessing(true);
+      handleTranscription(file);
     }
   };
 
-  const stopRecording = () => {
-    if (transcriptionTimeoutRef.current) {
-      clearTimeout(transcriptionTimeoutRef.current);
-    }
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-    }
-    stopBaseRecording();
-  };
-
-  const formatTime = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
-
-  const exportAudio = () => {
+  // Function to handle audio export
+  const handleAudioExport = () => {
     if (audioBlob) {
-      const url = URL.createObjectURL(audioBlob);
+      const url = window.URL.createObjectURL(audioBlob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `recording-${new Date().toISOString()}.webm`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(url);
     }
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setIsProcessing(true);
-    setUploadProgress(0);
-    setTranscriptionProgress(0);
-    try {
-      const transcriptText = await processAudioFile(file, API_KEY, (upload, transcribe) => {
-        setUploadProgress(upload);
-        setTranscriptionProgress(transcribe);
-      });
-      const timestamp = new Date().toLocaleTimeString();
-      setTranscription(prev =>
-        prev + `[$] ${timestamp} ${file.name}の文字起こし結果:\n${transcriptText}\n`
-      );
-    } catch (error: any) {
-      console.error('File Processing Error:', error);
-      toast({
-        title: "エラー",
-        description: error.message || "ファイル処理に失敗しました",
-        variant: "destructive"
-      });
-    } finally {
-      setIsProcessing(false);
-      setUploadProgress(0);
-      setTranscriptionProgress(0);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
-
+  // Cleanup function
   useEffect(() => {
     return () => {
       if (isRecording) {
         stopRecording();
       }
-      if (transcriptionTimeoutRef.current) {
-        clearTimeout(transcriptionTimeoutRef.current);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
       }
     };
   }, [isRecording]);
@@ -287,7 +259,7 @@ export default function AudioRecorder() {
           {audioBlob && !isRecording && (
             <Button
               variant="secondary"
-              onClick={exportAudio}
+              onClick={handleAudioExport}
               className="w-full"
               disabled={isProcessing || isTranscribing}
             >
