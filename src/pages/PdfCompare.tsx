@@ -176,14 +176,25 @@ export default function PdfCompare() {
         }
     };
 
-    const handleScroll = (event: React.UIEvent<HTMLDivElement>, side: 'left' | 'right') => {
+    const handleScroll = (event: React.WheelEvent<HTMLDivElement>, side: 'left' | 'right') => {
         if (!synchroScroll) return;
         
-        const scrolledElement = event.currentTarget;
-        const targetElement = side === 'left' ? rightScrollRef.current : leftScrollRef.current;
+        event.preventDefault();
+        const delta = event.deltaY;
         
-        if (targetElement && scrolledElement) {
-            targetElement.scrollTop = scrolledElement.scrollTop;
+        if (leftScrollRef.current && rightScrollRef.current) {
+            const leftViewport = leftScrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+            const rightViewport = rightScrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+            
+            if (leftViewport && rightViewport) {
+                if (side === 'left') {
+                    leftViewport.scrollTop += delta;
+                    rightViewport.scrollTop = leftViewport.scrollTop;
+                } else {
+                    rightViewport.scrollTop += delta;
+                    leftViewport.scrollTop = rightViewport.scrollTop;
+                }
+            }
         }
     };
 
@@ -282,18 +293,14 @@ export default function PdfCompare() {
                                     <ScrollArea 
                                         className="h-[500px] w-full rounded-md border border-slate-700"
                                         ref={leftScrollRef}
-                                        onWheel={(e) => {
-                                            if (leftScrollRef.current) {
-                                                handleScroll(e as unknown as React.UIEvent<HTMLDivElement>, 'left');
-                                            }
-                                        }}
+                                        onWheel={(e) => handleScroll(e, 'left')}
                                     >
                                         <div className="p-4">
                                             {differences.map((part, index) => (
                                                 <span
                                                     key={index}
                                                     className={`${
-                                                        part.removed ? 'bg-red-900/50 px-1 rounded border-b-2 border-red-500' : ''
+                                                        part.removed ? 'bg-red-600/20 px-1 rounded border-l-4 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : ''
                                                     }`}
                                                 >
                                                     {part.value}
@@ -317,18 +324,14 @@ export default function PdfCompare() {
                                     <ScrollArea 
                                         className="h-[500px] w-full rounded-md border border-slate-700"
                                         ref={rightScrollRef}
-                                        onWheel={(e) => {
-                                            if (rightScrollRef.current) {
-                                                handleScroll(e as unknown as React.UIEvent<HTMLDivElement>, 'right');
-                                            }
-                                        }}
+                                        onWheel={(e) => handleScroll(e, 'right')}
                                     >
                                         <div className="p-4">
                                             {differences.map((part, index) => (
                                                 <span
                                                     key={index}
                                                     className={`${
-                                                        part.added ? 'bg-green-900/50 px-1 rounded border-b-2 border-green-500' : ''
+                                                        part.added ? 'bg-emerald-600/20 px-1 rounded border-l-4 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.2)]' : ''
                                                     }`}
                                                 >
                                                     {part.value}
