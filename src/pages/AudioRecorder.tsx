@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Mic, Square, ArrowLeft, Download, Upload } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AudioWaveform } from "@/components/AudioWaveform";
@@ -137,128 +137,152 @@ export default function AudioRecorder() {
   }, [isRecording, stopRecording]);
 
   return (
-    <div className="p-6">
-      <Button
-        variant="ghost"
+    <div className="container mx-auto p-4 max-w-3xl">
+      <Button 
+        variant="ghost" 
         onClick={() => navigate("/")}
-        className="mb-6"
+        className="mb-4"
       >
         <ArrowLeft className="mr-2 h-4 w-4" />
         戻る
       </Button>
 
-      <div className="max-w-5xl mx-auto space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Google Cloud Speech-to-Text による音声文字起こし</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="projectId">Google Cloud Project ID</Label>
-                <Input
-                  id="projectId"
-                  value={projectId}
-                  onChange={(e) => setProjectId(e.target.value)}
-                  placeholder="your-project-id"
-                />
-              </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>音声文字起こし</CardTitle>
+          <CardDescription>
+            音声を録音するか、音声ファイルをアップロードして文字起こしを行います
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* API Key & Project ID */}
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="projectId">Google Cloud Project ID</Label>
+              <Input
+                id="projectId"
+                value={projectId}
+                onChange={(e) => setProjectId(e.target.value)}
+                placeholder="your-project-id"
+                className="max-w-md"
+              />
+            </div>
 
+            <div className="space-y-2">
+              <Label>Google Cloud API Key</Label>
               <ApiKeyInput
                 apiKey={apiKey}
                 onChange={setApiKey}
               />
+            </div>
+          </div>
 
-              {isRecording && (
+          {/* Recording Controls */}
+          <div className="flex flex-col items-center space-y-4 p-6 border rounded-lg bg-muted/10">
+            {isRecording ? (
+              <div className="w-full space-y-4">
+                <div className="text-center text-xl font-bold text-primary">
+                  {formatTime(recordingTime)}
+                </div>
+                <AudioWaveform stream={audioStream} isRecording={isRecording} />
+                <Button
+                  size="lg"
+                  variant="destructive"
+                  onClick={stopRecording}
+                  className="w-full max-w-md mx-auto"
+                  disabled={isProcessing || isTranscribing}
+                >
+                  <Square className="mr-2 h-5 w-5" />
+                  録音を停止
+                </Button>
+              </div>
+            ) : (
+              <div className="w-full space-y-4">
+                <Button
+                  size="lg"
+                  variant="default"
+                  onClick={handleStartRecording}
+                  className="w-full max-w-md mx-auto"
+                  disabled={!apiKey || !projectId || isProcessing || isTranscribing}
+                >
+                  <Mic className="mr-2 h-5 w-5" />
+                  録音を開始
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* File Upload */}
+          <div className="space-y-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="audio/*"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+            <Button
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full"
+              disabled={isRecording || isProcessing || isTranscribing || !apiKey || !projectId}
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              音声ファイルをアップロード
+            </Button>
+          </div>
+
+          {/* Progress Indicators */}
+          {(isProcessing || isTranscribing) && (
+            <div className="space-y-4 p-4 border rounded-lg bg-muted/10">
+              <p className="text-sm font-medium text-center">処理中...</p>
+              {isProcessing && (
                 <>
-                  <div className="text-center text-xl font-bold">
-                    {formatTime(recordingTime)}
+                  <div className="space-y-2">
+                    <Label className="text-sm">ファイルアップロード</Label>
+                    <Progress value={uploadProgress} />
                   </div>
-                  <div className="mt-4">
-                    <AudioWaveform stream={audioStream} isRecording={isRecording} />
+                  <div className="space-y-2">
+                    <Label className="text-sm">文字起こし</Label>
+                    <Progress value={transcriptionProgress} />
                   </div>
                 </>
               )}
-
-              {(isProcessing || isTranscribing) && (
+              {isTranscribing && (
                 <div className="space-y-2">
-                  <p>処理を実行中...</p>
-                  {isProcessing && (
-                    <>
-                      <Label>ファイルアップロード</Label>
-                      <Progress value={uploadProgress} />
-                      <Label>文字起こし</Label>
-                      <Progress value={transcriptionProgress} />
-                    </>
-                  )}
-                  {isTranscribing && (
-                    <>
-                      <Label>文字起こし</Label>
-                      <Progress value={transcriptionProgress} />
-                    </>
-                  )}
+                  <Label className="text-sm">文字起こし</Label>
+                  <Progress value={transcriptionProgress} />
                 </div>
               )}
-
-              <div className="flex justify-center gap-2">
-                <Button
-                  size="lg"
-                  variant={isRecording ? "destructive" : "default"}
-                  onClick={isRecording ? stopRecording : handleStartRecording}
-                  disabled={isProcessing || isTranscribing || !projectId}
-                >
-                  {isRecording ? (
-                    <>
-                      <Square className="mr-2 h-4 w-4" />
-                      録音を停止
-                    </>
-                  ) : (
-                    <>
-                      <Mic className="mr-2 h-4 w-4" />
-                      録音を開始
-                    </>
-                  )}
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  onClick={exportAudio}
-                  disabled={isRecording || !audioBlob || isProcessing || isTranscribing}
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  音声をエクスポート
-                </Button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="audio/*"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-                <Button
-                  size="lg"
-                  variant="secondary"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={isRecording || isProcessing || isTranscribing || !projectId}
-                >
-                  <Upload className="mr-2 h-4 w-4" />
-                  音声ファイルを選択
-                </Button>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="font-medium">文字起こし結果</h3>
-                <textarea
-                  value={transcription}
-                  onChange={(e) => setTranscription(e.target.value)}
-                  className="w-full h-[300px] p-2 border rounded resize-none"
-                  readOnly
-                />
-              </div>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          )}
+
+          {/* Audio Export */}
+          {audioBlob && !isRecording && (
+            <Button
+              variant="secondary"
+              onClick={exportAudio}
+              className="w-full"
+              disabled={isProcessing || isTranscribing}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              音声をエクスポート
+            </Button>
+          )}
+
+          {/* Transcription Results */}
+          <div className="space-y-2">
+            <Label>文字起こし結果</Label>
+            <textarea
+              value={transcription}
+              onChange={(e) => setTranscription(e.target.value)}
+              className="w-full h-[200px] p-4 border rounded-lg font-mono text-sm resize-none bg-muted/5"
+              placeholder="文字起こし結果がここに表示されます..."
+              readOnly
+            />
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
