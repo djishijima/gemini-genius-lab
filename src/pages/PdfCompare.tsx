@@ -254,11 +254,16 @@ export default function PdfCompare() {
                 </div>
 
                 <Button 
-                    className="compare-button w-full bg-slate-700 hover:bg-slate-600 text-slate-100" 
+                    className="compare-button w-full bg-gradient-to-r from-[#0EA5E9] to-[#8B5CF6] hover:from-[#0284C7] hover:to-[#7C3AED] text-white font-bold text-lg py-6 shadow-lg transform transition-all duration-200 hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(139,92,246,0.3)] active:scale-[0.98]" 
                     onClick={comparePdfs} 
                     disabled={loading || (!text1 && !pdf1) || (!text2 && !pdf2)}
                 >
-                    {loading ? (<><>比較中...</><Progress value={progress} className="mt-2" /></>) : '比較する'}
+                    {loading ? (
+                        <>
+                            比較中...
+                            <Progress value={progress} className="mt-2" />
+                        </>
+                    ) : '比較する'}
                 </Button>
 
                 {differences.length > 0 && (
