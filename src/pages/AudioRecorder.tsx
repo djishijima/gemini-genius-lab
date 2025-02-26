@@ -123,7 +123,7 @@ export default function AudioRecorder() {
       <div className="max-w-5xl mx-auto space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Gemini 1.5 Pro による音声文字起こし</CardTitle>
+            <CardTitle>Google Cloud Speech-to-Text による音声文字起こし</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
