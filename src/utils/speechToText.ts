@@ -14,8 +14,8 @@ interface GeminiResponse {
 async function splitAudioIntoChunks(audioBlob: Blob, chunkDuration: number = 45): Promise<Blob[]> {
   console.log('元の音声データサイズ:', audioBlob.size, 'bytes');
   const chunks: Blob[] = [];
-  const totalDuration = audioBlob.size / (48000 * 2); // Approximate duration in seconds
-  const chunkSize = (chunkDuration * 48000 * 2); // 48kHz, 16-bit
+  const totalDuration = audioBlob.size / (48000 * 2);
+  const chunkSize = (chunkDuration * 48000 * 2);
 
   console.log('予想される音声の長さ:', totalDuration, '秒');
   console.log('チャンクサイズ:', chunkSize, 'bytes');
@@ -33,7 +33,11 @@ async function splitAudioIntoChunks(audioBlob: Blob, chunkDuration: number = 45)
   return chunks;
 }
 
-export async function transcribeAudio(audioBlob: Blob, apiKey: string): Promise<string> {
+export async function transcribeAudio(
+  audioBlob: Blob, 
+  apiKey: string,
+  onProgress?: (progress: number) => void
+): Promise<string> {
   try {
     console.log('音声文字起こし開始');
     const chunks = await splitAudioIntoChunks(audioBlob);
@@ -76,7 +80,6 @@ export async function transcribeAudio(audioBlob: Blob, apiKey: string): Promise<
       if (!response.ok) {
         const errorData = await response.json();
         console.error('Speech-to-Text API Error:', errorData);
-        const timestamp = new Date().toLocaleTimeString();
         throw new Error(`APIエラー: ${errorData.error?.message || '不明なエラー'}`);
       }
 
@@ -90,15 +93,21 @@ export async function transcribeAudio(audioBlob: Blob, apiKey: string): Promise<
           .map((result: any) => result.alternatives[0].transcript)
           .join('\n');
         console.log(`チャンク ${i + 1} の文字起こし結果:`, transcription);
-        fullTranscription += `[${timestamp}] ${transcription}\n`;
+        fullTranscription += transcription + '\n';
       } else {
         console.log(`チャンク ${i + 1} の文字起こし結果が空です`);
+      }
+
+      // 進捗状況を更新
+      if (onProgress) {
+        const progress = ((i + 1) / chunks.length) * 100;
+        onProgress(progress);
       }
     }
 
     if (!fullTranscription) {
       console.log('すべてのチャンクの文字起こしが空でした');
-      return `[${new Date().toLocaleTimeString()}] 文字起こしに失敗しました`;
+      return `文字起こしに失敗しました`;
     }
 
     console.log('文字起こし完了:', fullTranscription);
@@ -106,13 +115,27 @@ export async function transcribeAudio(audioBlob: Blob, apiKey: string): Promise<
 
   } catch (error) {
     console.error('Speech-to-Text Error:', error);
-    const timestamp = new Date().toLocaleTimeString();
-    return `[${timestamp}] エラー: ${error instanceof Error ? error.message : '不明なエラー'}`;
+    throw error;
   }
 }
 
-export async function processAudioFile(file: File, apiKey: string): Promise<string> {
+export async function processAudioFile(
+  file: File, 
+  apiKey: string,
+  onProgress?: (uploadProgress: number, transcriptionProgress: number) => void
+): Promise<string> {
   console.log('ファイル処理開始:', file.name, file.type, file.size, 'bytes');
+  
+  // アップロード進捗を100%に設定
+  if (onProgress) {
+    onProgress(100, 0);
+  }
+  
   const blob = new Blob([await file.arrayBuffer()], { type: file.type });
-  return transcribeAudio(blob, apiKey);
+  
+  return transcribeAudio(blob, apiKey, (progress) => {
+    if (onProgress) {
+      onProgress(100, progress);
+    }
+  });
 }

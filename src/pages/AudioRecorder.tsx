@@ -10,27 +10,38 @@ import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { transcribeAudio, processAudioFile } from "@/utils/speechToText";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 
 export default function AudioRecorder() {
   const [transcription, setTranscription] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [transcriptionProgress, setTranscriptionProgress] = useState(0);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const [projectId, setProjectId] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   const handleRecordingComplete = async (blob: Blob) => {
+    setIsTranscribing(true);
+    setTranscriptionProgress(0);
     try {
-      const transcriptText = await transcribeAudio(blob, apiKey);
+      const transcriptText = await transcribeAudio(blob, apiKey, (progress) => {
+        setTranscriptionProgress(progress);
+      });
       const timestamp = new Date().toLocaleTimeString();
-      setTranscription(prev => 
-        prev + `[${timestamp}] ${transcriptText}\n`
+      setTranscription(prev =>
+        prev + `[$] ${timestamp}\n${transcriptText}\n`
       );
     } catch (error) {
       console.error('Speech-to-Text Error:', error);
-      setTranscription(prev => 
+      setTranscription(prev =>
         prev + `[ERROR] Speech-to-Text処理エラー: ${error}\n`
       );
+    } finally {
+      setIsTranscribing(false);
+      setTranscriptionProgress(0);
     }
   };
 
@@ -54,6 +65,10 @@ export default function AudioRecorder() {
   const handleStartRecording = () => {
     if (!apiKey) {
       alert('APIキーを入力してください');
+      return;
+    }
+    if (!projectId) {
+      alert('Project IDを入力してください');
       return;
     }
     startRecording();
@@ -81,20 +96,32 @@ export default function AudioRecorder() {
       return;
     }
 
+    if (!projectId) {
+      alert('Project IDを入力してください');
+      return;
+    }
+
+    setIsProcessing(true);
+    setUploadProgress(0);
+    setTranscriptionProgress(0);
     try {
-      setIsProcessing(true);
-      const transcriptText = await processAudioFile(file, apiKey);
+      const transcriptText = await processAudioFile(file, apiKey, (upload, transcribe) => {
+        setUploadProgress(upload);
+        setTranscriptionProgress(transcribe);
+      });
       const timestamp = new Date().toLocaleTimeString();
-      setTranscription(prev => 
-        prev + `[${timestamp}] ${file.name}の文字起こし結果:\n${transcriptText}\n`
+      setTranscription(prev =>
+        prev + `[$] ${timestamp} ${file.name}の文字起こし結果:\n${transcriptText}\n`
       );
     } catch (error) {
       console.error('File Processing Error:', error);
-      setTranscription(prev => 
+      setTranscription(prev =>
         prev + `[ERROR] ファイル処理エラー: ${error}\n`
       );
     } finally {
       setIsProcessing(false);
+      setUploadProgress(0);
+      setTranscriptionProgress(0);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -107,12 +134,12 @@ export default function AudioRecorder() {
         stopRecording();
       }
     };
-  }, [isRecording]);
+  }, [isRecording, stopRecording]);
 
   return (
     <div className="p-6">
-      <Button 
-        variant="ghost" 
+      <Button
+        variant="ghost"
         onClick={() => navigate("/")}
         className="mb-6"
       >
@@ -153,12 +180,32 @@ export default function AudioRecorder() {
                 </>
               )}
 
+              {(isProcessing || isTranscribing) && (
+                <div className="space-y-2">
+                  <p>処理を実行中...</p>
+                  {isProcessing && (
+                    <>
+                      <Label>ファイルアップロード</Label>
+                      <Progress value={uploadProgress} />
+                      <Label>文字起こし</Label>
+                      <Progress value={transcriptionProgress} />
+                    </>
+                  )}
+                  {isTranscribing && (
+                    <>
+                      <Label>文字起こし</Label>
+                      <Progress value={transcriptionProgress} />
+                    </>
+                  )}
+                </div>
+              )}
+
               <div className="flex justify-center gap-2">
                 <Button
                   size="lg"
                   variant={isRecording ? "destructive" : "default"}
                   onClick={isRecording ? stopRecording : handleStartRecording}
-                  disabled={isProcessing || !projectId}
+                  disabled={isProcessing || isTranscribing || !projectId}
                 >
                   {isRecording ? (
                     <>
@@ -176,7 +223,7 @@ export default function AudioRecorder() {
                   size="lg"
                   variant="outline"
                   onClick={exportAudio}
-                  disabled={isRecording || !audioBlob || isProcessing}
+                  disabled={isRecording || !audioBlob || isProcessing || isTranscribing}
                 >
                   <Download className="mr-2 h-4 w-4" />
                   音声をエクスポート
@@ -192,7 +239,7 @@ export default function AudioRecorder() {
                   size="lg"
                   variant="secondary"
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={isRecording || isProcessing || !projectId}
+                  disabled={isRecording || isProcessing || isTranscribing || !projectId}
                 >
                   <Upload className="mr-2 h-4 w-4" />
                   音声ファイルを選択
@@ -205,7 +252,7 @@ export default function AudioRecorder() {
                   value={transcription}
                   onChange={(e) => setTranscription(e.target.value)}
                   className="w-full h-[300px] p-2 border rounded resize-none"
-                  readOnly={false}
+                  readOnly
                 />
               </div>
             </div>
