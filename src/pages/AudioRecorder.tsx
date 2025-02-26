@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,7 +14,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { AudioWaveform } from '@/components/AudioWaveform';
 import { useToast } from "@/hooks/use-toast";
-import { transcribeAudioWithGoogle } from "@/utils/speechToText";
+import { transcribeAudio } from "@/utils/speechToText";
 
 function formatTime(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
@@ -100,7 +101,7 @@ export default function AudioRecorder() {
     setIsTranscribing(true);
     setTranscriptionProgress(0);
     try {
-      const transcriptText = await transcribeAudioWithGoogle(blob);
+      const transcriptText = await transcribeAudio(blob, API_KEY);
       const timestamp = new Date().toLocaleTimeString();
       setTranscription(prev => prev + `[${timestamp}]\n${transcriptText}\n`);
     } catch (error: any) {
