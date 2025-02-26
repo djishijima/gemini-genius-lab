@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { diffWords } from 'diff';
 import Joyride, { STATUS } from 'react-joyride';
@@ -7,10 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import * as pdfjsLib from 'pdfjs-dist';
-import { TextItem, TextMarkedContent } from 'pdfjs-dist/types/src/display/api';
+import { TextItem } from 'pdfjs-dist/types/src/display/api';
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import 'pdfjs-dist/build/pdf.worker.entry';
+import { toast } from "sonner";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
 
@@ -22,6 +24,7 @@ interface Difference {
 
 export default function PdfCompare() {
   const navigate = useNavigate();
+  const [fileType, setFileType] = useState<'pdf' | 'text'>('pdf');
   const [pdf1, setPdf1] = useState<File | null>(null);
   const [pdf2, setPdf2] = useState<File | null>(null);
   const [pdf1Text, setPdf1Text] = useState<string>('');
@@ -65,18 +68,36 @@ export default function PdfCompare() {
 
   const handlePdf1Change = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
-      setPdf1(event.target.files[0]);
+      const file = event.target.files[0];
+      if (fileType === 'pdf' && file.type !== 'application/pdf') {
+        toast.error('PDFファイルのみアップロード可能です');
+        return;
+      }
+      if (fileType === 'text' && file.type !== 'text/plain') {
+        toast.error('テキストファイルのみアップロード可能です');
+        return;
+      }
+      setPdf1(file);
     }
   };
 
   const handlePdf2Change = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
-      setPdf2(event.target.files[0]);
+      const file = event.target.files[0];
+      if (fileType === 'pdf' && file.type !== 'application/pdf') {
+        toast.error('PDFファイルのみアップロード可能です');
+        return;
+      }
+      if (fileType === 'text' && file.type !== 'text/plain') {
+        toast.error('テキストファイルのみアップロード可能です');
+        return;
+      }
+      setPdf2(file);
     }
   };
 
   const extractFileContent = async (file: File): Promise<string> => {
-    if (file.type === 'text/plain') {
+    if (fileType === 'text') {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (event) => {
@@ -90,6 +111,8 @@ export default function PdfCompare() {
         reader.readAsText(file);
       });
     }
+
+    // PDFファイルの処理
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = async function () {
@@ -229,13 +252,45 @@ export default function PdfCompare() {
       />
 
       <div className="grid gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>ファイルタイプの選択</CardTitle>
+            <CardDescription>比較するファイルの種類を選択してください</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-4">
+              <Button
+                variant={fileType === 'pdf' ? 'default' : 'outline'}
+                onClick={() => {
+                  setFileType('pdf');
+                  setPdf1(null);
+                  setPdf2(null);
+                }}
+              >
+                PDFファイル
+              </Button>
+              <Button
+                variant={fileType === 'text' ? 'default' : 'outline'}
+                onClick={() => {
+                  setFileType('text');
+                  setPdf1(null);
+                  setPdf2(null);
+                }}
+              >
+                テキストファイル
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="grid md:grid-cols-2 gap-4">
           <div className="upload-section-1">
             <Card>
               <CardHeader>
                 <CardTitle>元のファイルをアップロード</CardTitle>
-                <CardDescription>比較の基準となるPDFまたはテキストファイルを選択してください。</CardDescription>
+                <CardDescription>
+                  {fileType === 'pdf' ? 'PDFファイルを選択してください' : 'テキストファイルを選択してください'}
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center space-x-4">
@@ -243,7 +298,7 @@ export default function PdfCompare() {
                   <Input 
                     type="file" 
                     id="pdf1" 
-                    accept=".pdf,.txt,application/pdf,text/plain" 
+                    accept={fileType === 'pdf' ? '.pdf,application/pdf' : '.txt,text/plain'}
                     onChange={handlePdf1Change} 
                   />
                 </div>
@@ -255,7 +310,9 @@ export default function PdfCompare() {
             <Card>
               <CardHeader>
                 <CardTitle>新しいファイルをアップロード</CardTitle>
-                <CardDescription>変更を比較するPDFまたはテキストファイルを選択してください。</CardDescription>
+                <CardDescription>
+                  {fileType === 'pdf' ? 'PDFファイルを選択してください' : 'テキストファイルを選択してください'}
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center space-x-4">
@@ -263,7 +320,7 @@ export default function PdfCompare() {
                   <Input 
                     type="file" 
                     id="pdf2" 
-                    accept=".pdf,.txt,application/pdf,text/plain" 
+                    accept={fileType === 'pdf' ? '.pdf,application/pdf' : '.txt,text/plain'}
                     onChange={handlePdf2Change} 
                   />
                 </div>
