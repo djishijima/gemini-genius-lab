@@ -1,17 +1,19 @@
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useToast } from "@/components/ui/use-toast";
-import { Wand2, Copy, FileDown } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Wand2, Copy, FileDown, Upload, Eye } from "lucide-react";
 import { generateInDesignScript, parsePromptForOptions } from "@/utils/indesignScriptGenerator";
 
 const Transcription = () => {
   const [manuscript, setManuscript] = useState("");
   const [prompt, setPrompt] = useState("");
   const [generatedScript, setGeneratedScript] = useState("");
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const handleGenerate = () => {
@@ -57,6 +59,42 @@ const Transcription = () => {
       title: "ダウンロード完了",
       description: "スクリプトファイルのダウンロードが完了しました。",
     });
+  };
+
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      setGeneratedScript(text);
+      
+      // スクリプトから原稿とプロンプトを解析する試み
+      const manuscriptMatch = text.match(/contents = "(.*?)"/);
+      const promptMatch = text.match(/\/\/ Prompt: (.*?)\n/);
+      
+      if (manuscriptMatch?.[1]) {
+        setManuscript(manuscriptMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"'));
+      }
+      if (promptMatch?.[1]) {
+        setPrompt(promptMatch[1]);
+      }
+
+      toast({
+        title: "インポート完了",
+        description: "スクリプトのインポートが完了しました。",
+      });
+    } catch (error) {
+      toast({
+        title: "インポートエラー",
+        description: "スクリプトの読み込みに失敗しました。",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const togglePreview = () => {
+    setIsPreviewMode(!isPreviewMode);
   };
 
   return (
@@ -106,7 +144,7 @@ const Transcription = () => {
         </Card>
       </div>
 
-      <div className="flex justify-center">
+      <div className="flex justify-center gap-4">
         <Button
           onClick={handleGenerate}
           className="w-full max-w-md text-lg py-6 bg-[hsl(198,93%,60%)] hover:bg-[hsl(198,93%,50%)] text-slate-900 font-medium"
@@ -114,6 +152,22 @@ const Transcription = () => {
         >
           <Wand2 className="mr-2 h-5 w-5" />
           スクリプトを生成
+        </Button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".jsx,.js"
+          onChange={handleImport}
+          className="hidden"
+        />
+        <Button
+          onClick={() => fileInputRef.current?.click()}
+          className="w-full max-w-md text-lg py-6"
+          variant="outline"
+          size="lg"
+        >
+          <Upload className="mr-2 h-5 w-5" />
+          スクリプトをインポート
         </Button>
       </div>
 
@@ -128,6 +182,15 @@ const Transcription = () => {
                 </CardDescription>
               </div>
               <div className="flex gap-2">
+                <Button
+                  onClick={togglePreview}
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                >
+                  <Eye className="w-4 h-4" />
+                  {isPreviewMode ? "コードを表示" : "プレビュー"}
+                </Button>
                 <Button
                   onClick={handleCopy}
                   variant="outline"
@@ -151,9 +214,17 @@ const Transcription = () => {
           </CardHeader>
           <CardContent className="pt-6">
             <ScrollArea className="h-[400px] w-full rounded-md border border-slate-700">
-              <pre className="p-4 text-slate-100 font-mono text-sm">
-                {generatedScript}
-              </pre>
+              {isPreviewMode ? (
+                <div className="p-4 font-serif text-slate-100">
+                  {manuscript.split('\n').map((line, i) => (
+                    <p key={i} className="mb-4">{line}</p>
+                  ))}
+                </div>
+              ) : (
+                <pre className="p-4 text-slate-100 font-mono text-sm">
+                  {generatedScript}
+                </pre>
+              )}
             </ScrollArea>
           </CardContent>
         </Card>
