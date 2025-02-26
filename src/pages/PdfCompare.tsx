@@ -1,21 +1,20 @@
-// Core Libraries
 import React, { useState, useRef } from 'react';
 import { diffWords } from 'diff';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import * as pdfjsLib from 'pdfjs-dist';
 import { TextItem } from 'pdfjs-dist/types/src/display/api';
+import { PDFInputSection } from '@/components/pdf-compare/PDFInputSection';
+import { SimilarityCard } from '@/components/pdf-compare/SimilarityCard';
+import { DiffDisplay } from '@/components/pdf-compare/DiffDisplay';
+import { DiffList } from '@/components/pdf-compare/DiffList';
 import 'pdfjs-dist/build/pdf.worker.entry';
+
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
 
-interface Difference {
+export interface Difference {
     value: string;
     added?: boolean;
     removed?: boolean;
@@ -37,7 +36,6 @@ export default function PdfCompare() {
     const [progress, setProgress] = useState<number>(0);
     const fileInput1Ref = useRef<HTMLInputElement>(null);
     const fileInput2Ref = useRef<HTMLInputElement>(null);
-    const [synchroScroll, setSynchroScroll] = useState<boolean>(true);
     const leftScrollRef = useRef<HTMLDivElement>(null);
     const rightScrollRef = useRef<HTMLDivElement>(null);
     const [leftScrollTop, setLeftScrollTop] = useState(0);
@@ -156,32 +154,6 @@ export default function PdfCompare() {
         return parseFloat((totalLength === 0 ? 0 : (unchangedLength / totalLength) * 100).toFixed(2));
     };
 
-    const jumpToDiff = (index: number) => {
-        setSelectedDiffIndex(index);
-
-        const targetElement = document.getElementById(`original-line-${differences[index].lines1?.[0]}`);
-        if (targetElement) {
-            const container = document.querySelector('.col-span-4>.h-full') as HTMLElement;
-            if (container) {
-                container.scrollTo({
-                    top: targetElement.offsetTop - (container.offsetHeight / 2),
-                    behavior: 'smooth'
-                });
-            }
-        }
-
-        const targetElement2 = document.getElementById(`new-line-${differences[index].lines2?.[0]}`);
-        if (targetElement2) {
-            const container = document.querySelectorAll('.col-span-4>.h-full')[1] as HTMLElement;
-            if (container) {
-                container.scrollTo({
-                    top: targetElement2.offsetTop - (container.offsetHeight / 2),
-                    behavior: 'smooth'
-                });
-            }
-        }
-    };
-
     const handleScroll = (e: React.UIEvent<HTMLDivElement>, side: 'left' | 'right') => {
         const scrollTop = (e.target as HTMLDivElement).scrollTop;
         if (side === 'left') {
@@ -203,6 +175,32 @@ export default function PdfCompare() {
         }
     };
 
+    const jumpToDiff = (index: number) => {
+        setSelectedDiffIndex(index);
+
+        const targetElement = document.getElementById(`left-line-${differences[index].lines1?.[0]}`);
+        if (targetElement) {
+            const container = document.querySelector('.col-span-4>.h-full') as HTMLElement;
+            if (container) {
+                container.scrollTo({
+                    top: targetElement.offsetTop - (container.offsetHeight / 2),
+                    behavior: 'smooth'
+                });
+            }
+        }
+
+        const targetElement2 = document.getElementById(`right-line-${differences[index].lines2?.[0]}`);
+        if (targetElement2) {
+            const container = document.querySelectorAll('.col-span-4>.h-full')[1] as HTMLElement;
+            if (container) {
+                container.scrollTo({
+                    top: targetElement2.offsetTop - (container.offsetHeight / 2),
+                    behavior: 'smooth'
+                });
+            }
+        }
+    };
+
     return (
         <div className="container mx-auto p-6">
             <Button variant="ghost" onClick={() => navigate("/")} className="mb-6">
@@ -212,61 +210,32 @@ export default function PdfCompare() {
 
             <div className="grid gap-6">
                 <div className="grid md:grid-cols-2 gap-4">
-                    <div className="input-section-1">
-                        <Card className="bg-slate-800">
-                            <CardHeader>
-                                <CardTitle className="text-slate-100">元のテキスト/PDF</CardTitle>
-                                <CardDescription className="text-slate-300">テキストを入力またはPDFを選択</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <Textarea
-                                    placeholder="テキストを入力"
-                                    value={text1}
-                                    onChange={(e) => setText1(e.target.value)}
-                                    className="min-h-[200px] text-slate-200 bg-slate-700 placeholder:text-slate-400"
-                                />
-                                <div className="flex items-center space-x-4">
-                                    <Label htmlFor="pdf1" className="text-slate-200">またはPDFをアップロード:</Label>
-                                    <Input 
-                                        type="file" 
-                                        id="pdf1" 
-                                        accept=".pdf,application/pdf" 
-                                        onChange={handlePdf1Change} 
-                                        ref={fileInput1Ref}
-                                        className="text-slate-200 bg-slate-700"
-                                    />
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                    <div className="input-section-2">
-                        <Card className="bg-slate-800">
-                            <CardHeader>
-                                <CardTitle className="text-slate-100">新しいテキスト/PDF</CardTitle>
-                                <CardDescription className="text-slate-300">テキストを入力またはPDFを選択</CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <Textarea
-                                    placeholder="テキストを入力"
-                                    value={text2}
-                                    onChange={(e) => setText2(e.target.value)}
-                                    className="min-h-[200px] text-slate-200 bg-slate-700 placeholder:text-slate-400"
-                                />
-                                <div className="flex items-center space-x-4">
-                                    <Label htmlFor="pdf2" className="text-slate-200">またはPDFをアップロード:</Label>
-                                    <Input 
-                                        type="file" 
-                                        id="pdf2" 
-                                        accept=".pdf,application/pdf" 
-                                        onChange={handlePdf2Change} 
-                                        ref={fileInput2Ref}
-                                        className="text-slate-200 bg-slate-700"
-                                    />
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
+                    <PDFInputSection
+                        title="元のテキスト/PDF"
+                        description="テキストを入力またはPDFを選択"
+                        text={text1}
+                        onTextChange={setText1}
+                        pdf={pdf1}
+                        onPdfChange={(e) => {
+                            const file = e.target.files?.[0] || null;
+                            setPdf1(file);
+                            if (file) extractFileContent(file).then(setText1);
+                        }}
+                        inputRef={fileInput1Ref}
+                    />
+                    <PDFInputSection
+                        title="新しいテキスト/PDF"
+                        description="テキストを入力またはPDFを選択"
+                        text={text2}
+                        onTextChange={setText2}
+                        pdf={pdf2}
+                        onPdfChange={(e) => {
+                            const file = e.target.files?.[0] || null;
+                            setPdf2(file);
+                            if (file) extractFileContent(file).then(setText2);
+                        }}
+                        inputRef={fileInput2Ref}
+                    />
                 </div>
 
                 <Button 
@@ -295,136 +264,37 @@ export default function PdfCompare() {
                         </div>
 
                         {showSimilarity && (
-                            <Card className="bg-slate-800">
-                                <CardHeader>
-                                    <div className="flex flex-col items-center justify-center space-y-2">
-                                        <CardTitle className="text-slate-100 text-3xl">類似度</CardTitle>
-                                        <div className="flex items-center gap-4">
-                                            <div className="text-5xl font-bold bg-gradient-to-r from-[#0EA5E9] to-[#8B5CF6] bg-clip-text text-transparent">
-                                                {similarityScore}%
-                                            </div>
-                                            <div className="h-16 w-[2px] bg-slate-700"/>
-                                            <div className="text-slate-400">
-                                                <div>追加された箇所: {differences.filter(d => d.added).length}</div>
-                                                <div>削除された箇所: {differences.filter(d => d.removed).length}</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </CardHeader>
-                            </Card>
+                            <SimilarityCard
+                                similarityScore={similarityScore}
+                                addedCount={differences.filter(d => d.added).length}
+                                removedCount={differences.filter(d => d.removed).length}
+                            />
                         )}
 
                         <div className="grid grid-cols-12 gap-6 h-[calc(100vh-28rem)]">
-                            <Card className="col-span-4 bg-slate-800 border border-slate-700">
-                                <CardHeader className="border-b border-slate-700">
-                                    <CardTitle className="text-slate-100 flex items-center justify-between">
-                                        <span>参照ファイル</span>
-                                        {pdf1 && <span className="text-sm text-slate-400">
-                                            {pdf1.name}
-                                        </span>}
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="p-0 h-full">
-                                    <ScrollArea 
-                                        className="h-full rounded-md"
-                                        ref={leftScrollRef}
-                                        onScroll={(e) => handleScroll(e, 'left')}
-                                    >
-                                        <div className="p-4 space-y-2">
-                                            {differences.map((part, index) => (
-                                                <div 
-                                                    key={`original-${index}`}
-                                                    id={`original-line-${part.lines1?.[0]}`}
-                                                    className={`relative ${
-                                                        part.removed ? 'bg-red-600/20 px-3 py-2 rounded border-l-4 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'px-3 py-2'
-                                                    } ${selectedDiffIndex === index ? 'ring-2 ring-blue-500 shadow-lg' : ''}`}
-                                                >
-                                                    {part.removed && (
-                                                        <div className="absolute -left-8 top-1/2 -translate-y-1/2 text-red-400 text-sm">
-                                                            削除
-                                                        </div>
-                                                    )}
-                                                    <span className="block break-words whitespace-pre-wrap text-slate-200">{part.value}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </ScrollArea>
-                                </CardContent>
-                            </Card>
-
-                            <Card className="col-span-4 bg-slate-800 border border-slate-700">
-                                <CardHeader className="border-b border-slate-700">
-                                    <CardTitle className="text-slate-100">変更点一覧</CardTitle>
-                                    <CardDescription className="text-slate-400">クリックで該当箇所にジャンプ</CardDescription>
-                                </CardHeader>
-                                <CardContent className="p-0 h-full">
-                                    <ScrollArea className="h-full rounded-md">
-                                        <div className="p-4 space-y-2">
-                                            {differences.map((diff, index) => {
-                                                if (!diff.added && !diff.removed) return null;
-                                                const isSelected = selectedDiffIndex === index;
-                                                return (
-                                                    <div
-                                                        key={`diff-${index}`}
-                                                        onClick={() => jumpToDiff(index)}
-                                                        className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                                                            diff.added ? 'bg-emerald-600/20 hover:bg-emerald-600/30 border-l-4 border-emerald-500' : 
-                                                            diff.removed ? 'bg-red-600/20 hover:bg-red-600/30 border-l-4 border-red-500' : 
-                                                            'bg-slate-700 hover:bg-slate-600'
-                                                        } ${isSelected ? 'ring-2 ring-blue-500 shadow-lg' : ''}`}
-                                                    >
-                                                        <div className="flex items-center gap-2">
-                                                            <span className={`font-semibold ${diff.added ? 'text-emerald-400' : 'text-red-400'}`}>
-                                                                {diff.added ? '追加' : '削除'}
-                                                            </span>
-                                                            <div className="overflow-hidden">
-                                                                <span className="text-sm text-slate-200 block break-words whitespace-pre-wrap">{diff.value}</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </ScrollArea>
-                                </CardContent>
-                            </Card>
-
-                            <Card className="col-span-4 bg-slate-800 border border-slate-700">
-                                <CardHeader className="border-b border-slate-700">
-                                    <CardTitle className="text-slate-100 flex items-center justify-between">
-                                        <span>比較するファイル</span>
-                                        {pdf2 && <span className="text-sm text-slate-400">
-                                            {pdf2.name}
-                                        </span>}
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="p-0 h-full">
-                                    <ScrollArea 
-                                        className="h-full rounded-md"
-                                        ref={rightScrollRef}
-                                        onScroll={(e) => handleScroll(e, 'right')}
-                                    >
-                                        <div className="p-4 space-y-2">
-                                            {differences.map((part, index) => (
-                                                <div 
-                                                    key={`new-${index}`}
-                                                    id={`new-line-${part.lines2?.[0]}`}
-                                                    className={`relative ${
-                                                        part.added ? 'bg-emerald-600/20 px-3 py-2 rounded border-l-4 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.2)]' : 'px-3 py-2'
-                                                    } ${selectedDiffIndex === index ? 'ring-2 ring-blue-500 shadow-lg' : ''}`}
-                                                >
-                                                    {part.added && (
-                                                        <div className="absolute -left-8 top-1/2 -translate-y-1/2 text-emerald-400 text-sm">
-                                                            追加
-                                                        </div>
-                                                    )}
-                                                    <span className="block break-words whitespace-pre-wrap text-slate-200">{part.value}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </ScrollArea>
-                                </CardContent>
-                            </Card>
+                            <DiffDisplay
+                                title="参照ファイル"
+                                fileName={pdf1?.name}
+                                differences={differences}
+                                selectedDiffIndex={selectedDiffIndex}
+                                scrollRef={leftScrollRef}
+                                onScroll={(e) => handleScroll(e, 'left')}
+                                side="left"
+                            />
+                            <DiffList
+                                differences={differences}
+                                selectedDiffIndex={selectedDiffIndex}
+                                onDiffClick={jumpToDiff}
+                            />
+                            <DiffDisplay
+                                title="比較するファイル"
+                                fileName={pdf2?.name}
+                                differences={differences}
+                                selectedDiffIndex={selectedDiffIndex}
+                                scrollRef={rightScrollRef}
+                                onScroll={(e) => handleScroll(e, 'right')}
+                                side="right"
+                            />
                         </div>
                     </div>
                 )}
