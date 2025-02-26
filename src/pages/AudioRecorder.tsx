@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -24,7 +23,6 @@ export default function AudioRecorder() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // APIキーとProject IDをハードコーディング
   const API_KEY = 'AIzaSyB3e3yEOKECnlDtivhi_jPxOpepk8wo6jE';
   const PROJECT_ID = 'aisanbo';
 
@@ -90,7 +88,6 @@ export default function AudioRecorder() {
         mediaRecorder.ondataavailable = async (event) => {
           if (event.data.size > 0) {
             chunksRef.current.push(event.data);
-            // 3秒ごとに文字起こしを実行
             if (transcriptionTimeoutRef.current) {
               clearTimeout(transcriptionTimeoutRef.current);
             }
@@ -102,7 +99,7 @@ export default function AudioRecorder() {
           }
         };
 
-        mediaRecorder.start(1000); // 1秒ごとにデータを取得
+        mediaRecorder.start(1000);
       }
     } catch (error) {
       console.error('Error starting recording:', error);
@@ -230,7 +227,7 @@ export default function AudioRecorder() {
                 <Button
                   size="lg"
                   variant="default"
-                  onClick={handleStartRecording}
+                  onClick={startRecording}
                   className="w-full max-w-md mx-auto"
                   disabled={isProcessing || isTranscribing}
                 >
