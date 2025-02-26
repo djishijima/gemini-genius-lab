@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { diffWords } from 'diff';
 import { Button } from "@/components/ui/button";
@@ -12,6 +11,7 @@ import { TextItem } from 'pdfjs-dist/types/src/display/api';
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import 'pdfjs-dist/build/pdf.worker.entry';
+import { toast } from 'react-toastify';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
 
@@ -81,7 +81,11 @@ export default function PdfCompare() {
 
   const comparePdfs = async () => {
     if (!pdf1 || !pdf2) {
-      alert('ファイルを両方アップロードしてください。');
+      toast({
+        title: "エラー",
+        description: "ファイルを両方アップロードしてください。",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -141,7 +145,11 @@ export default function PdfCompare() {
 
     } catch (error) {
       console.error("ファイルの比較中にエラーが発生しました:", error);
-      alert('ファイルの比較中にエラーが発生しました。');
+      toast({
+        title: "エラー",
+        description: "ファイルの比較中にエラーが発生しました。",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
       setProgress(0);
@@ -161,7 +169,7 @@ export default function PdfCompare() {
   };
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="container mx-auto p-6 min-h-screen">
       <Button 
         variant="ghost" 
         onClick={() => navigate("/")}
