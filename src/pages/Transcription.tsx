@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/components/ui/use-toast";
 import { Mic, StopCircle, Copy } from "lucide-react";
-import AudioWaveform from "@/components/AudioWaveform";
+import { AudioWaveform } from "@/components/AudioWaveform";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { processAudioForTranscription } from "@/utils/audioProcessing";
 

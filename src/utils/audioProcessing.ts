@@ -1,4 +1,3 @@
-
 export function floatTo16BitPCM(output: Float32Array): DataView {
   const dataView = new DataView(new ArrayBuffer(output.length * 2));
   for (let i = 0; i < output.length; i++) {
@@ -82,3 +81,9 @@ export async function convertAudioToWav(audioBlob: Blob): Promise<Blob> {
     }, reject);
   });
 }
+
+export const processAudioForTranscription = async (blob: Blob): Promise<string> => {
+  const wavBlob = await convertAudioToWav(blob);
+  // TODO: ここで実際の文字起こし処理を実装
+  return "文字起こしのテスト結果です";
+};
