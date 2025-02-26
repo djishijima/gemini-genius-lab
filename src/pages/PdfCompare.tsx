@@ -1,4 +1,3 @@
-
 // Core Libraries
 import React, { useState, useRef } from 'react';
 import { diffWords } from 'diff';
@@ -251,8 +250,8 @@ export default function PdfCompare() {
                 {differences.length > 0 && (
                     <div className="grid md:grid-cols-2 gap-6">
                         <div className="left-column space-y-6">
-                            <Card className="bg-slate-800">
-                                <CardHeader>
+                            <Card className="bg-slate-800 border border-slate-700">
+                                <CardHeader className="border-b border-slate-700">
                                     <CardTitle className="text-slate-100">オリジナルテキスト</CardTitle>
                                 </CardHeader>
                                 <CardContent>
@@ -269,8 +268,9 @@ export default function PdfCompare() {
                                                     <div
                                                         key={`original-line-${lineNumber}`}
                                                         id={`original-line-${lineNumber}`}
-                                                        className={`mb-2 text-slate-200 ${isDiffPresent ? 'bg-red-900/50 p-2 rounded' : ''}`}
+                                                        className={`mb-2 text-slate-200 ${isDiffPresent ? 'bg-red-900/50 p-2 rounded border-l-4 border-red-500' : ''}`}
                                                     >
+                                                        <span className="text-slate-500 mr-2 select-none">{lineNumber}:</span>
                                                         {line}
                                                     </div>
                                                 );
@@ -280,8 +280,8 @@ export default function PdfCompare() {
                                 </CardContent>
                             </Card>
 
-                            <Card className="bg-slate-800">
-                                <CardHeader>
+                            <Card className="bg-slate-800 border border-slate-700">
+                                <CardHeader className="border-b border-slate-700">
                                     <CardTitle className="text-slate-100">類似度</CardTitle>
                                 </CardHeader>
                                 <CardContent>
@@ -291,8 +291,8 @@ export default function PdfCompare() {
                         </div>
 
                         <div className="right-column space-y-6">
-                            <Card className="bg-slate-800">
-                                <CardHeader>
+                            <Card className="bg-slate-800 border border-slate-700">
+                                <CardHeader className="border-b border-slate-700">
                                     <CardTitle className="text-slate-100">新規テキスト</CardTitle>
                                 </CardHeader>
                                 <CardContent>
@@ -309,8 +309,9 @@ export default function PdfCompare() {
                                                     <div
                                                         key={`new-line-${lineNumber}`}
                                                         id={`new-line-${lineNumber}`}
-                                                        className={`mb-2 text-slate-200 ${isDiffPresent ? 'bg-green-900/50 p-2 rounded' : ''}`}
+                                                        className={`mb-2 text-slate-200 ${isDiffPresent ? 'bg-green-900/50 p-2 rounded border-l-4 border-green-500' : ''}`}
                                                     >
+                                                        <span className="text-slate-500 mr-2 select-none">{lineNumber}:</span>
                                                         {line}
                                                     </div>
                                                 );
@@ -320,35 +321,32 @@ export default function PdfCompare() {
                                 </CardContent>
                             </Card>
 
-                            <Card className="bg-slate-800">
-                                <CardHeader>
+                            <Card className="bg-slate-800 border border-slate-700">
+                                <CardHeader className="border-b border-slate-700">
                                     <CardTitle className="text-slate-100">変更点リスト</CardTitle>
-                                    <CardDescription className="text-slate-300">クリックでジャンプ</CardDescription>
+                                    <CardDescription className="text-slate-400">クリックでジャンプ</CardDescription>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="space-y-4">
+                                    <div className="space-y-2">
                                         {differences.map((diff, index) => {
+                                            if (!diff.added && !diff.removed) return null;
                                             const addedLine = diff.added && diff.lines2?.[0];
                                             const removedLine = diff.removed && diff.lines1?.[0];
                                             return (
                                                 <div
                                                     key={`diff-${index}`}
                                                     onClick={() => jumpToDiff(index)}
-                                                    className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                                                        diff.added ? 'bg-green-900/30 hover:bg-green-900/50' : 
-                                                        diff.removed ? 'bg-red-900/30 hover:bg-red-900/50' : 
+                                                    className={`p-3 rounded-lg cursor-pointer transition-colors border-l-4 ${
+                                                        diff.added ? 'bg-green-900/30 hover:bg-green-900/50 border-green-500' : 
+                                                        diff.removed ? 'bg-red-900/30 hover:bg-red-900/50 border-red-500' : 
                                                         'bg-slate-700 hover:bg-slate-600'
                                                     }`}
                                                 >
                                                     <div className="flex items-start gap-2">
-                                                        {diff.added && <span className="text-green-400 font-semibold">追加:</span>}
-                                                        {diff.removed && <span className="text-red-400 font-semibold">削除:</span>}
-                                                        <div>
-                                                            <span className="text-sm text-slate-200 truncate">{diff.value}</span>
-                                                            <span className="text-xs text-slate-400 ml-2">
-                                                                {diff.added && addedLine ? `(Line: ${addedLine})` : null}
-                                                                {diff.removed && removedLine ? `(Line: ${removedLine})` : null}
-                                                            </span>
+                                                        {diff.added && <span className="text-green-400 font-semibold whitespace-nowrap">追加 (行: {addedLine})</span>}
+                                                        {diff.removed && <span className="text-red-400 font-semibold whitespace-nowrap">削除 (行: {removedLine})</span>}
+                                                        <div className="overflow-hidden">
+                                                            <span className="text-sm text-slate-200 block truncate">{diff.value}</span>
                                                         </div>
                                                     </div>
                                                 </div>
