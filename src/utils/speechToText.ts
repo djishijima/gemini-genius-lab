@@ -19,19 +19,33 @@ interface SpeechRecognitionResponse {
 async function splitAudioIntoChunks(audioBlob: Blob, chunkDuration: number = 45): Promise<Blob[]> {
   console.log('元の音声データサイズ:', audioBlob.size, 'bytes');
   const chunks: Blob[] = [];
-  const totalDuration = audioBlob.size / (48000 * 2);
-  const chunkSize = (chunkDuration * 48000 * 2);
 
-  console.log('予想される音声の長さ:', totalDuration, '秒');
+  // チャンクサイズの計算を修正
+  const sampleRate = 48000;
+  const bytesPerSample = 2;
+  const chunkSize = chunkDuration * sampleRate * bytesPerSample;
+
+  console.log('予想される音声の長さ:', audioBlob.size / (sampleRate * bytesPerSample), '秒');
   console.log('チャンクサイズ:', chunkSize, 'bytes');
 
-  for (let start = 0; start < audioBlob.size; start += chunkSize) {
+  // 一度に処理するチャンクを制限
+  const maxChunks = 10;
+  let chunkCount = 0;
+
+  for (let start = 0; start < audioBlob.size && chunkCount < maxChunks; start += chunkSize) {
     const end = Math.min(start + chunkSize, audioBlob.size);
     const chunk = audioBlob.slice(start, end);
     console.log(`チャンク ${chunks.length + 1} サイズ:`, chunk.size, 'bytes');
-    const wavChunk = await convertAudioToWav(chunk);
-    console.log(`WAV変換後のチャンク ${chunks.length + 1} サイズ:`, wavChunk.size, 'bytes');
-    chunks.push(wavChunk);
+    
+    try {
+      const wavChunk = await convertAudioToWav(chunk);
+      console.log(`WAV変換後のチャンク ${chunks.length + 1} サイズ:`, wavChunk.size, 'bytes');
+      chunks.push(wavChunk);
+      chunkCount++;
+    } catch (error) {
+      console.error(`チャンク ${chunks.length + 1} の変換に失敗:`, error);
+      break;
+    }
   }
 
   console.log('合計チャンク数:', chunks.length);
@@ -46,6 +60,11 @@ export async function transcribeAudio(
   try {
     console.log('音声文字起こし開始');
     const chunks = await splitAudioIntoChunks(audioBlob);
+    
+    if (chunks.length === 0) {
+      throw new Error('音声データを処理できませんでした。');
+    }
+
     let fullTranscription = '';
 
     for (let i = 0; i < chunks.length; i++) {
@@ -53,9 +72,7 @@ export async function transcribeAudio(
       console.log(`チャンク ${i + 1}/${chunks.length} の処理開始`);
 
       const buffer = await chunk.arrayBuffer();
-      const base64Data = btoa(
-        String.fromCharCode.apply(null, new Uint8Array(buffer) as any)
-      );
+      const base64Data = btoa(String.fromCharCode(...new Uint8Array(buffer)));
       
       console.log(`チャンク ${i + 1} のAPIリクエスト送信`);
       const response = await fetch(
@@ -99,7 +116,6 @@ export async function transcribeAudio(
         fullTranscription += transcription + '\n';
       } else {
         console.log(`チャンク ${i + 1} の文字起こし結果が空です`);
-        throw new Error('音声認識結果が空でした。より明確な音声で再度お試しください。');
       }
 
       if (onProgress) {
@@ -113,7 +129,7 @@ export async function transcribeAudio(
     }
 
     console.log('文字起こし完了:', fullTranscription);
-    return fullTranscription;
+    return fullTranscription.trim();
 
   } catch (error) {
     console.error('Speech-to-Text Error:', error);
@@ -133,26 +149,14 @@ export async function processAudioFile(
   }
   
   try {
-    // ファイルの読み込みを進捗表示
-    const arrayBuffer = await new Promise<ArrayBuffer>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as ArrayBuffer);
-      reader.onerror = reject;
-      reader.onprogress = (event) => {
-        if (event.lengthComputable && onProgress) {
-          const progress = (event.loaded / event.total) * 100;
-          onProgress(progress, 0);
-        }
-      };
-      reader.readAsArrayBuffer(file);
-    });
-
+    const arrayBuffer = await file.arrayBuffer();
+    
     if (onProgress) {
       onProgress(100, 0);
     }
 
     const blob = new Blob([arrayBuffer], { type: file.type });
-    return transcribeAudio(blob, apiKey, (progress) => {
+    return await transcribeAudio(blob, apiKey, (progress) => {
       if (onProgress) {
         onProgress(100, progress);
       }
