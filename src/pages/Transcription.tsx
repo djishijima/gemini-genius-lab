@@ -156,19 +156,19 @@ export default function Transcription() {
               テキストファイルをアップロードして、InDesignスクリプトを生成します
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-4">
+          <CardContent className="grid gap-6">
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">テキストファイルをアップロード</label>
+              <label className="text-sm font-medium text-foreground">テキストファイルをアップロード</label>
               <Input
                 type="file"
                 accept=".txt,.pdf"
                 onChange={handleFileUpload}
-                className="w-full"
+                className="w-full border-2 border-input hover:border-primary/50 focus:border-primary"
               />
             </div>
 
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">設定プロンプト</label>
+              <label className="text-sm font-medium text-foreground">設定プロンプト</label>
               <Textarea
                 value={prompt}
                 onChange={(e) => {
@@ -178,7 +178,7 @@ export default function Transcription() {
                   }
                 }}
                 placeholder="例: A4サイズの縦書き、明朝体で本文を組んでください。"
-                className="min-h-[80px] resize-none"
+                className="min-h-[80px] resize-none border-2 border-input hover:border-primary/50 focus:border-primary"
               />
               <p className="text-sm text-muted-foreground">
                 プロンプトの例:
@@ -192,7 +192,7 @@ export default function Transcription() {
             </div>
 
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium">原稿テキスト</label>
+              <label className="text-sm font-medium text-foreground">原稿テキスト</label>
               <Textarea
                 value={manuscriptText}
                 onChange={(e) => {
@@ -202,13 +202,13 @@ export default function Transcription() {
                   }
                 }}
                 placeholder="ここに原稿テキストを入力するか、ファイルをアップロードしてください..."
-                className="min-h-[200px]"
+                className="min-h-[200px] border-2 border-input hover:border-primary/50 focus:border-primary"
               />
             </div>
 
             <div className="flex flex-col gap-2">
               <div className="flex justify-between items-center">
-                <label className="text-sm font-medium">生成されたスクリプト</label>
+                <label className="text-sm font-medium text-foreground">生成されたスクリプト</label>
                 <div className="flex gap-2">
                   <Button
                     variant="secondary"
@@ -256,7 +256,7 @@ export default function Transcription() {
                 value={generatedScript}
                 readOnly
                 placeholder="スクリプトはここに表示されます..."
-                className="min-h-[200px] font-mono text-sm"
+                className="min-h-[200px] font-mono text-sm border-2 border-input bg-muted/5"
               />
             </div>
           </CardContent>
