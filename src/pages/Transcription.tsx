@@ -1,3 +1,4 @@
+
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -5,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { Wand2, Copy, FileDown, Upload } from "lucide-react";
-import { generateInDesignScript, parsePromptForOptions, analyzeScript } from "@/utils/indesignScriptGenerator";
+import { generateInDesignScript, parsePromptForOptions, analyzeScript, convertInddToScript } from "@/utils/indesignScriptGenerator";
 
 const Transcription = () => {
   const [manuscript, setManuscript] = useState("");
@@ -44,12 +45,27 @@ const Transcription = () => {
     if (!file) return;
 
     try {
-      // InDesignファイル（.indd）の場合は警告を表示
+      // InDesignファイル（.indd）の場合は変換処理を実行
       if (file.name.toLowerCase().endsWith('.indd')) {
+        const script = await convertInddToScript(file);
+        setImportedScript(script);
+        
+        // スクリプトの解析結果をプロンプトに反映
+        const analysis = analyzeScript(script);
+        const newPrompt = [
+          "以下の設定で組版:",
+          analysis.isVertical ? "・縦書き" : "・横書き",
+          `・フォント: ${analysis.fontFamily || "未設定"}`,
+          `・フォントサイズ: ${analysis.fontSize || "未設定"}pt`,
+          `・行送り: ${analysis.lineHeight || "未設定"}pt`,
+          `・マージン: 上${analysis.marginTop}mm 下${analysis.marginBottom}mm 左${analysis.marginLeft}mm 右${analysis.marginRight}mm`,
+        ].join("\n");
+        
+        setPrompt(newPrompt);
+        
         toast({
-          title: "注意",
-          description: "InDesignドキュメント（.indd）は直接読み込めません。スクリプトファイル（.jsx, .js）をインポートしてください。",
-          variant: "destructive",
+          title: "InDesignドキュメント変換完了",
+          description: "ドキュメントからスクリプトを生成し、設定を反映しました。",
         });
         return;
       }
@@ -57,7 +73,7 @@ const Transcription = () => {
       const text = await file.text();
       setImportedScript(text);
 
-      // スクリプトの解析結果をプロンプトに反映
+      // 既存のスクリプト解析処理
       const analysis = analyzeScript(text);
       const newPrompt = [
         "以下の設定で組版:",
@@ -77,7 +93,7 @@ const Transcription = () => {
     } catch (error) {
       toast({
         title: "インポートエラー",
-        description: "スクリプトの読み込みに失敗しました。テキスト形式のスクリプトファイルのみ対応しています。",
+        description: `ファイルの読み込みに失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`,
         variant: "destructive",
       });
     }
