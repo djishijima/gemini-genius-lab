@@ -10,8 +10,8 @@ import * as pdfjsLib from 'pdfjs-dist';
 import { TextItem } from 'pdfjs-dist/types/src/display/api';
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 import 'pdfjs-dist/build/pdf.worker.entry';
-import { toast } from 'react-toastify';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
 
@@ -25,6 +25,7 @@ interface Difference {
 
 export default function PdfCompare() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [pdf1, setPdf1] = useState<File | null>(null);
   const [pdf2, setPdf2] = useState<File | null>(null);
   const [pdf1Text, setPdf1Text] = useState<string>('');
