@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { diffWords } from 'diff';
 import Joyride, { STATUS } from 'react-joyride';
@@ -7,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import * as pdfjsLib from 'pdfjs-dist';
+import { TextItem, TextMarkedContent } from 'pdfjs-dist/types/src/display/api';
 import 'pdfjs-dist/build/pdf.worker.entry';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
@@ -72,6 +74,7 @@ export default function PdfCompare() {
   };
 
   const extractFileContent = async (file: File): Promise<string> => {
+    // テキストファイルの場合
     if (file.type === 'text/plain') {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -86,6 +89,7 @@ export default function PdfCompare() {
         reader.readAsText(file);
       });
     }
+    // PDFファイルの場合
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = async function () {
@@ -96,7 +100,15 @@ export default function PdfCompare() {
           for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
             const textContent = await page.getTextContent();
-            const pageText = textContent.items.map(item => item.str).join(' ');
+            const pageText = textContent.items
+              .map((item) => {
+                // TextItemの場合のみstrプロパティにアクセス
+                if ('str' in item) {
+                  return (item as TextItem).str;
+                }
+                return '';
+              })
+              .join(' ');
             fullText += pageText + '\n';
           }
           resolve(fullText);
