@@ -1,12 +1,12 @@
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
-import { Button } from "./ui/button";
-import { ScrollArea } from "./ui/scroll-area";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { generateInDesignScript, parsePromptForOptions } from "@/utils/indesignScriptGenerator";
-import { Textarea } from "./ui/textarea";
-import { Copy, FileDown } from "lucide-react";
-import { useToast } from "./ui/use-toast";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { Copy, FileDown, Wand2 } from "lucide-react";
 
 export function GeminiForm() {
   const [manuscript, setManuscript] = useState("");
@@ -29,7 +29,7 @@ export function GeminiForm() {
     setGeneratedScript(script);
     
     toast({
-      title: "スクリプト生成完了",
+      title: "生成完了",
       description: "InDesignスクリプトの生成が完了しました。",
     });
   };
@@ -63,9 +63,9 @@ export function GeminiForm() {
     <div className="container mx-auto p-6 space-y-6 animate-fade-in">
       <Card className="bg-slate-800 border-slate-700">
         <CardHeader>
-          <CardTitle className="text-slate-100 text-2xl">InDesign スクリプトジェネレーター</CardTitle>
+          <CardTitle className="text-slate-100 text-2xl">InDesign スクリプト生成</CardTitle>
           <CardDescription className="text-slate-400">
-            原稿とプロンプトを入力して、InDesignスクリプトを生成します
+            原稿とプロンプトから、InDesignの自動組版スクリプトを生成します
           </CardDescription>
         </CardHeader>
       </Card>
@@ -78,12 +78,12 @@ export function GeminiForm() {
               InDesignで組版したい原稿を入力してください
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             <Textarea
               value={manuscript}
               onChange={(e) => setManuscript(e.target.value)}
-              placeholder="ここに原稿を入力..."
-              className="min-h-[300px] bg-slate-900 border-slate-700 text-slate-100"
+              placeholder="ここに原稿を入力してください..."
+              className="min-h-[300px] bg-slate-900 border-slate-700 text-slate-100 placeholder:text-slate-500"
             />
           </CardContent>
         </Card>
@@ -92,15 +92,15 @@ export function GeminiForm() {
           <CardHeader className="border-b border-slate-700">
             <CardTitle className="text-slate-100">プロンプト入力</CardTitle>
             <CardDescription className="text-slate-400">
-              組版の指示（縦書き・横書き、フォント、マージンなど）を入力してください
+              組版の指示内容を入力してください
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             <Textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="例: 縦書き、明朝体、マージン上下20mm左右15mm..."
-              className="min-h-[300px] bg-slate-900 border-slate-700 text-slate-100"
+              placeholder="例: 縦書き、本文フォントは明朝体、マージン上下20mm左右15mm..."
+              className="min-h-[300px] bg-slate-900 border-slate-700 text-slate-100 placeholder:text-slate-500"
             />
           </CardContent>
         </Card>
@@ -109,10 +109,10 @@ export function GeminiForm() {
       <div className="flex justify-center">
         <Button
           onClick={handleGenerate}
-          className="w-full max-w-md text-lg py-6"
+          className="w-full max-w-md text-lg py-6 bg-[hsl(198,93%,60%)] hover:bg-[hsl(198,93%,50%)] text-slate-900 font-medium"
           size="lg"
-          variant="outline"
         >
+          <Wand2 className="mr-2 h-5 w-5" />
           スクリプトを生成
         </Button>
       </div>
@@ -149,7 +149,7 @@ export function GeminiForm() {
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             <ScrollArea className="h-[400px] w-full rounded-md border border-slate-700">
               <pre className="p-4 text-slate-100 font-mono text-sm">
                 {generatedScript}
