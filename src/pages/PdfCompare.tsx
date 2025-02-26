@@ -40,6 +40,10 @@ export default function PdfCompare() {
     const [synchroScroll, setSynchroScroll] = useState<boolean>(true);
     const leftScrollRef = useRef<HTMLDivElement>(null);
     const rightScrollRef = useRef<HTMLDivElement>(null);
+    const [leftScrollTop, setLeftScrollTop] = useState(0);
+    const [rightScrollTop, setRightScrollTop] = useState(0);
+    const [selectedDiffIndex, setSelectedDiffIndex] = useState<number | null>(null);
+    const [showSimilarity, setShowSimilarity] = useState(true);
 
     const handlePdf1Change = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0] || null;
@@ -153,46 +157,47 @@ export default function PdfCompare() {
     };
 
     const jumpToDiff = (index: number) => {
-        const diff = differences[index];
-        const line1 = diff.lines1?.[0];
-        const line2 = diff.lines2?.[0];
+        setSelectedDiffIndex(index);
 
-        if (line1) {
-            const elementId1 = `original-line-${line1}`;
-            document.getElementById(elementId1)?.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start',
-                inline: 'nearest',
-            });
+        const targetElement = document.getElementById(`original-line-${differences[index].lines1?.[0]}`);
+        if (targetElement) {
+            const container = document.querySelector('.col-span-4>.h-full') as HTMLElement;
+            if (container) {
+                container.scrollTo({
+                    top: targetElement.offsetTop - (container.offsetHeight / 2),
+                    behavior: 'smooth'
+                });
+            }
         }
 
-        if (line2) {
-            const elementId2 = `new-line-${line2}`;
-            document.getElementById(elementId2)?.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start',
-                inline: 'nearest',
-            });
+        const targetElement2 = document.getElementById(`new-line-${differences[index].lines2?.[0]}`);
+        if (targetElement2) {
+            const container = document.querySelectorAll('.col-span-4>.h-full')[1] as HTMLElement;
+            if (container) {
+                container.scrollTo({
+                    top: targetElement2.offsetTop - (container.offsetHeight / 2),
+                    behavior: 'smooth'
+                });
+            }
         }
     };
 
-    const handleScroll = (event: React.WheelEvent<HTMLDivElement>, side: 'left' | 'right') => {
-        if (!synchroScroll) return;
-        
-        event.preventDefault();
-        const delta = event.deltaY;
-        
-        if (leftScrollRef.current && rightScrollRef.current) {
-            const leftViewport = leftScrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
-            const rightViewport = rightScrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
-            
-            if (leftViewport && rightViewport) {
-                if (side === 'left') {
-                    leftViewport.scrollTop += delta;
-                    rightViewport.scrollTop = leftViewport.scrollTop;
-                } else {
-                    rightViewport.scrollTop += delta;
-                    leftViewport.scrollTop = rightViewport.scrollTop;
+    const handleScroll = (e: React.UIEvent<HTMLDivElement>, side: 'left' | 'right') => {
+        const scrollTop = (e.target as HTMLDivElement).scrollTop;
+        if (side === 'left') {
+            setLeftScrollTop(scrollTop);
+            if (rightScrollRef.current) {
+                const rightViewport = rightScrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+                if (rightViewport) {
+                    rightViewport.scrollTop = scrollTop;
+                }
+            }
+        } else {
+            setRightScrollTop(scrollTop);
+            if (leftScrollRef.current) {
+                const leftViewport = leftScrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+                if (leftViewport) {
+                    leftViewport.scrollTop = scrollTop;
                 }
             }
         }
@@ -279,23 +284,35 @@ export default function PdfCompare() {
 
                 {differences.length > 0 && (
                     <div className="grid gap-6">
-                        <Card className="bg-slate-800">
-                            <CardHeader>
-                                <div className="flex flex-col items-center justify-center space-y-2">
-                                    <CardTitle className="text-slate-100 text-3xl">類似度</CardTitle>
-                                    <div className="flex items-center gap-4">
-                                        <div className="text-5xl font-bold bg-gradient-to-r from-[#0EA5E9] to-[#8B5CF6] bg-clip-text text-transparent">
-                                            {similarityScore}%
-                                        </div>
-                                        <div className="h-16 w-[2px] bg-slate-700"/>
-                                        <div className="text-slate-400">
-                                            <div>追加された箇所: {differences.filter(d => d.added).length}</div>
-                                            <div>削除された箇所: {differences.filter(d => d.removed).length}</div>
+                        <div className="flex items-center justify-between">
+                            <Button 
+                                variant="outline" 
+                                onClick={() => setShowSimilarity(!showSimilarity)}
+                                className="text-slate-200"
+                            >
+                                類似度表示: {showSimilarity ? '非表示' : '表示'}
+                            </Button>
+                        </div>
+
+                        {showSimilarity && (
+                            <Card className="bg-slate-800">
+                                <CardHeader>
+                                    <div className="flex flex-col items-center justify-center space-y-2">
+                                        <CardTitle className="text-slate-100 text-3xl">類似度</CardTitle>
+                                        <div className="flex items-center gap-4">
+                                            <div className="text-5xl font-bold bg-gradient-to-r from-[#0EA5E9] to-[#8B5CF6] bg-clip-text text-transparent">
+                                                {similarityScore}%
+                                            </div>
+                                            <div className="h-16 w-[2px] bg-slate-700"/>
+                                            <div className="text-slate-400">
+                                                <div>追加された箇所: {differences.filter(d => d.added).length}</div>
+                                                <div>削除された箇所: {differences.filter(d => d.removed).length}</div>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </CardHeader>
-                        </Card>
+                                </CardHeader>
+                            </Card>
+                        )}
 
                         <div className="grid grid-cols-12 gap-6 h-[calc(100vh-28rem)]">
                             <Card className="col-span-4 bg-slate-800 border border-slate-700">
@@ -311,16 +328,16 @@ export default function PdfCompare() {
                                     <ScrollArea 
                                         className="h-full rounded-md"
                                         ref={leftScrollRef}
-                                        onWheel={(e) => handleScroll(e, 'left')}
+                                        onScroll={(e) => handleScroll(e, 'left')}
                                     >
                                         <div className="p-4 space-y-2">
                                             {differences.map((part, index) => (
                                                 <div 
-                                                    key={index}
+                                                    key={`original-${index}`}
                                                     id={`original-line-${part.lines1?.[0]}`}
                                                     className={`relative ${
                                                         part.removed ? 'bg-red-600/20 px-3 py-2 rounded border-l-4 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'px-3 py-2'
-                                                    }`}
+                                                    } ${selectedDiffIndex === index ? 'ring-2 ring-blue-500 shadow-lg' : ''}`}
                                                 >
                                                     {part.removed && (
                                                         <div className="absolute -left-8 top-1/2 -translate-y-1/2 text-red-400 text-sm">
@@ -345,6 +362,7 @@ export default function PdfCompare() {
                                         <div className="p-4 space-y-2">
                                             {differences.map((diff, index) => {
                                                 if (!diff.added && !diff.removed) return null;
+                                                const isSelected = selectedDiffIndex === index;
                                                 return (
                                                     <div
                                                         key={`diff-${index}`}
@@ -353,7 +371,7 @@ export default function PdfCompare() {
                                                             diff.added ? 'bg-emerald-600/20 hover:bg-emerald-600/30 border-l-4 border-emerald-500' : 
                                                             diff.removed ? 'bg-red-600/20 hover:bg-red-600/30 border-l-4 border-red-500' : 
                                                             'bg-slate-700 hover:bg-slate-600'
-                                                        }`}
+                                                        } ${isSelected ? 'ring-2 ring-blue-500 shadow-lg' : ''}`}
                                                     >
                                                         <div className="flex items-center gap-2">
                                                             <span className={`font-semibold ${diff.added ? 'text-emerald-400' : 'text-red-400'}`}>
@@ -384,16 +402,16 @@ export default function PdfCompare() {
                                     <ScrollArea 
                                         className="h-full rounded-md"
                                         ref={rightScrollRef}
-                                        onWheel={(e) => handleScroll(e, 'right')}
+                                        onScroll={(e) => handleScroll(e, 'right')}
                                     >
                                         <div className="p-4 space-y-2">
                                             {differences.map((part, index) => (
                                                 <div 
-                                                    key={index}
+                                                    key={`new-${index}`}
                                                     id={`new-line-${part.lines2?.[0]}`}
                                                     className={`relative ${
                                                         part.added ? 'bg-emerald-600/20 px-3 py-2 rounded border-l-4 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.2)]' : 'px-3 py-2'
-                                                    }`}
+                                                    } ${selectedDiffIndex === index ? 'ring-2 ring-blue-500 shadow-lg' : ''}`}
                                                 >
                                                     {part.added && (
                                                         <div className="absolute -left-8 top-1/2 -translate-y-1/2 text-emerald-400 text-sm">
