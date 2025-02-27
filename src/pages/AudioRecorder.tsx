@@ -33,6 +33,7 @@ export default function AudioRecorder() {
   const [recordingTime, setRecordingTime] = useState(0);
   const [amplitude, setAmplitude] = useState(0);
   const [audioStream, setAudioStream] = useState<MediaStream | null>(null);
+  const [audioFileName, setAudioFileName] = useState('');
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -229,14 +230,30 @@ export default function AudioRecorder() {
 
     setIsProcessing(true);
     setUploadProgress(0);
+    setAudioFileName(file.name);
 
     try {
-      const result = await transcribeAudio(file, API_KEY, (progress) => {
-        setTranscriptionProgress(progress);
-      });
-      setAudioBlob(file);
-      setTranscription(result);
-      setIsProcessing(false);
+      // ファイルアップロード進捗表示の模擬
+      const uploadTimer = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 95) {
+            clearInterval(uploadTimer);
+            return 95;
+          }
+          return prev + 5;
+        });
+      }, 100);
+      
+      // 少し遅延させて処理開始の感覚を出す
+      setTimeout(() => {
+        clearInterval(uploadTimer);
+        setUploadProgress(100);
+        
+        // 文字起こし処理を開始
+        const audioBlob = new Blob([file], { type: file.type });
+        setAudioBlob(audioBlob);
+        handleTranscription(file);
+      }, 1000);
     } catch (error) {
       console.error('File processing error:', error);
       toast({
@@ -288,6 +305,10 @@ export default function AudioRecorder() {
               <div className="w-full space-y-4">
                 <div className="text-center text-xl font-bold text-primary">
                   {formatTime(recordingTime)}
+                </div>
+                <div className="flex items-center justify-center mb-4">
+                  <div className="animate-pulse bg-red-500 rounded-full h-4 w-4 mr-2"></div>
+                  <span className="text-lg font-semibold text-red-500">録音中</span>
                 </div>
                 <AudioWaveform 
                   isRecording={isRecording} 
@@ -371,7 +392,30 @@ export default function AudioRecorder() {
               )}
             </div>
           )}
-
+          {isTranscribing && (
+            <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-md">
+              <div className="flex items-center mb-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2"></div>
+                <span className="text-lg font-semibold text-blue-500">文字起こし中...</span>
+              </div>
+              <Progress value={transcriptionProgress} className="h-2 mb-2" />
+              <p className="text-sm text-blue-600 dark:text-blue-400">
+                {transcriptionProgress}% 完了
+              </p>
+            </div>
+          )}
+          {isProcessing && !isTranscribing && (
+            <div className="mt-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-md">
+              <div className="flex items-center mb-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-500 mr-2"></div>
+                <span className="text-lg font-semibold text-yellow-500">ファイル処理中...</span>
+              </div>
+              <Progress value={uploadProgress} className="h-2 mb-2" />
+              <p className="text-sm text-yellow-600 dark:text-yellow-400">
+                {uploadProgress}% 完了
+              </p>
+            </div>
+          )}
           {audioBlob && !isRecording && (
             <Button
               variant="secondary"
