@@ -21,7 +21,7 @@ async function splitAudioIntoChunks(audioBlob: Blob, chunkDuration = 45): Promis
   const chunks: Blob[] = [];
 
   // チャンクサイズの計算を修正
-  const sampleRate = 48000;
+  const sampleRate = 44100; // 48000から44100に変更
   const bytesPerSample = 2;
   const chunkSize = chunkDuration * sampleRate * bytesPerSample;
 
@@ -110,7 +110,7 @@ export async function transcribeAudio(
           body: JSON.stringify({
             config: {
               encoding: 'LINEAR16',
-              sampleRateHertz: 48000,
+              sampleRateHertz: 44100, // 48000から44100に変更
               languageCode: 'ja-JP',
               enableAutomaticPunctuation: true,
               model: 'default',

@@ -9,10 +9,10 @@ import {
   Mic,
   Square,
   Upload,
-} from "lucide-react";
+} from "lucide-react"
+import { useToast } from "@/components/ui/use-toast"
 import { AudioWaveform } from '@/components/AudioWaveform';
-import { useToast } from "@/hooks/use-toast";
-import { transcribeAudio } from "@/utils/speechToText";
+import { transcribeAudio } from '@/utils/speechToText';
 
 function formatTime(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
@@ -43,13 +43,32 @@ export default function AudioRecorder() {
 
   const { toast } = useToast();
 
+  // APIキーを設定
   const API_KEY = 'AIzaSyB3e3yEOKECnlDtivhi_jPxOpepk8wo6jE';
 
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // マイクへのアクセス許可を明示的に確認
+      console.log("マイクへのアクセスを要求中...");
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        } 
+      });
+      console.log("マイクへのアクセスが許可されました");
+      
       setAudioStream(stream);
+      
+      // MediaRecorderのサポート確認
+      if (!window.MediaRecorder) {
+        throw new Error("お使いのブラウザはMediaRecorderをサポートしていません");
+      }
+      
       const recorder = new MediaRecorder(stream);
+      console.log("MediaRecorderが作成されました:", recorder.state);
+      
       mediaRecorderRef.current = recorder;
       audioChunksRef.current = [];
 
@@ -74,18 +93,47 @@ export default function AudioRecorder() {
       };
       calculateAmplitude();
 
+      // イベントリスナーの設定
       recorder.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data);
+        console.log("データ取得:", event.data.size, "bytes");
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onerror = (event) => {
+        console.error("MediaRecorder エラー:", event);
+        toast({
+          title: "録音エラー",
+          description: "録音中にエラーが発生しました",
+          variant: "destructive"
+        });
       };
 
       recorder.onstop = () => {
+        console.log("録音停止");
+        if (audioChunksRef.current.length === 0) {
+          toast({
+            title: "エラー",
+            description: "録音データが取得できませんでした",
+            variant: "destructive"
+          });
+          setIsRecording(false);
+          return;
+        }
+        
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        console.log("録音データサイズ:", audioBlob.size, "bytes");
         setAudioBlob(audioBlob);
         setIsProcessing(true);
         handleTranscription(audioBlob);
       };
 
+      // 録音開始
+      console.log("録音を開始します...");
       recorder.start(1000); // 1秒ごとにデータを取得
+      console.log("録音状態:", recorder.state);
+      
       setIsRecording(true);
       setRecordingTime(0);
 
@@ -97,7 +145,7 @@ export default function AudioRecorder() {
       console.error("Error starting recording:", error);
       toast({
         title: "エラー",
-        description: "録音の開始に失敗しました",
+        description: `録音の開始に失敗しました: ${error.message || "不明なエラー"}`,
         variant: "destructive"
       });
     }
@@ -129,77 +177,74 @@ export default function AudioRecorder() {
   const handleTranscription = async (blob: Blob) => {
     setIsTranscribing(true);
     setTranscriptionProgress(0);
+    
     try {
-      const transcriptText = await transcribeAudio(blob, API_KEY, (progress) => {
+      const result = await transcribeAudio(blob, API_KEY, (progress) => {
         setTranscriptionProgress(progress);
       });
-      
-      const timestamp = new Date().toLocaleTimeString();
-      setTranscription(prev => `${prev}[${timestamp}]\n${transcriptText}\n\n`);
-      
+      setTranscription(result);
+    } catch (error) {
+      console.error('Transcription error:', error);
       toast({
-        title: "文字起こし完了",
-        description: "音声の文字起こしが完了しました",
-      });
-    } catch (error: unknown) {
-      console.error('Speech-to-Text Error:', error);
-      toast({
-        title: "エラー",
-        description: error instanceof Error ? error.message : "文字起こしに失敗しました",
+        title: "文字起こしエラー",
+        description: error instanceof Error ? error.message : "文字起こし中にエラーが発生しました",
         variant: "destructive"
       });
     } finally {
       setIsTranscribing(false);
       setIsProcessing(false);
-      setTranscriptionProgress(100);
     }
   };
 
   const handleFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      // ファイルサイズのチェック
-      const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
-      if (file.size > MAX_FILE_SIZE) {
-        toast({
-          title: "エラー",
-          description: `ファイルサイズが大きすぎます（${(file.size / (1024 * 1024)).toFixed(2)}MB）。100MB以下のファイルを使用してください。`,
-          variant: "destructive"
-        });
-        return;
-      }
-      
+    if (!file) return;
+
+    // ファイルサイズのチェック
+    const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+    if (file.size > MAX_FILE_SIZE) {
+      toast({
+        title: "エラー",
+        description: `ファイルサイズが大きすぎます。最大${MAX_FILE_SIZE / (1024 * 1024)}MBまでです。`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // サポートされているファイル形式のチェック
+    const supportedFormats = ['audio/mp3', 'audio/wav', 'audio/webm', 'audio/mpeg', 'audio/ogg'];
+    if (!supportedFormats.includes(file.type) && 
+        !file.name.endsWith('.mp3') && 
+        !file.name.endsWith('.wav') && 
+        !file.name.endsWith('.webm') && 
+        !file.name.endsWith('.m4a') && 
+        !file.name.endsWith('.ogg')) {
+      toast({
+        title: "エラー",
+        description: "サポートされていないファイル形式です。MP3, WAV, WEBM, M4A, OGGファイルをアップロードしてください。",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+    setUploadProgress(0);
+
+    try {
+      const result = await transcribeAudio(file, API_KEY, (progress) => {
+        setTranscriptionProgress(progress);
+      });
       setAudioBlob(file);
-      setIsProcessing(true);
-      setUploadProgress(0);
-      setTranscriptionProgress(0);
-      
-      try {
-        // ファイルアップロード進捗表示の模擬
-        const uploadTimer = setInterval(() => {
-          setUploadProgress(prev => {
-            if (prev >= 95) {
-              clearInterval(uploadTimer);
-              return 95;
-            }
-            return prev + 5;
-          });
-        }, 50);
-        
-        // 少し遅延させて処理開始の感覚を出す
-        setTimeout(() => {
-          clearInterval(uploadTimer);
-          setUploadProgress(100);
-          handleTranscription(file);
-        }, 800);
-      } catch (error) {
-        setIsProcessing(false);
-        toast({
-          title: "エラー",
-          description: "ファイルの処理中にエラーが発生しました",
-          variant: "destructive"
-        });
-      }
+      setTranscription(result);
+      setIsProcessing(false);
+    } catch (error) {
+      console.error('File processing error:', error);
+      toast({
+        title: "エラー",
+        description: error instanceof Error ? error.message : "ファイル処理中にエラーが発生しました",
+        variant: "destructive"
+      });
+      setIsProcessing(false);
     }
   };
 
@@ -249,16 +294,18 @@ export default function AudioRecorder() {
                   recordingTime={recordingTime}
                   amplitude={amplitude}
                 />
-                <Button
-                  size="lg"
-                  variant="destructive"
-                  onClick={stopRecording}
-                  className="w-full max-w-md mx-auto"
-                  disabled={isProcessing || isTranscribing}
-                >
-                  <Square className="mr-2 h-5 w-5" />
-                  録音を停止
-                </Button>
+                <div className="w-full space-y-4">
+                  <Button
+                    size="lg"
+                    variant="destructive"
+                    onClick={stopRecording}
+                    className="w-full max-w-md mx-auto"
+                    disabled={isProcessing || isTranscribing}
+                  >
+                    <Square className="mr-2 h-5 w-5" />
+                    録音を停止
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="w-full space-y-4">

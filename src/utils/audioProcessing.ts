@@ -65,21 +65,30 @@ function convertToMono(buffer: AudioBuffer): Float32Array {
 }
 
 export async function convertAudioToWav(audioBlob: Blob): Promise<Blob> {
-  const audioContext = new AudioContext();
-  const arrayBuffer = await audioBlob.arrayBuffer();
-  
-  return new Promise((resolve, reject) => {
-    audioContext.decodeAudioData(arrayBuffer, (buffer) => {
-      const monoData = convertToMono(buffer);
-      const wavBytes = floatTo16BitPCM(monoData);
-      const wavHeader = createWavHeader(1, buffer.sampleRate, monoData.length);
-      const wavBuffer = new Uint8Array(wavHeader.byteLength + wavBytes.byteLength);
-      wavBuffer.set(wavHeader, 0);
-      wavBuffer.set(new Uint8Array(wavBytes.buffer), wavHeader.byteLength);
-      
-      resolve(new Blob([wavBuffer], { type: 'audio/wav' }));
-    }, reject);
-  });
+  try {
+    const audioContext = new AudioContext();
+    const arrayBuffer = await audioBlob.arrayBuffer();
+    
+    // デコードしてオーディオバッファに変換
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    
+    // モノラルに変換
+    const monoData = convertToMono(audioBuffer);
+    
+    // 16ビットPCMに変換
+    const pcmData = floatTo16BitPCM(monoData);
+    
+    // WAVヘッダーを作成（サンプルレートを44100に設定）
+    const wavHeader = createWavHeader(1, 44100, monoData.length);
+    
+    // WAVヘッダーとPCMデータを結合
+    const wavBlob = new Blob([wavHeader, pcmData.buffer], { type: 'audio/wav' });
+    
+    return wavBlob;
+  } catch (error) {
+    console.error('Audio conversion error:', error);
+    throw error;
+  }
 }
 
 export const processAudioForTranscription = async (blob: Blob): Promise<string> => {
