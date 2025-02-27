@@ -9,11 +9,11 @@ import {
   Mic,
   Square,
   Upload,
+  ClipboardCopy
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { AudioWaveform } from '@/components/AudioWaveform';
 import { transcribeAudio, processFile } from '@/utils/speechToText';
-import { ClipboardCopy } from "lucide-react";
 
 function formatTime(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
@@ -115,13 +115,13 @@ export default function AudioRecorder() {
 
       recorder.onstop = () => {
         console.log("録音停止");
+        setIsRecording(false); // ここで録音状態を変更する
         if (audioChunksRef.current.length === 0) {
           toast({
             title: "エラー",
             description: "録音データが取得できませんでした",
             variant: "destructive"
           });
-          setIsRecording(false);
           return;
         }
         
@@ -158,28 +158,32 @@ export default function AudioRecorder() {
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
       mediaRecorderRef.current.stop();
-      setIsRecording(false);
+      
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
+      
       if (audioStream) {
         for (const track of audioStream.getTracks()) {
           track.stop();
         }
         setAudioStream(null);
       }
+      
       if (audioContextRef.current) {
         audioContextRef.current.close();
         audioContextRef.current = null;
       }
+      
       setAmplitude(0);
+      // 録音状態をここではまだ変更しない（onstopイベントで変更する）
     }
   }, [audioStream]);
 
   const handleTranscription = async (blob: Blob) => {
     setIsTranscribing(true);
-    setTranscriptionProgress(0);
+    setTranscriptionProgress(10); // 初期値を10%に設定
     setTranscription(''); // 文字起こし結果をクリア
     
     try {
@@ -192,7 +196,6 @@ export default function AudioRecorder() {
         (partialText, isFinal) => {
           // 部分的な文字起こし結果を表示
           setTranscription(prev => {
-            const timestamp = new Date().toLocaleTimeString();
             if (isFinal) {
               return `${prev}${partialText}\n\n`;
             } else {
@@ -241,13 +244,13 @@ export default function AudioRecorder() {
     }
 
     setIsProcessing(true);
-    setUploadProgress(0);
+    setUploadProgress(10); // 初期値を10%に設定
     setTranscriptionProgress(0);
     setTranscription(''); // 文字起こし結果をクリア
     setUploadedFileName(file.name);
 
     // アップロード進捗のシミュレーション
-    let progress = 0;
+    let progress = 10;
     const uploadTimer = setInterval(() => {
       progress += 5;
       if (progress > 90) {
@@ -332,18 +335,18 @@ export default function AudioRecorder() {
           <div className="flex flex-col items-center space-y-4 p-6 border rounded-lg bg-muted/10">
             {isRecording ? (
               <div className="w-full space-y-4">
-                <div className="text-center text-xl font-bold text-primary">
-                  {formatTime(recordingTime)}
-                </div>
-                <div className="flex items-center justify-center mb-4">
-                  <div className="animate-pulse bg-red-500 rounded-full h-4 w-4 mr-2"></div>
-                  <span className="text-lg font-semibold text-red-500">録音中</span>
-                </div>
-                <AudioWaveform 
-                  isRecording={isRecording} 
-                  recordingTime={recordingTime}
-                  amplitude={amplitude}
-                />
+                {isRecording && (
+                  <div className="flex items-center space-x-2 mt-2">
+                    <div className="h-3 w-3 rounded-full bg-red-500 animate-pulse"></div>
+                    <span className="text-red-500 font-medium">録音中</span>
+                    <span className="ml-2 font-mono">{formatTime(recordingTime)}</span>
+                  </div>
+                )}
+                {isRecording && audioStream && (
+                  <div className="mt-4 h-24 bg-muted/20 rounded-md overflow-hidden">
+                    <AudioWaveform audioStream={audioStream} />
+                  </div>
+                )}
                 <div className="w-full space-y-4">
                   <Button
                     size="lg"
