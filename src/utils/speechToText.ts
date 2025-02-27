@@ -73,6 +73,11 @@ export async function transcribeAudio(
       throw new Error(`ファイルサイズが大きすぎます（${(audioBlob.size / (1024 * 1024)).toFixed(2)}MB）。100MB以下のファイルを使用してください。`);
     }
     
+    // 小さなファイルの場合は分割せずに処理
+    if (audioBlob.size < 1024 * 1024) { // 1MB未満
+      return await processFile(audioBlob, apiKey, onProgress, onPartialResult);
+    }
+    
     // audioBlob自体をチャンクに分割する
     const chunks = await splitAudioIntoChunks(audioBlob);
     

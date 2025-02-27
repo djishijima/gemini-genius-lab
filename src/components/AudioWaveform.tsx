@@ -1,20 +1,23 @@
-
 import { useEffect, useRef } from 'react';
 
 interface AudioWaveformProps {
-  isRecording: boolean;
-  recordingTime: number;
-  amplitude: number;
+  isRecording?: boolean;
+  recordingTime?: number;
+  amplitude?: number;
+  audioStream?: MediaStream;
 }
 
-export function AudioWaveform({ isRecording, amplitude }: AudioWaveformProps) {
+export function AudioWaveform({ isRecording, amplitude, audioStream }: AudioWaveformProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     if (!canvasRef.current) return;
 
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d')!;
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) return;
+    
     const width = canvas.width;
     const height = canvas.height;
 

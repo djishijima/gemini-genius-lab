@@ -69,7 +69,9 @@ export default function AudioRecorder() {
         throw new Error("お使いのブラウザはMediaRecorderをサポートしていません");
       }
       
-      const recorder = new MediaRecorder(stream);
+      // mimeTypeの設定
+      const options = { mimeType: 'audio/webm' };
+      const recorder = new MediaRecorder(stream, options);
       console.log("MediaRecorderが作成されました:", recorder.state);
       
       mediaRecorderRef.current = recorder;
@@ -189,9 +191,8 @@ export default function AudioRecorder() {
           setTranscription(prev => {
             if (isFinal) {
               return `${prev}${partialText}\n\n`;
-            } else {
-              return `${prev}${partialText}\n`;
             }
+            return `${prev}${partialText}\n`;
           });
         }
       );
@@ -292,7 +293,9 @@ export default function AudioRecorder() {
       
       // オーディオストリームを停止
       if (audioStream) {
-        audioStream.getTracks().forEach(track => track.stop());
+        for (const track of audioStream.getTracks()) {
+          track.stop();
+        }
       }
       
       // オーディオコンテキストを閉じる
@@ -302,26 +305,19 @@ export default function AudioRecorder() {
     };
   }, [audioStream]);
 
-  // 録音時間の更新
   useEffect(() => {
-    let timer: ReturnType<typeof setInterval> | null = null;
+    // 録音時間の更新
+    let interval: number | null = null;
     
     if (isRecording) {
-      // 録音中は1秒ごとに録音時間を更新
-      timer = setInterval(() => {
-        setRecordingTime(prevTime => prevTime + 1);
+      interval = window.setInterval(() => {
+        setRecordingTime(prev => prev + 1);
       }, 1000);
-    } else {
-      // 録音停止時はタイマーをクリア
-      if (timer) {
-        clearInterval(timer);
-      }
     }
     
-    // クリーンアップ関数
     return () => {
-      if (timer) {
-        clearInterval(timer);
+      if (interval !== null) {
+        clearInterval(interval);
       }
     };
   }, [isRecording]);
@@ -342,7 +338,7 @@ export default function AudioRecorder() {
               <div className="w-full space-y-4">
                 {isRecording && (
                   <div className="flex items-center space-x-2 mt-2">
-                    <div className="h-3 w-3 rounded-full bg-red-500 animate-pulse"></div>
+                    <div className="h-3 w-3 rounded-full bg-red-500 animate-pulse" />
                     <span className="text-red-500 font-medium">録音中</span>
                     <span className="ml-2 font-mono text-lg">{formatTime(recordingTime)}</span>
                   </div>
@@ -352,12 +348,12 @@ export default function AudioRecorder() {
                     <AudioWaveform audioStream={audioStream} />
                   </div>
                 )}
-                <div className="w-full space-y-4">
+                <div className="w-full flex justify-center">
                   <Button
                     size="lg"
                     variant="destructive"
                     onClick={stopRecording}
-                    className="w-full max-w-md mx-auto"
+                    className="w-full max-w-md"
                     disabled={isProcessing || isTranscribing}
                   >
                     <StopCircle className="mr-2 h-5 w-5" />
@@ -366,12 +362,12 @@ export default function AudioRecorder() {
                 </div>
               </div>
             ) : (
-              <div className="w-full space-y-4">
+              <div className="w-full flex justify-center">
                 <Button
                   size="lg"
                   variant="default"
                   onClick={startRecording}
-                  className="w-full max-w-md mx-auto"
+                  className="w-full max-w-md"
                   disabled={isProcessing || isTranscribing}
                 >
                   <Mic className="mr-2 h-5 w-5" />
@@ -432,7 +428,7 @@ export default function AudioRecorder() {
           {isTranscribing && (
             <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-md">
               <div className="flex items-center mb-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2"></div>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2" />
                 <span className="text-lg font-semibold text-blue-500">文字起こし中...</span>
               </div>
               <Progress value={transcriptionProgress} className="h-2 mb-2" />
@@ -444,7 +440,7 @@ export default function AudioRecorder() {
           {isProcessing && !isTranscribing && (
             <div className="mt-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-md">
               <div className="flex items-center mb-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-500 mr-2"></div>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-500 mr-2" />
                 <span className="text-lg font-semibold text-yellow-500">ファイル処理中...</span>
               </div>
               <Progress value={uploadProgress} className="h-2 mb-2" />
@@ -502,4 +498,4 @@ export default function AudioRecorder() {
 }
 
 // バージョン情報
-export const APP_VERSION = "1.0.3"; // 2025-02-28 リリース - importエラーの修正
+export const APP_VERSION = "1.0.4"; // 2025-02-28 リリース - 関数呼び出しの修正
