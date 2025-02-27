@@ -528,4 +528,4 @@ export default function AudioRecorder() {
 }
 
 // バージョン情報
-export const APP_VERSION = "1.0.1"; // 2025-02-28 リリース - 録音時間表示と進捗インジケーターの修正
+export const APP_VERSION = "1.0.2"; // 2025-02-28 リリース - 録音時間表示の修正
