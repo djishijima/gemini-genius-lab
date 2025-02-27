@@ -10,6 +10,7 @@ import AudioRecorder from "./pages/AudioRecorder";
 import Transcription from "./pages/Transcription";
 import PdfCompare from "./pages/PdfCompare";
 import NotFound from "./pages/NotFound";
+import { Header } from "./components/Header";
 
 const queryClient = new QueryClient();
 
@@ -20,13 +21,18 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/audio-recorder" element={<AudioRecorder />} />
-            <Route path="/transcription" element={<Transcription />} />
-            <Route path="/pdf-compare" element={<PdfCompare />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <div className="min-h-screen flex flex-col">
+            <Header />
+            <main className="flex-1">
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/audio-recorder" element={<AudioRecorder />} />
+                <Route path="/transcription" element={<Transcription />} />
+                <Route path="/pdf-compare" element={<PdfCompare />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </main>
+          </div>
         </BrowserRouter>
       </TooltipProvider>
     </ThemeProvider>
