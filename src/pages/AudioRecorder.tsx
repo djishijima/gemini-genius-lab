@@ -1,14 +1,14 @@
-import { useState, useRef, useEffect, useCallback, ChangeEvent } from 'react';
-import type { ChangeEvent } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import {
-  Download,
   Mic,
-  Square,
+  StopCircle,
   Upload,
+  RefreshCw,
+  Loader2,
   ClipboardCopy
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
@@ -386,7 +386,7 @@ export default function AudioRecorder() {
                     className="w-full max-w-md mx-auto"
                     disabled={isProcessing || isTranscribing}
                   >
-                    <Square className="mr-2 h-5 w-5" />
+                    <StopCircle className="mr-2 h-5 w-5" />
                     録音を停止
                   </Button>
                 </div>
@@ -486,7 +486,7 @@ export default function AudioRecorder() {
               className="w-full"
               disabled={isProcessing || isTranscribing}
             >
-              <Download className="mr-2 h-4 w-4" />
+              <RefreshCw className="mr-2 h-4 w-4" />
               音声をエクスポート
             </Button>
           )}
