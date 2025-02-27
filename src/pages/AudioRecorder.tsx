@@ -85,7 +85,7 @@ export default function AudioRecorder() {
         handleTranscription(audioBlob);
       };
 
-      recorder.start();
+      recorder.start(1000); // 1秒ごとにデータを取得
       setIsRecording(true);
       setRecordingTime(0);
 
@@ -127,9 +127,17 @@ export default function AudioRecorder() {
     setIsTranscribing(true);
     setTranscriptionProgress(0);
     try {
-      const transcriptText = await transcribeAudio(blob, API_KEY);
+      const transcriptText = await transcribeAudio(blob, API_KEY, (progress) => {
+        setTranscriptionProgress(progress);
+      });
+      
       const timestamp = new Date().toLocaleTimeString();
-      setTranscription(prev => prev + `[${timestamp}]\n${transcriptText}\n`);
+      setTranscription(prev => prev + `[${timestamp}]\n${transcriptText}\n\n`);
+      
+      toast({
+        title: "文字起こし完了",
+        description: "音声の文字起こしが完了しました",
+      });
     } catch (error: any) {
       console.error('Speech-to-Text Error:', error);
       toast({
@@ -149,7 +157,25 @@ export default function AudioRecorder() {
     if (file) {
       setAudioBlob(file);
       setIsProcessing(true);
-      handleTranscription(file);
+      setUploadProgress(0);
+      
+      // ファイルアップロード進捗表示の模擬
+      const uploadTimer = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 100) {
+            clearInterval(uploadTimer);
+            return 100;
+          }
+          return prev + 10;
+        });
+      }, 100);
+      
+      // 少し遅延させて処理開始の感覚を出す
+      setTimeout(() => {
+        clearInterval(uploadTimer);
+        setUploadProgress(100);
+        handleTranscription(file);
+      }, 1000);
     }
   };
 

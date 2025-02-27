@@ -16,6 +16,7 @@ interface SpeechRecognitionResponse {
   };
 }
 
+// オーディオをチャンクに分割する関数を修正
 async function splitAudioIntoChunks(audioBlob: Blob, chunkDuration: number = 45): Promise<Blob[]> {
   console.log('元の音声データサイズ:', audioBlob.size, 'bytes');
   const chunks: Blob[] = [];
@@ -52,6 +53,7 @@ async function splitAudioIntoChunks(audioBlob: Blob, chunkDuration: number = 45)
   return chunks;
 }
 
+// 無限再帰を修正したtranscribeAudio関数
 export async function transcribeAudio(
   audioBlob: Blob, 
   apiKey: string,
@@ -59,6 +61,7 @@ export async function transcribeAudio(
 ): Promise<string> {
   try {
     console.log('音声文字起こし開始');
+    // audioBlob自体をチャンクに分割する
     const chunks = await splitAudioIntoChunks(audioBlob);
     
     if (chunks.length === 0) {
@@ -71,8 +74,12 @@ export async function transcribeAudio(
       const chunk = chunks[i];
       console.log(`チャンク ${i + 1}/${chunks.length} の処理開始`);
 
+      // バイナリデータをBase64にエンコード
       const buffer = await chunk.arrayBuffer();
-      const base64Data = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+      const base64Data = btoa(
+        new Uint8Array(buffer)
+          .reduce((data, byte) => data + String.fromCharCode(byte), '')
+      );
       
       console.log(`チャンク ${i + 1} のAPIリクエスト送信`);
       const response = await fetch(
@@ -130,7 +137,6 @@ export async function transcribeAudio(
 
     console.log('文字起こし完了:', fullTranscription);
     return fullTranscription.trim();
-
   } catch (error) {
     console.error('Speech-to-Text Error:', error);
     throw error;
