@@ -56,7 +56,8 @@ async function splitAudioIntoChunks(audioBlob: Blob, chunkDuration = 45): Promis
 export async function transcribeAudio(
   audioBlob: Blob, 
   apiKey: string,
-  onProgress?: (progress: number) => void
+  onProgress?: (progress: number) => void,
+  onPartialResult?: (text: string, isFinal: boolean) => void
 ): Promise<string> {
   try {
     console.log('音声文字起こし開始');
@@ -139,6 +140,11 @@ export async function transcribeAudio(
           .join('\n');
         console.log(`チャンク ${i + 1} の文字起こし結果:`, transcription);
         fullTranscription += `${transcription}\n`;
+        
+        // 部分的な結果を返す
+        if (onPartialResult) {
+          onPartialResult(transcription, i === chunks.length - 1);
+        }
       } else {
         console.log(`チャンク ${i + 1} の文字起こし結果が空です`);
       }
@@ -167,10 +173,11 @@ export async function transcribeAudio(
   }
 }
 
-export async function processAudioFile(
+export async function processFile(
   file: File, 
   apiKey: string,
-  onProgress?: (uploadProgress: number, transcriptionProgress: number) => void
+  onProgress?: (uploadProgress: number, transcriptionProgress: number) => void,
+  onPartialResult?: (text: string, isFinal: boolean) => void
 ): Promise<string> {
   console.log('ファイル処理開始:', file.name, file.type, file.size, 'bytes');
   
@@ -190,7 +197,7 @@ export async function processAudioFile(
       if (onProgress) {
         onProgress(100, progress);
       }
-    });
+    }, onPartialResult);
   } catch (error) {
     console.error('File Processing Error:', error);
     throw error;

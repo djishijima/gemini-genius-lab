@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, ChangeEvent } from 'react';
 import type { ChangeEvent } from 'react';
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,7 +12,8 @@ import {
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { AudioWaveform } from '@/components/AudioWaveform';
-import { transcribeAudio } from '@/utils/speechToText';
+import { transcribeAudio, processFile } from '@/utils/speechToText';
+import { ClipboardCopy } from "lucide-react";
 
 function formatTime(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
@@ -34,6 +35,7 @@ export default function AudioRecorder() {
   const [amplitude, setAmplitude] = useState(0);
   const [audioStream, setAudioStream] = useState<MediaStream | null>(null);
   const [audioFileName, setAudioFileName] = useState('');
+  const [uploadedFileName, setUploadedFileName] = useState('');
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -178,12 +180,27 @@ export default function AudioRecorder() {
   const handleTranscription = async (blob: Blob) => {
     setIsTranscribing(true);
     setTranscriptionProgress(0);
+    setTranscription(''); // 文字起こし結果をクリア
     
     try {
-      const result = await transcribeAudio(blob, API_KEY, (progress) => {
-        setTranscriptionProgress(progress);
-      });
-      setTranscription(result);
+      await transcribeAudio(
+        blob, 
+        API_KEY, 
+        (progress) => {
+          setTranscriptionProgress(progress);
+        },
+        (partialText, isFinal) => {
+          // 部分的な文字起こし結果を表示
+          setTranscription(prev => {
+            const timestamp = new Date().toLocaleTimeString();
+            if (isFinal) {
+              return `${prev}${partialText}\n\n`;
+            } else {
+              return `${prev}${partialText}\n`;
+            }
+          });
+        }
+      );
     } catch (error) {
       console.error('Transcription error:', error);
       toast({
@@ -197,32 +214,27 @@ export default function AudioRecorder() {
     }
   };
 
-  const handleFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // ファイルサイズのチェック
-    const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
-    if (file.size > MAX_FILE_SIZE) {
+    // ファイルサイズチェック (100MB制限)
+    if (file.size > 100 * 1024 * 1024) {
       toast({
-        title: "エラー",
-        description: `ファイルサイズが大きすぎます。最大${MAX_FILE_SIZE / (1024 * 1024)}MBまでです。`,
+        title: "ファイルサイズエラー",
+        description: "ファイルサイズは100MB以下にしてください",
         variant: "destructive"
       });
       return;
     }
 
-    // サポートされているファイル形式のチェック
-    const supportedFormats = ['audio/mp3', 'audio/wav', 'audio/webm', 'audio/mpeg', 'audio/ogg'];
-    if (!supportedFormats.includes(file.type) && 
-        !file.name.endsWith('.mp3') && 
-        !file.name.endsWith('.wav') && 
-        !file.name.endsWith('.webm') && 
-        !file.name.endsWith('.m4a') && 
-        !file.name.endsWith('.ogg')) {
+    // サポートされているファイル形式チェック
+    const supportedTypes = ['audio/mp3', 'audio/wav', 'audio/webm', 'audio/m4a', 'audio/ogg', 'audio/mpeg'];
+    if (!supportedTypes.includes(file.type) && !file.name.endsWith('.mp3') && !file.name.endsWith('.wav') && 
+        !file.name.endsWith('.webm') && !file.name.endsWith('.m4a') && !file.name.endsWith('.ogg')) {
       toast({
-        title: "エラー",
-        description: "サポートされていないファイル形式です。MP3, WAV, WEBM, M4A, OGGファイルをアップロードしてください。",
+        title: "ファイル形式エラー",
+        description: "サポートされているファイル形式: MP3, WAV, WEBM, M4A, OGG",
         variant: "destructive"
       });
       return;
@@ -230,39 +242,56 @@ export default function AudioRecorder() {
 
     setIsProcessing(true);
     setUploadProgress(0);
-    setAudioFileName(file.name);
+    setTranscriptionProgress(0);
+    setTranscription(''); // 文字起こし結果をクリア
+    setUploadedFileName(file.name);
 
-    try {
-      // ファイルアップロード進捗表示の模擬
-      const uploadTimer = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 95) {
-            clearInterval(uploadTimer);
-            return 95;
-          }
-          return prev + 5;
-        });
-      }, 100);
-      
-      // 少し遅延させて処理開始の感覚を出す
-      setTimeout(() => {
+    // アップロード進捗のシミュレーション
+    let progress = 0;
+    const uploadTimer = setInterval(() => {
+      progress += 5;
+      if (progress > 90) {
+        progress = 90;
         clearInterval(uploadTimer);
-        setUploadProgress(100);
-        
-        // 文字起こし処理を開始
-        const audioBlob = new Blob([file], { type: file.type });
-        setAudioBlob(audioBlob);
-        handleTranscription(file);
-      }, 1000);
-    } catch (error) {
-      console.error('File processing error:', error);
-      toast({
-        title: "エラー",
-        description: error instanceof Error ? error.message : "ファイル処理中にエラーが発生しました",
-        variant: "destructive"
+      }
+      setUploadProgress(progress);
+    }, 100);
+
+    // 少し遅延させて処理開始の感覚を出す
+    setTimeout(() => {
+      clearInterval(uploadTimer);
+      setUploadProgress(100);
+      
+      // 文字起こし処理を開始
+      processFile(
+        file, 
+        API_KEY, 
+        (uploadProgress, transcriptionProgress) => {
+          setUploadProgress(uploadProgress);
+          setTranscriptionProgress(transcriptionProgress);
+        },
+        (partialText, isFinal) => {
+          // 部分的な文字起こし結果を表示
+          setTranscription(prev => {
+            if (isFinal) {
+              return `${prev}${partialText}\n\n`;
+            } else {
+              return `${prev}${partialText}\n`;
+            }
+          });
+        }
+      ).catch(error => {
+        console.error('File processing error:', error);
+        toast({
+          title: "処理エラー",
+          description: error instanceof Error ? error.message : "ファイル処理中にエラーが発生しました",
+          variant: "destructive"
+        });
+        setIsProcessing(false);
+      }).finally(() => {
+        setIsProcessing(false);
       });
-      setIsProcessing(false);
-    }
+    }, 1000);
   };
 
   const handleAudioExport = () => {
@@ -428,15 +457,31 @@ export default function AudioRecorder() {
             </Button>
           )}
 
-          <div className="space-y-2">
-            <Label>文字起こし結果</Label>
-            <textarea
-              value={transcription}
-              onChange={(e) => setTranscription(e.target.value)}
-              className="w-full h-[200px] p-4 border rounded-lg font-mono text-sm resize-none bg-muted/5"
-              placeholder="文字起こし結果がここに表示されます..."
-            />
-          </div>
+          {transcription && (
+            <div className="mt-6 p-4 border rounded-lg bg-card">
+              <h3 className="text-lg font-semibold mb-2">文字起こし結果</h3>
+              <div className="max-h-60 overflow-y-auto whitespace-pre-wrap bg-muted p-3 rounded text-sm">
+                {isTranscribing && <div className="text-primary animate-pulse">文字起こし中...</div>}
+                {transcription}
+              </div>
+              <div className="flex justify-end mt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText(transcription);
+                    toast({
+                      title: "コピー完了",
+                      description: "文字起こし結果をクリップボードにコピーしました",
+                    });
+                  }}
+                >
+                  <ClipboardCopy className="h-4 w-4 mr-2" />
+                  コピー
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
