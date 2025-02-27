@@ -140,10 +140,6 @@ export default function AudioRecorder() {
       setIsRecording(true);
       setRecordingTime(0);
 
-      intervalRef.current = setInterval(() => {
-        setRecordingTime((prevTime) => prevTime + 1);
-      }, 1000);
-
     } catch (error) {
       console.error("Error starting recording:", error);
       toast({
@@ -158,11 +154,6 @@ export default function AudioRecorder() {
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
       mediaRecorderRef.current.stop();
-      
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
       
       if (audioStream) {
         for (const track of audioStream.getTracks()) {
@@ -310,16 +301,56 @@ export default function AudioRecorder() {
     }
   };
 
+  // コンポーネントのマウント時とアンマウント時の処理
   useEffect(() => {
+    // クリーンアップ関数
     return () => {
-      if (isRecording) {
-        stopRecording();
-      }
+      // インターバルをクリア
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      
+      // 録音を停止
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+        mediaRecorderRef.current.stop();
+      }
+      
+      // オーディオストリームを停止
+      if (audioStream) {
+        audioStream.getTracks().forEach(track => track.stop());
+      }
+      
+      // オーディオコンテキストを閉じる
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
       }
     };
-  }, [isRecording, stopRecording]);
+  }, [audioStream]);
+
+  // 録音時間の更新
+  useEffect(() => {
+    let timer: ReturnType<typeof setInterval> | null = null;
+    
+    if (isRecording) {
+      // 録音中は1秒ごとに録音時間を更新
+      timer = setInterval(() => {
+        setRecordingTime(prevTime => prevTime + 1);
+      }, 1000);
+    } else {
+      // 録音停止時はタイマーをクリア
+      if (timer) {
+        clearInterval(timer);
+      }
+    }
+    
+    // クリーンアップ関数
+    return () => {
+      if (timer) {
+        clearInterval(timer);
+      }
+    };
+  }, [isRecording]);
 
   return (
     <div className="container mx-auto p-4 max-w-3xl">
@@ -339,7 +370,7 @@ export default function AudioRecorder() {
                   <div className="flex items-center space-x-2 mt-2">
                     <div className="h-3 w-3 rounded-full bg-red-500 animate-pulse"></div>
                     <span className="text-red-500 font-medium">録音中</span>
-                    <span className="ml-2 font-mono">{formatTime(recordingTime)}</span>
+                    <span className="ml-2 font-mono text-lg">{formatTime(recordingTime)}</span>
                   </div>
                 )}
                 {isRecording && audioStream && (
