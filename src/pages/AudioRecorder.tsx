@@ -497,4 +497,4 @@ export default function AudioRecorder() {
 }
 
 // バージョン情報
-export const APP_VERSION = "1.0.0"; // 2025-02-28 リリース - リアルタイム文字起こし機能追加
+export const APP_VERSION = "1.0.1"; // 2025-02-28 リリース - 録音時間表示と進捗インジケーターの修正
