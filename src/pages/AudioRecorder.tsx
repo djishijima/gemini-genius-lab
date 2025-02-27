@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, ChangeEvent } from 'react';
 import type { ChangeEvent } from 'react';
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import {
@@ -483,7 +483,15 @@ export default function AudioRecorder() {
             </div>
           )}
         </CardContent>
+        <CardFooter className="flex justify-between">
+          <div className="text-xs text-muted-foreground">
+            Gemini Genius Lab - 音声文字起こしツール v{APP_VERSION}
+          </div>
+        </CardFooter>
       </Card>
     </div>
   );
 }
+
+// バージョン情報
+export const APP_VERSION = "1.0.0"; // 2025-02-28 リリース - リアルタイム文字起こし機能追加
