@@ -5,13 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import {
-  ArrowLeft,
   Download,
   Mic,
   Square,
   Upload,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { AudioWaveform } from '@/components/AudioWaveform';
 import { useToast } from "@/hooks/use-toast";
 import { transcribeAudio } from "@/utils/speechToText";
@@ -43,7 +41,6 @@ export default function AudioRecorder() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
 
-  const navigate = useNavigate();
   const { toast } = useToast();
 
   const API_KEY = 'AIzaSyB3e3yEOKECnlDtivhi_jPxOpepk8wo6jE';
@@ -182,15 +179,6 @@ export default function AudioRecorder() {
 
   return (
     <div className="container mx-auto p-4 max-w-3xl">
-      <Button 
-        variant="ghost" 
-        onClick={() => navigate("/")}
-        className="mb-4"
-      >
-        <ArrowLeft className="mr-2 h-4 w-4" />
-        戻る
-      </Button>
-
       <Card>
         <CardHeader>
           <CardTitle>音声文字起こし</CardTitle>
