@@ -1,5 +1,5 @@
-
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import type { ChangeEvent } from 'react';
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -37,7 +37,7 @@ export default function AudioRecorder() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
 
@@ -103,7 +103,8 @@ export default function AudioRecorder() {
     }
   };
 
-  const stopRecording = () => {
+  // useCallbackを使用してstopRecording関数をメモ化
+  const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
@@ -112,7 +113,9 @@ export default function AudioRecorder() {
         intervalRef.current = null;
       }
       if (audioStream) {
-        audioStream.getTracks().forEach(track => track.stop());
+        for (const track of audioStream.getTracks()) {
+          track.stop();
+        }
         setAudioStream(null);
       }
       if (audioContextRef.current) {
@@ -121,7 +124,7 @@ export default function AudioRecorder() {
       }
       setAmplitude(0);
     }
-  };
+  }, [audioStream]);
 
   const handleTranscription = async (blob: Blob) => {
     setIsTranscribing(true);
@@ -132,17 +135,17 @@ export default function AudioRecorder() {
       });
       
       const timestamp = new Date().toLocaleTimeString();
-      setTranscription(prev => prev + `[${timestamp}]\n${transcriptText}\n\n`);
+      setTranscription(prev => `${prev}[${timestamp}]\n${transcriptText}\n\n`);
       
       toast({
         title: "文字起こし完了",
         description: "音声の文字起こしが完了しました",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Speech-to-Text Error:', error);
       toast({
         title: "エラー",
-        description: error.message || "文字起こしに失敗しました",
+        description: error instanceof Error ? error.message : "文字起こしに失敗しました",
         variant: "destructive"
       });
     } finally {
@@ -152,30 +155,51 @@ export default function AudioRecorder() {
     }
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // ファイルサイズのチェック
+      const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+      if (file.size > MAX_FILE_SIZE) {
+        toast({
+          title: "エラー",
+          description: `ファイルサイズが大きすぎます（${(file.size / (1024 * 1024)).toFixed(2)}MB）。100MB以下のファイルを使用してください。`,
+          variant: "destructive"
+        });
+        return;
+      }
+      
       setAudioBlob(file);
       setIsProcessing(true);
       setUploadProgress(0);
+      setTranscriptionProgress(0);
       
-      // ファイルアップロード進捗表示の模擬
-      const uploadTimer = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 100) {
-            clearInterval(uploadTimer);
-            return 100;
-          }
-          return prev + 10;
+      try {
+        // ファイルアップロード進捗表示の模擬
+        const uploadTimer = setInterval(() => {
+          setUploadProgress(prev => {
+            if (prev >= 95) {
+              clearInterval(uploadTimer);
+              return 95;
+            }
+            return prev + 5;
+          });
+        }, 50);
+        
+        // 少し遅延させて処理開始の感覚を出す
+        setTimeout(() => {
+          clearInterval(uploadTimer);
+          setUploadProgress(100);
+          handleTranscription(file);
+        }, 800);
+      } catch (error) {
+        setIsProcessing(false);
+        toast({
+          title: "エラー",
+          description: "ファイルの処理中にエラーが発生しました",
+          variant: "destructive"
         });
-      }, 100);
-      
-      // 少し遅延させて処理開始の感覚を出す
-      setTimeout(() => {
-        clearInterval(uploadTimer);
-        setUploadProgress(100);
-        handleTranscription(file);
-      }, 1000);
+      }
     }
   };
 
@@ -201,7 +225,7 @@ export default function AudioRecorder() {
         clearInterval(intervalRef.current);
       }
     };
-  }, [isRecording]);
+  }, [isRecording, stopRecording]);
 
   return (
     <div className="container mx-auto p-4 max-w-3xl">
@@ -209,7 +233,8 @@ export default function AudioRecorder() {
         <CardHeader>
           <CardTitle>音声文字起こし</CardTitle>
           <CardDescription>
-            音声を録音するか、音声ファイルをアップロードして文字起こしを行います
+            音声を録音するか、音声ファイルをアップロードして文字起こしを行います。
+            対応ファイル形式: MP3, WAV, WEBM, M4A, OGG（最大100MB）
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -255,7 +280,7 @@ export default function AudioRecorder() {
             <input
               ref={fileInputRef}
               type="file"
-              accept="audio/*"
+              accept="audio/mp3,audio/wav,audio/webm,audio/m4a,audio/ogg,audio/*"
               onChange={handleFileUpload}
               className="hidden"
             />
@@ -272,16 +297,21 @@ export default function AudioRecorder() {
 
           {(isProcessing || isTranscribing) && (
             <div className="space-y-4 p-4 border rounded-lg bg-muted/10">
-              <p className="text-sm font-medium text-center">処理中...</p>
+              <p className="text-sm font-medium text-center">
+                {isTranscribing ? "文字起こし処理中..." : "ファイル処理中..."}
+                {transcriptionProgress > 0 && transcriptionProgress < 100 && ` (${Math.round(transcriptionProgress)}%)`}
+              </p>
               {isProcessing && (
                 <>
                   <div className="space-y-2">
                     <Label className="text-sm">ファイルアップロード</Label>
                     <Progress value={uploadProgress} />
+                    <p className="text-xs text-muted-foreground text-right">{Math.round(uploadProgress)}%</p>
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm">文字起こし</Label>
                     <Progress value={transcriptionProgress} />
+                    <p className="text-xs text-muted-foreground text-right">{Math.round(transcriptionProgress)}%</p>
                   </div>
                 </>
               )}
@@ -289,6 +319,7 @@ export default function AudioRecorder() {
                 <div className="space-y-2">
                   <Label className="text-sm">文字起こし</Label>
                   <Progress value={transcriptionProgress} />
+                  <p className="text-xs text-muted-foreground text-right">{Math.round(transcriptionProgress)}%</p>
                 </div>
               )}
             </div>

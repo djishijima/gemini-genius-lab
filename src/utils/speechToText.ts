@@ -1,4 +1,3 @@
-
 import { convertAudioToWav } from './audioProcessing';
 
 interface SpeechRecognitionResult {
@@ -17,7 +16,7 @@ interface SpeechRecognitionResponse {
 }
 
 // オーディオをチャンクに分割する関数を修正
-async function splitAudioIntoChunks(audioBlob: Blob, chunkDuration: number = 45): Promise<Blob[]> {
+async function splitAudioIntoChunks(audioBlob: Blob, chunkDuration = 45): Promise<Blob[]> {
   console.log('元の音声データサイズ:', audioBlob.size, 'bytes');
   const chunks: Blob[] = [];
 
@@ -61,6 +60,18 @@ export async function transcribeAudio(
 ): Promise<string> {
   try {
     console.log('音声文字起こし開始');
+    
+    // 進捗状況の初期化
+    if (onProgress) {
+      onProgress(10);
+    }
+    
+    // ファイルサイズのチェック
+    const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+    if (audioBlob.size > MAX_FILE_SIZE) {
+      throw new Error(`ファイルサイズが大きすぎます（${(audioBlob.size / (1024 * 1024)).toFixed(2)}MB）。100MB以下のファイルを使用してください。`);
+    }
+    
     // audioBlob自体をチャンクに分割する
     const chunks = await splitAudioIntoChunks(audioBlob);
     
@@ -82,6 +93,13 @@ export async function transcribeAudio(
       );
       
       console.log(`チャンク ${i + 1} のAPIリクエスト送信`);
+      
+      // 進捗状況の更新
+      if (onProgress) {
+        const progress = 10 + ((i / chunks.length) * 80);
+        onProgress(Math.round(progress));
+      }
+      
       const response = await fetch(
         `https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`,
         {
@@ -120,14 +138,14 @@ export async function transcribeAudio(
           .map(result => result.alternatives[0].transcript)
           .join('\n');
         console.log(`チャンク ${i + 1} の文字起こし結果:`, transcription);
-        fullTranscription += transcription + '\n';
+        fullTranscription += `${transcription}\n`;
       } else {
         console.log(`チャンク ${i + 1} の文字起こし結果が空です`);
       }
 
       if (onProgress) {
-        const progress = ((i + 1) / chunks.length) * 100;
-        onProgress(progress);
+        const progress = 10 + ((i + 1) / chunks.length) * 80;
+        onProgress(Math.round(progress));
       }
     }
 
@@ -136,6 +154,12 @@ export async function transcribeAudio(
     }
 
     console.log('文字起こし完了:', fullTranscription);
+    
+    // 完了時の進捗状況を100%に設定
+    if (onProgress) {
+      onProgress(100);
+    }
+    
     return fullTranscription.trim();
   } catch (error) {
     console.error('Speech-to-Text Error:', error);
