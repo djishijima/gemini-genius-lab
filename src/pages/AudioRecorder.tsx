@@ -185,7 +185,7 @@ export default function AudioRecorder() {
         });
       }
     }
-  }, [audioStream]);
+  }, [toast]);
 
   const handleTranscription = async (blob: Blob) => {
     setIsTranscribing(true);

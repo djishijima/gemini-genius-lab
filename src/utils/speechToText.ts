@@ -179,12 +179,12 @@ export async function transcribeAudio(
 }
 
 export async function processFile(
-  file: File, 
+  file: Blob, 
   apiKey: string,
   onProgress?: (uploadProgress: number, transcriptionProgress: number) => void,
   onPartialResult?: (text: string, isFinal: boolean) => void
 ): Promise<string> {
-  console.log('ファイル処理開始:', file.name, file.type, file.size, 'bytes');
+  console.log('ファイル処理開始:', file.type, file.size, 'bytes');
   
   if (onProgress) {
     onProgress(0, 0);
