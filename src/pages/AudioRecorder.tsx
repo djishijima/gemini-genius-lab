@@ -51,6 +51,19 @@ export default function AudioRecorder() {
 
   const startRecording = async () => {
     try {
+      // 既存の録音があれば停止
+      if (mediaRecorderRef.current) {
+        mediaRecorderRef.current.stop();
+      }
+      
+      // 既存のオーディオストリームがあれば停止
+      if (audioStream) {
+        for (const track of audioStream.getTracks()) {
+          track.stop();
+        }
+        setAudioStream(null);
+      }
+      
       // マイクへのアクセス許可を明示的に確認
       console.log("マイクへのアクセスを要求中...");
       const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -154,23 +167,23 @@ export default function AudioRecorder() {
 
   // useCallbackを使用してstopRecording関数をメモ化
   const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-      mediaRecorderRef.current.stop();
-      
-      if (audioStream) {
-        for (const track of audioStream.getTracks()) {
-          track.stop();
+    console.log("録音を停止します...");
+    
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      try {
+        // 録音中の場合のみ停止
+        if (mediaRecorderRef.current.state === 'recording') {
+          mediaRecorderRef.current.stop();
+          console.log("MediaRecorder停止");
         }
-        setAudioStream(null);
+      } catch (error) {
+        console.error("録音停止エラー:", error);
+        toast({
+          title: "エラー",
+          description: "録音の停止中にエラーが発生しました",
+          variant: "destructive"
+        });
       }
-      
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-        audioContextRef.current = null;
-      }
-      
-      setAmplitude(0);
-      // 録音状態をここではまだ変更しない（onstopイベントで変更する）
     }
   }, [audioStream]);
 
@@ -180,6 +193,14 @@ export default function AudioRecorder() {
     setTranscription(''); // 文字起こし結果をクリア
     
     try {
+      // Blobの種類を確認
+      console.log('Blob type:', blob.type);
+      
+      // Blobが空でないことを確認
+      if (blob.size === 0) {
+        throw new Error('録音データが空です');
+      }
+      
       await transcribeAudio(
         blob, 
         API_KEY, 
@@ -276,6 +297,33 @@ export default function AudioRecorder() {
     }
   };
 
+  // 録音停止後のクリーンアップ
+  useEffect(() => {
+    if (!isRecording && audioStream) {
+      // 録音が停止されたらオーディオストリームをクリーンアップ
+      const cleanupAudio = () => {
+        console.log("オーディオリソースのクリーンアップ");
+        
+        // オーディオストリームを停止
+        for (const track of audioStream.getTracks()) {
+          track.stop();
+        }
+        
+        // オーディオコンテキストを閉じる
+        if (audioContextRef.current) {
+          audioContextRef.current.close();
+        }
+        
+        setAudioStream(null);
+        setAmplitude(0);
+      };
+      
+      // 少し遅延させてクリーンアップ（データ取得完了を待つ）
+      const timeoutId = setTimeout(cleanupAudio, 500);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isRecording, audioStream]);
+
   // コンポーネントのマウント時とアンマウント時の処理
   useEffect(() => {
     // クリーンアップ関数
@@ -285,25 +333,8 @@ export default function AudioRecorder() {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
-      
-      // 録音を停止
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-        mediaRecorderRef.current.stop();
-      }
-      
-      // オーディオストリームを停止
-      if (audioStream) {
-        for (const track of audioStream.getTracks()) {
-          track.stop();
-        }
-      }
-      
-      // オーディオコンテキストを閉じる
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-      }
     };
-  }, [audioStream]);
+  }, []);
 
   useEffect(() => {
     // 録音時間の更新
