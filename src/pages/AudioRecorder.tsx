@@ -257,34 +257,8 @@ export default function AudioRecorder() {
       setUploadProgress(100);
       
       // 文字起こし処理を開始
-      processFile(
-        file, 
-        API_KEY, 
-        (uploadProgress, transcriptionProgress) => {
-          setUploadProgress(uploadProgress);
-          setTranscriptionProgress(transcriptionProgress);
-        },
-        (partialText, isFinal) => {
-          // 部分的な文字起こし結果を表示
-          setTranscription(prev => {
-            if (isFinal) {
-              return `${prev}${partialText}\n\n`;
-            } else {
-              return `${prev}${partialText}\n`;
-            }
-          });
-        }
-      ).catch(error => {
-        console.error('File processing error:', error);
-        toast({
-          title: "処理エラー",
-          description: error instanceof Error ? error.message : "ファイル処理中にエラーが発生しました",
-          variant: "destructive"
-        });
-        setIsProcessing(false);
-      }).finally(() => {
-        setIsProcessing(false);
-      });
+      const audioBlob = new Blob([file], { type: file.type });
+      handleTranscription(audioBlob);
     }, 1000);
   };
 
@@ -528,4 +502,4 @@ export default function AudioRecorder() {
 }
 
 // バージョン情報
-export const APP_VERSION = "1.0.2"; // 2025-02-28 リリース - 録音時間表示の修正
+export const APP_VERSION = "1.0.3"; // 2025-02-28 リリース - importエラーの修正
