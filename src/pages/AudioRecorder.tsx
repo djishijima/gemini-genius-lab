@@ -84,27 +84,37 @@ export default function AudioRecorder() {
       mediaRecorderRef.current = recorder;
       audioChunksRef.current = [];
 
-      const audioContext = new AudioContext();
-      const analyser = audioContext.createAnalyser();
-      const source = audioContext.createMediaStreamSource(stream);
-      source.connect(analyser);
-      analyser.fftSize = 256;
-      audioContextRef.current = audioContext;
-      analyserRef.current = analyser;
-
-      const dataArray = new Uint8Array(analyser.frequencyBinCount);
-      const calculateAmplitude = () => {
-        if (!analyserRef.current || !isRecording) return;
-        analyserRef.current.getByteFrequencyData(dataArray);
-        const sum = dataArray.reduce((acc, value) => acc + value, 0);
-        const avg = sum / dataArray.length;
-        setAmplitude(avg / 128.0);
+      // Create audio context and analyser for amplitude calculation
+      try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const analyser = audioContext.createAnalyser();
+        const source = audioContext.createMediaStreamSource(stream);
+        source.connect(analyser);
+        analyser.fftSize = 256;
+        audioContextRef.current = audioContext;
+        analyserRef.current = analyser;
         
-        if (isRecording) {
-          requestAnimationFrame(calculateAmplitude);
-        }
-      };
-      calculateAmplitude();
+        // Calculate amplitude
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        const calculateAmplitude = () => {
+          if (!analyserRef.current || !isRecording) return;
+          
+          analyserRef.current.getByteFrequencyData(dataArray);
+          const sum = dataArray.reduce((acc, value) => acc + value, 0);
+          const avg = sum / dataArray.length;
+          const normalizedAmplitude = avg / 128.0;
+          setAmplitude(normalizedAmplitude > 0 ? normalizedAmplitude : 0.05);
+          
+          if (isRecording) {
+            requestAnimationFrame(calculateAmplitude);
+          }
+        };
+        
+        // Start amplitude calculation
+        requestAnimationFrame(calculateAmplitude);
+      } catch (error) {
+        console.error("AudioContext error:", error);
+      }
 
       recorder.ondataavailable = (event) => {
         console.log("データ取得:", event.data.size, "bytes");
@@ -125,6 +135,7 @@ export default function AudioRecorder() {
       recorder.onstop = async () => {
         console.log("録音停止");
         setIsRecording(false);
+        
         if (audioChunksRef.current.length === 0) {
           toast({
             title: "エラー",
@@ -147,6 +158,15 @@ export default function AudioRecorder() {
       
       setIsRecording(true);
       setRecordingTime(0);
+      
+      // Start timer for recording time
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+      
+      intervalRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
 
     } catch (error) {
       console.error("Error starting recording:", error);
@@ -509,4 +529,4 @@ export default function AudioRecorder() {
   );
 }
 
-export const APP_VERSION = "1.0.5"; // 2025-03-04 リリース - 波形表示と文字起こし機能の修正
+export const APP_VERSION = "1.0.6"; // 2025-03-04 リリース - 波形表示の修正
