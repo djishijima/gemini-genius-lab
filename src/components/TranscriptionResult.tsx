@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ClipboardCopy } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Editor } from "@tinymce/tinymce-react";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 
 interface TranscriptionResultProps {
   transcription: string;
@@ -16,14 +16,14 @@ export function TranscriptionResult({ transcription, isTranscribing }: Transcrip
   const editorRef = useRef<any>(null);
   
   // Update the edited text when transcription changes
-  if (transcription && !editedText && !isTranscribing) {
-    setEditedText(transcription);
-  }
-  
-  if (!transcription && !editedText) return null;
+  useEffect(() => {
+    if (transcription && !isTranscribing) {
+      setEditedText(prev => prev ? prev + transcription : transcription);
+    }
+  }, [transcription, isTranscribing]);
   
   const handleCopy = () => {
-    const contentToCopy = editorRef.current ? editorRef.current.getContent({ format: 'text' }) : transcription;
+    const contentToCopy = editorRef.current ? editorRef.current.getContent({ format: 'text' }) : editedText;
     navigator.clipboard.writeText(contentToCopy);
     toast({
       title: "コピー完了",
@@ -39,12 +39,12 @@ export function TranscriptionResult({ transcription, isTranscribing }: Transcrip
         <div className="text-primary animate-pulse mb-4">文字起こし中...</div>
       )}
       
-      <div className="mb-4 bg-background rounded border">
+      <div className="mb-4 bg-background rounded border min-h-[300px]">
         <Editor
           apiKey="no-api-key"
           onInit={(evt, editor) => editorRef.current = editor}
-          initialValue={editedText || transcription}
-          value={editedText || transcription}
+          initialValue={editedText || "ここに文字起こし結果が表示されます..."}
+          value={editedText || ""}
           onEditorChange={(newText) => setEditedText(newText)}
           init={{
             height: 300,
@@ -66,7 +66,8 @@ export function TranscriptionResult({ transcription, isTranscribing }: Transcrip
             },
             branding: false,
             promotion: false,
-            statusbar: false
+            statusbar: false,
+            placeholder: 'ここに文字起こし結果が表示されます...'
           }}
         />
       </div>

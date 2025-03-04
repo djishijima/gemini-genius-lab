@@ -1,6 +1,5 @@
 
 import { transcribeAudio } from './speechToText';
-import { useToast } from "@/components/ui/use-toast";
 
 interface TranscriptionHandlerOptions {
   apiKey: string;
@@ -44,12 +43,12 @@ export async function handleTranscription(
       },
       (partialText, isFinal) => {
         console.log('部分的な文字起こし結果:', partialText, isFinal);
-        onTranscriptionChange(prev => {
-          if (isFinal) {
-            return `${prev}${partialText}\n\n`;
-          }
-          return `${prev}${partialText}\n`;
-        });
+        // Fixed: Changed to update the transcription directly with string value
+        if (isFinal) {
+          onTranscriptionChange(partialText + '\n\n');
+        } else {
+          onTranscriptionChange(partialText + '\n');
+        }
       }
     );
     
