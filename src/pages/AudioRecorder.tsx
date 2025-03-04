@@ -46,17 +46,14 @@ export default function AudioRecorder() {
 
   const { toast } = useToast();
 
-  // APIキーを設定
   const API_KEY = 'AIzaSyB3e3yEOKECnlDtivhi_jPxOpepk8wo6jE';
 
   const startRecording = async () => {
     try {
-      // 既存の録音があれば停止
       if (mediaRecorderRef.current) {
         mediaRecorderRef.current.stop();
       }
       
-      // 既存のオーディオストリームがあれば停止
       if (audioStream) {
         for (const track of audioStream.getTracks()) {
           track.stop();
@@ -64,7 +61,6 @@ export default function AudioRecorder() {
         setAudioStream(null);
       }
       
-      // マイクへのアクセス許可を明示的に確認
       console.log("マイクへのアクセスを要求中...");
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
@@ -77,12 +73,10 @@ export default function AudioRecorder() {
       
       setAudioStream(stream);
       
-      // MediaRecorderのサポート確認
       if (!window.MediaRecorder) {
         throw new Error("お使いのブラウザはMediaRecorderをサポートしていません");
       }
       
-      // mimeTypeの設定
       const options = { mimeType: 'audio/webm' };
       const recorder = new MediaRecorder(stream, options);
       console.log("MediaRecorderが作成されました:", recorder.state);
@@ -90,7 +84,6 @@ export default function AudioRecorder() {
       mediaRecorderRef.current = recorder;
       audioChunksRef.current = [];
 
-      // オーディオ解析の設定
       const audioContext = new AudioContext();
       const analyser = audioContext.createAnalyser();
       const source = audioContext.createMediaStreamSource(stream);
@@ -99,19 +92,20 @@ export default function AudioRecorder() {
       audioContextRef.current = audioContext;
       analyserRef.current = analyser;
 
-      // 音量の計算
       const dataArray = new Uint8Array(analyser.frequencyBinCount);
       const calculateAmplitude = () => {
-        if (!isRecording) return;
-        analyser.getByteFrequencyData(dataArray);
+        if (!analyserRef.current || !isRecording) return;
+        analyserRef.current.getByteFrequencyData(dataArray);
         const sum = dataArray.reduce((acc, value) => acc + value, 0);
         const avg = sum / dataArray.length;
-        setAmplitude(avg / 128.0); // 0-1の範囲に正規化
-        requestAnimationFrame(calculateAmplitude);
+        setAmplitude(avg / 128.0);
+        
+        if (isRecording) {
+          requestAnimationFrame(calculateAmplitude);
+        }
       };
       calculateAmplitude();
 
-      // イベントリスナーの設定
       recorder.ondataavailable = (event) => {
         console.log("データ取得:", event.data.size, "bytes");
         if (event.data.size > 0) {
@@ -128,9 +122,9 @@ export default function AudioRecorder() {
         });
       };
 
-      recorder.onstop = () => {
+      recorder.onstop = async () => {
         console.log("録音停止");
-        setIsRecording(false); // ここで録音状態を変更する
+        setIsRecording(false);
         if (audioChunksRef.current.length === 0) {
           toast({
             title: "エラー",
@@ -147,9 +141,8 @@ export default function AudioRecorder() {
         handleTranscription(audioBlob);
       };
 
-      // 録音開始
       console.log("録音を開始します...");
-      recorder.start(1000); // 1秒ごとにデータを取得
+      recorder.start(1000);
       console.log("録音状態:", recorder.state);
       
       setIsRecording(true);
@@ -165,13 +158,11 @@ export default function AudioRecorder() {
     }
   };
 
-  // useCallbackを使用してstopRecording関数をメモ化
   const stopRecording = useCallback(() => {
     console.log("録音を停止します...");
     
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       try {
-        // 録音中の場合のみ停止
         if (mediaRecorderRef.current.state === 'recording') {
           mediaRecorderRef.current.stop();
           console.log("MediaRecorder停止");
@@ -189,26 +180,27 @@ export default function AudioRecorder() {
 
   const handleTranscription = async (blob: Blob) => {
     setIsTranscribing(true);
-    setTranscriptionProgress(10); // 初期値を10%に設定
-    setTranscription(''); // 文字起こし結果をクリア
+    setTranscriptionProgress(10);
+    setTranscription('');
     
     try {
-      // Blobの種類を確認
       console.log('Blob type:', blob.type);
       
-      // Blobが空でないことを確認
       if (blob.size === 0) {
         throw new Error('録音データが空です');
       }
       
-      await transcribeAudio(
+      console.log('文字起こし開始:', blob.size, 'bytes');
+      
+      const result = await transcribeAudio(
         blob, 
         API_KEY, 
         (progress) => {
+          console.log('文字起こし進捗:', progress);
           setTranscriptionProgress(progress);
         },
         (partialText, isFinal) => {
-          // 部分的な文字起こし結果を表示
+          console.log('部分的な文字起こし結果:', partialText, isFinal);
           setTranscription(prev => {
             if (isFinal) {
               return `${prev}${partialText}\n\n`;
@@ -217,6 +209,9 @@ export default function AudioRecorder() {
           });
         }
       );
+      
+      console.log('文字起こし結果:', result);
+      setTranscription(result);
     } catch (error) {
       console.error('Transcription error:', error);
       toast({
@@ -234,7 +229,6 @@ export default function AudioRecorder() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // ファイルサイズチェック (100MB制限)
     if (file.size > 100 * 1024 * 1024) {
       toast({
         title: "ファイルサイズエラー",
@@ -244,8 +238,7 @@ export default function AudioRecorder() {
       return;
     }
 
-    // サポートされているファイル形式チェック
-    const supportedTypes = ['audio/mp3', 'audio/wav', 'audio/webm', 'audio/m4a', 'audio/ogg', 'audio/mpeg'];
+    const supportedTypes = ['audio/mp3', 'audio/wav', 'audio/webm', 'audio/m4a', 'audio/ogg', 'audio/*'];
     if (!supportedTypes.includes(file.type) && !file.name.endsWith('.mp3') && !file.name.endsWith('.wav') && 
         !file.name.endsWith('.webm') && !file.name.endsWith('.m4a') && !file.name.endsWith('.ogg')) {
       toast({
@@ -257,12 +250,11 @@ export default function AudioRecorder() {
     }
 
     setIsProcessing(true);
-    setUploadProgress(10); // 初期値を10%に設定
+    setUploadProgress(10);
     setTranscriptionProgress(0);
-    setTranscription(''); // 文字起こし結果をクリア
+    setTranscription('');
     setUploadedFileName(file.name);
 
-    // アップロード進捗のシミュレーション
     let progress = 10;
     const uploadTimer = setInterval(() => {
       progress += 5;
@@ -273,12 +265,10 @@ export default function AudioRecorder() {
       setUploadProgress(progress);
     }, 100);
 
-    // 少し遅延させて処理開始の感覚を出す
     setTimeout(() => {
       clearInterval(uploadTimer);
       setUploadProgress(100);
       
-      // 文字起こし処理を開始
       const audioBlob = new Blob([file], { type: file.type });
       handleTranscription(audioBlob);
     }, 1000);
@@ -297,19 +287,15 @@ export default function AudioRecorder() {
     }
   };
 
-  // 録音停止後のクリーンアップ
   useEffect(() => {
     if (!isRecording && audioStream) {
-      // 録音が停止されたらオーディオストリームをクリーンアップ
       const cleanupAudio = () => {
         console.log("オーディオリソースのクリーンアップ");
         
-        // オーディオストリームを停止
         for (const track of audioStream.getTracks()) {
           track.stop();
         }
         
-        // オーディオコンテキストを閉じる
         if (audioContextRef.current) {
           audioContextRef.current.close();
         }
@@ -318,17 +304,13 @@ export default function AudioRecorder() {
         setAmplitude(0);
       };
       
-      // 少し遅延させてクリーンアップ（データ取得完了を待つ）
       const timeoutId = setTimeout(cleanupAudio, 500);
       return () => clearTimeout(timeoutId);
     }
   }, [isRecording, audioStream]);
 
-  // コンポーネントのマウント時とアンマウント時の処理
   useEffect(() => {
-    // クリーンアップ関数
     return () => {
-      // インターバルをクリア
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
@@ -337,7 +319,6 @@ export default function AudioRecorder() {
   }, []);
 
   useEffect(() => {
-    // 録音時間の更新
     let interval: number | null = null;
     
     if (isRecording) {
@@ -374,9 +355,9 @@ export default function AudioRecorder() {
                     <span className="ml-2 font-mono text-lg">{formatTime(recordingTime)}</span>
                   </div>
                 )}
-                {isRecording && audioStream && (
+                {isRecording && (
                   <div className="mt-4 h-24 bg-muted/20 rounded-md overflow-hidden">
-                    <AudioWaveform audioStream={audioStream} />
+                    <AudioWaveform isRecording={isRecording} amplitude={amplitude} audioStream={audioStream} />
                   </div>
                 )}
                 <div className="w-full flex justify-center">
@@ -528,5 +509,4 @@ export default function AudioRecorder() {
   );
 }
 
-// バージョン情報
-export const APP_VERSION = "1.0.4"; // 2025-02-28 リリース - 関数呼び出しの修正
+export const APP_VERSION = "1.0.5"; // 2025-03-04 リリース - 波形表示と文字起こし機能の修正
