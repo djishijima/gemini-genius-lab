@@ -14,7 +14,7 @@ export default function AudioRecorder() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcriptionProgress, setTranscriptionProgress] = useState(0);
-  const [pendingBlob, setPendingBlob] = useState<Blob | null>(null);
+  const [pendingTranscription, setPendingTranscription] = useState(false);
   
   const { toast } = useToast();
   
@@ -31,16 +31,18 @@ export default function AudioRecorder() {
     setAudioBlob
   } = useAudioRecorder();
 
-  // Effect to process the audioBlob when it becomes available
+  // Effect to monitor audio blob changes and handle pending transcription
   useEffect(() => {
-    if (pendingBlob && audioBlob) {
-      console.log("Audio blob is now available, proceeding with transcription");
-      onTranscriptionComplete(audioBlob);
-      setPendingBlob(null);
+    console.log("AudioBlob changed:", audioBlob ? `${audioBlob.size} bytes` : "null");
+    
+    if (pendingTranscription && audioBlob && audioBlob.size > 0) {
+      console.log("Pending transcription with valid audio blob, processing now");
+      handleTranscriptionProcess(audioBlob);
+      setPendingTranscription(false);
     }
-  }, [audioBlob, pendingBlob]);
+  }, [audioBlob, pendingTranscription]);
 
-  const onTranscriptionComplete = async (blob: Blob) => {
+  const handleTranscriptionProcess = async (blob: Blob) => {
     if (!blob || blob.size === 0) {
       toast({
         title: "エラー",
@@ -57,7 +59,10 @@ export default function AudioRecorder() {
     try {
       await handleTranscription(blob, {
         apiKey: API_KEY,
-        onProgress: setTranscriptionProgress,
+        onProgress: (progress) => {
+          console.log("文字起こし進捗:", progress);
+          setTranscriptionProgress(progress);
+        },
         onTranscriptionChange: (text) => {
           console.log("文字起こし結果更新:", text);
           setTranscription(text);
@@ -78,13 +83,21 @@ export default function AudioRecorder() {
   };
 
   const handleStopRecording = async () => {
-    // Mark that we're expecting an audio blob
-    setPendingBlob({} as Blob);
-    
-    console.log("録音停止を要求します");
-    stopRecording();
-    
-    // We'll wait for the useEffect to detect the audio blob and proceed with transcription
+    if (isRecording) {
+      console.log("録音停止を要求します");
+      
+      // First, mark that we want to transcribe when the audio is ready
+      setPendingTranscription(true);
+      
+      // Then stop the recording
+      stopRecording();
+      
+      // The useEffect will pick up when audioBlob becomes available
+      toast({
+        title: "録音完了",
+        description: "録音を停止しました。文字起こし処理を開始します。"
+      });
+    }
   };
 
   return (
@@ -138,4 +151,4 @@ export default function AudioRecorder() {
   );
 }
 
-export const APP_VERSION = "1.4.0"; // 2025-03-05 リリース - 録音データ取得の修正
+export const APP_VERSION = "1.5.0"; // 2025-03-05 録音データ取得の修正

@@ -18,7 +18,7 @@ export function useAudioRecorder(options?: UseAudioRecorderOptions) {
     audioBlob, 
     audioStream,
     startRecording: startMediaRecording, 
-    stopRecording, 
+    stopRecording: stopMediaRecording, 
     setAudioBlob 
   } = useRecorder({
     onRecordingStatusChange: (recording) => {
@@ -69,14 +69,21 @@ export function useAudioRecorder(options?: UseAudioRecorderOptions) {
         setAmplitude(0);
       };
       
-      const timeoutId = setTimeout(cleanupAudio, 500);
+      // Give a little time before cleanup to ensure all data is processed
+      const timeoutId = setTimeout(cleanupAudio, 1000);
       return () => clearTimeout(timeoutId);
     }
   }, [isRecording, audioStream]);
 
   const startRecording = async () => {
+    console.log("録音を開始します");
     setAmplitude(0);
     await startMediaRecording();
+  };
+
+  const stopRecording = () => {
+    console.log("録音を停止します");
+    stopMediaRecording();
   };
 
   return {

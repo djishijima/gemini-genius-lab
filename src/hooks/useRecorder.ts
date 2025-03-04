@@ -25,10 +25,12 @@ export function useRecorder(options?: UseRecorderOptions) {
 
   const startRecording = async () => {
     try {
+      // Stop any existing recording
       if (mediaRecorderRef.current) {
         mediaRecorderRef.current.stop();
       }
       
+      // Clean up any existing audio stream
       if (audioStream) {
         for (const track of audioStream.getTracks()) {
           track.stop();
@@ -36,7 +38,7 @@ export function useRecorder(options?: UseRecorderOptions) {
         setAudioStream(null);
       }
       
-      // クリア
+      // Clear previous recording data
       setAudioBlob(null);
       audioChunksRef.current = [];
       
@@ -56,7 +58,19 @@ export function useRecorder(options?: UseRecorderOptions) {
         throw new Error("お使いのブラウザはMediaRecorderをサポートしていません");
       }
       
-      const recorderOptions = { mimeType: 'audio/webm' };
+      // Prefer webm audio format, but fall back to alternatives if not supported
+      let mimeType = 'audio/webm';
+      if (!MediaRecorder.isTypeSupported('audio/webm')) {
+        if (MediaRecorder.isTypeSupported('audio/mp4')) {
+          mimeType = 'audio/mp4';
+        } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
+          mimeType = 'audio/ogg';
+        }
+      }
+      
+      const recorderOptions = { mimeType };
+      console.log(`使用する録音フォーマット: ${mimeType}`);
+      
       const recorder = new MediaRecorder(stream, recorderOptions);
       console.log("MediaRecorderが作成されました:", recorder.state);
       
@@ -80,7 +94,7 @@ export function useRecorder(options?: UseRecorderOptions) {
       };
 
       recorder.onstop = () => {
-        console.log("録音停止");
+        console.log("録音停止 - チャンク数:", audioChunksRef.current.length);
         setIsRecording(false);
         
         if (options?.onRecordingStatusChange) {
@@ -98,21 +112,23 @@ export function useRecorder(options?: UseRecorderOptions) {
         }
         
         try {
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-          console.log("録音データサイズ:", audioBlob.size, "bytes");
+          const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+          console.log("録音データサイズ:", audioBlob.size, "bytes", "タイプ:", audioBlob.type);
           
-          // Ensure blob is set in state after it's created
-          if (audioBlob.size > 0) {
-            console.log("有効な録音ブロブを設定します");
-            setAudioBlob(audioBlob);
-          } else {
-            console.error("録音ブロブが空です");
-            toast({
-              title: "エラー",
-              description: "録音データが空です",
-              variant: "destructive"
-            });
-          }
+          // Add a small delay to ensure the blob is fully processed
+          setTimeout(() => {
+            if (audioBlob.size > 0) {
+              console.log("有効な録音ブロブを設定します");
+              setAudioBlob(audioBlob);
+            } else {
+              console.error("録音ブロブが空です");
+              toast({
+                title: "エラー",
+                description: "録音データが空です",
+                variant: "destructive"
+              });
+            }
+          }, 100);
         } catch (error) {
           console.error("Blob作成エラー:", error);
           toast({
@@ -124,7 +140,8 @@ export function useRecorder(options?: UseRecorderOptions) {
       };
 
       console.log("録音を開始します...");
-      recorder.start(1000);
+      // Decreased the time slice for more frequent data chunks
+      recorder.start(500); 
       console.log("録音状態:", recorder.state);
       
       setIsRecording(true);
@@ -147,8 +164,11 @@ export function useRecorder(options?: UseRecorderOptions) {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       try {
         if (mediaRecorderRef.current.state === 'recording') {
+          // Request final data
+          mediaRecorderRef.current.requestData();
+          // Then stop the recorder
           mediaRecorderRef.current.stop();
-          console.log("MediaRecorder停止");
+          console.log("MediaRecorder停止リクエスト送信");
         }
       } catch (error) {
         console.error("録音停止エラー:", error);
