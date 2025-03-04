@@ -1,3 +1,4 @@
+
 import { useState, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
@@ -6,18 +7,14 @@ import { AudioRecorderControls } from '@/components/AudioRecorderControls';
 import { TranscriptionProgress } from '@/components/TranscriptionProgress';
 import { TranscriptionResult } from '@/components/TranscriptionResult';
 import { AudioExportButton } from '@/components/AudioExportButton';
-import { AudioFileUploader } from '@/components/AudioFileUploader';
 import { handleTranscription } from '@/utils/handleTranscription';
 
 export default function AudioRecorder() {
   const [transcription, setTranscription] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [transcriptionProgress, setTranscriptionProgress] = useState(0);
-  const [uploadedFileName, setUploadedFileName] = useState('');
   
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   
   const API_KEY = 'AIzaSyB3e3yEOKECnlDtivhi_jPxOpepk8wo6jE';
@@ -89,41 +86,13 @@ export default function AudioRecorder() {
     }, 500); // 少し待ってからブロブをチェック
   };
 
-  const handleFileUpload = (file: File) => {
-    setIsProcessing(true);
-    setUploadProgress(10);
-    setTranscriptionProgress(0);
-    setTranscription('');
-    setUploadedFileName(file.name);
-
-    let progress = 10;
-    const uploadTimer = setInterval(() => {
-      progress += 5;
-      if (progress > 90) {
-        progress = 90;
-        clearInterval(uploadTimer);
-      }
-      setUploadProgress(progress);
-    }, 100);
-
-    setTimeout(() => {
-      clearInterval(uploadTimer);
-      setUploadProgress(100);
-      
-      const audioBlob = new Blob([file], { type: file.type });
-      setAudioBlob(audioBlob);
-      onTranscriptionComplete(audioBlob);
-    }, 1000);
-  };
-
   return (
     <div className="container mx-auto p-4 max-w-3xl">
       <Card>
         <CardHeader>
           <CardTitle>音声文字起こし</CardTitle>
           <CardDescription>
-            音声を録音するか、音声ファイルをアップロードして文字起こしを行います。
-            対応ファイル形式: MP3, WAV, WEBM, M4A, OGG（最大100MB）
+            音声を録音してリアルタイムで文字起こしを行います。
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -136,18 +105,13 @@ export default function AudioRecorder() {
             isTranscribing={isTranscribing}
             onStartRecording={startRecording}
             onStopRecording={handleStopRecording}
-            onFileInputClick={() => fileInputRef.current?.click()}
-          />
-
-          <AudioFileUploader 
-            onFileUpload={handleFileUpload}
-            isDisabled={isRecording || isProcessing || isTranscribing}
+            onFileInputClick={() => {}} // 使用しない機能
           />
 
           <TranscriptionProgress 
             isProcessing={isProcessing}
             isTranscribing={isTranscribing}
-            uploadProgress={uploadProgress}
+            uploadProgress={0} // ファイルアップロードは使用しない
             transcriptionProgress={transcriptionProgress}
           />
 
@@ -173,4 +137,5 @@ export default function AudioRecorder() {
   );
 }
 
-export const APP_VERSION = "1.2.1"; // 2025-03-15 リリース - 文字起こし問題を修正
+export const APP_VERSION = "1.3.0"; // 2025-03-05 リリース - 録音機能のみに特化
+
