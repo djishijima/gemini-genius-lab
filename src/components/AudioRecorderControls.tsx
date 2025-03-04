@@ -1,7 +1,6 @@
 
 import { Button } from "@/components/ui/button";
 import { Mic, StopCircle, Upload } from "lucide-react";
-import { AudioWaveform } from '@/components/AudioWaveform';
 import { formatTime } from '@/utils/formatTime';
 
 interface AudioRecorderControlsProps {
@@ -37,15 +36,6 @@ export function AudioRecorderControls({
                 <div className="h-3 w-3 rounded-full bg-red-500 animate-pulse" />
                 <span className="text-red-500 font-medium">録音中</span>
                 <span className="ml-2 font-mono text-lg">{formatTime(recordingTime)}</span>
-              </div>
-            )}
-            {isRecording && (
-              <div className="mt-4 h-24 bg-muted/20 rounded-md overflow-hidden">
-                <AudioWaveform 
-                  isRecording={isRecording} 
-                  amplitude={amplitude} 
-                  audioStream={audioStream} 
-                />
               </div>
             )}
             <div className="w-full flex justify-center">
