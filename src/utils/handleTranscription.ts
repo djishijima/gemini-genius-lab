@@ -1,5 +1,5 @@
 
-import { transcribeAudio } from './speechToText';
+import { transcribeAudio } from './speechRecognition';
 
 interface TranscriptionHandlerOptions {
   apiKey: string;
