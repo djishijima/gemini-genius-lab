@@ -1,5 +1,5 @@
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
@@ -14,6 +14,7 @@ export default function AudioRecorder() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcriptionProgress, setTranscriptionProgress] = useState(0);
+  const [pendingBlob, setPendingBlob] = useState<Blob | null>(null);
   
   const { toast } = useToast();
   
@@ -29,6 +30,15 @@ export default function AudioRecorder() {
     stopRecording,
     setAudioBlob
   } = useAudioRecorder();
+
+  // Effect to process the audioBlob when it becomes available
+  useEffect(() => {
+    if (pendingBlob && audioBlob) {
+      console.log("Audio blob is now available, proceeding with transcription");
+      onTranscriptionComplete(audioBlob);
+      setPendingBlob(null);
+    }
+  }, [audioBlob, pendingBlob]);
 
   const onTranscriptionComplete = async (blob: Blob) => {
     if (!blob || blob.size === 0) {
@@ -68,22 +78,13 @@ export default function AudioRecorder() {
   };
 
   const handleStopRecording = async () => {
+    // Mark that we're expecting an audio blob
+    setPendingBlob({} as Blob);
+    
+    console.log("録音停止を要求します");
     stopRecording();
     
-    // stopRecordingはブロブが後から設定されるため、少し待ってからチェック
-    setTimeout(() => {
-      if (audioBlob) {
-        console.log("録音停止後のブロブ:", audioBlob.type, audioBlob.size, "bytes");
-        onTranscriptionComplete(audioBlob);
-      } else {
-        console.error("録音ブロブが取得できませんでした");
-        toast({
-          title: "録音エラー",
-          description: "録音データが取得できませんでした。もう一度お試しください。",
-          variant: "destructive"
-        });
-      }
-    }, 500); // 少し待ってからブロブをチェック
+    // We'll wait for the useEffect to detect the audio blob and proceed with transcription
   };
 
   return (
@@ -137,5 +138,4 @@ export default function AudioRecorder() {
   );
 }
 
-export const APP_VERSION = "1.3.0"; // 2025-03-05 リリース - 録音機能のみに特化
-
+export const APP_VERSION = "1.4.0"; // 2025-03-05 リリース - 録音データ取得の修正

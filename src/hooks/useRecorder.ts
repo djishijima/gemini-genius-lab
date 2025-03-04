@@ -1,5 +1,5 @@
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useToast } from "@/components/ui/use-toast";
 
 interface UseRecorderOptions {
@@ -15,6 +15,13 @@ export function useRecorder(options?: UseRecorderOptions) {
   const audioChunksRef = useRef<Blob[]>([]);
   
   const { toast } = useToast();
+
+  // Reset audio blob when starting a new recording
+  useEffect(() => {
+    if (isRecording) {
+      setAudioBlob(null);
+    }
+  }, [isRecording]);
 
   const startRecording = async () => {
     try {
@@ -72,7 +79,7 @@ export function useRecorder(options?: UseRecorderOptions) {
         });
       };
 
-      recorder.onstop = async () => {
+      recorder.onstop = () => {
         console.log("録音停止");
         setIsRecording(false);
         
@@ -81,6 +88,7 @@ export function useRecorder(options?: UseRecorderOptions) {
         }
         
         if (audioChunksRef.current.length === 0) {
+          console.error("録音データが空です");
           toast({
             title: "エラー",
             description: "録音データが取得できませんでした",
@@ -89,9 +97,30 @@ export function useRecorder(options?: UseRecorderOptions) {
           return;
         }
         
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        console.log("録音データサイズ:", audioBlob.size, "bytes");
-        setAudioBlob(audioBlob);
+        try {
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          console.log("録音データサイズ:", audioBlob.size, "bytes");
+          
+          // Ensure blob is set in state after it's created
+          if (audioBlob.size > 0) {
+            console.log("有効な録音ブロブを設定します");
+            setAudioBlob(audioBlob);
+          } else {
+            console.error("録音ブロブが空です");
+            toast({
+              title: "エラー",
+              description: "録音データが空です",
+              variant: "destructive"
+            });
+          }
+        } catch (error) {
+          console.error("Blob作成エラー:", error);
+          toast({
+            title: "エラー",
+            description: "録音データの処理中にエラーが発生しました",
+            variant: "destructive"
+          });
+        }
       };
 
       console.log("録音を開始します...");
@@ -129,6 +158,8 @@ export function useRecorder(options?: UseRecorderOptions) {
           variant: "destructive"
         });
       }
+    } else {
+      console.warn("MediaRecorderが存在しないか、すでに停止しています");
     }
   }, [toast]);
 
