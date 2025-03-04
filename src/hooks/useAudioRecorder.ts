@@ -19,7 +19,8 @@ export function useAudioRecorder(options?: UseAudioRecorderOptions) {
     audioStream,
     startRecording: startMediaRecording, 
     stopRecording: stopMediaRecording, 
-    setAudioBlob 
+    setAudioBlob,
+    recordingError
   } = useRecorder({
     onRecordingStatusChange: (recording) => {
       if (!recording) {
@@ -58,12 +59,16 @@ export function useAudioRecorder(options?: UseAudioRecorderOptions) {
       const cleanupAudio = () => {
         console.log("オーディオリソースのクリーンアップ");
         
-        for (const track of audioStream.getTracks()) {
-          track.stop();
+        if (audioStream) {
+          for (const track of audioStream.getTracks()) {
+            track.stop();
+          }
         }
         
-        if (audioContextRef.current) {
-          audioContextRef.current.close();
+        if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+          audioContextRef.current.close().catch(err => {
+            console.error("AudioContext close error:", err);
+          });
         }
         
         setAmplitude(0);
@@ -92,6 +97,7 @@ export function useAudioRecorder(options?: UseAudioRecorderOptions) {
     recordingTime,
     amplitude,
     audioStream,
+    recordingError,
     startRecording,
     stopRecording,
     setAudioBlob,

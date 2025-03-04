@@ -15,6 +15,7 @@ export default function AudioRecorder() {
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcriptionProgress, setTranscriptionProgress] = useState(0);
   const [pendingTranscription, setPendingTranscription] = useState(false);
+  const [transcriptionError, setTranscriptionError] = useState<string | null>(null);
   
   const { toast } = useToast();
   
@@ -35,10 +36,21 @@ export default function AudioRecorder() {
   useEffect(() => {
     console.log("AudioBlob changed:", audioBlob ? `${audioBlob.size} bytes` : "null");
     
-    if (pendingTranscription && audioBlob && audioBlob.size > 0) {
-      console.log("Pending transcription with valid audio blob, processing now");
-      handleTranscriptionProcess(audioBlob);
-      setPendingTranscription(false);
+    if (pendingTranscription && audioBlob) {
+      if (audioBlob.size > 0) {
+        console.log("Pending transcription with valid audio blob, processing now");
+        handleTranscriptionProcess(audioBlob);
+        setPendingTranscription(false);
+      } else {
+        console.error("AudioBlob is empty, cannot process for transcription");
+        toast({
+          title: "エラー",
+          description: "録音データが空です。録音を再試行してください。",
+          variant: "destructive"
+        });
+        setPendingTranscription(false);
+        setIsProcessing(false);
+      }
     }
   }, [audioBlob, pendingTranscription]);
 
@@ -49,12 +61,14 @@ export default function AudioRecorder() {
         description: "音声データが空です。録音を再試行してください。",
         variant: "destructive"
       });
+      setTranscriptionError("録音データが空です。録音を再試行してください。");
       return;
     }
     
     console.log("文字起こし処理開始:", blob.type, blob.size, "bytes");
     setIsProcessing(true);
     setTranscription(''); // クリア
+    setTranscriptionError(null);
     
     try {
       await handleTranscription(blob, {
@@ -65,18 +79,29 @@ export default function AudioRecorder() {
         },
         onTranscriptionChange: (text) => {
           console.log("文字起こし結果更新:", text);
-          setTranscription(text);
+          
+          if (text.includes("音声を認識できませんでした")) {
+            setTranscriptionError(text);
+          } else {
+            setTranscription(text);
+          }
         },
         onProcessingStateChange: setIsProcessing,
         onTranscribingStateChange: setIsTranscribing
       });
     } catch (error) {
       console.error("文字起こしエラー:", error);
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : "文字起こし中にエラーが発生しました";
+      
       toast({
         title: "文字起こしエラー",
-        description: error instanceof Error ? error.message : "文字起こし中にエラーが発生しました",
+        description: errorMessage,
         variant: "destructive"
       });
+      
+      setTranscriptionError(errorMessage);
       setIsProcessing(false);
       setIsTranscribing(false);
     }
@@ -129,11 +154,18 @@ export default function AudioRecorder() {
             transcriptionProgress={transcriptionProgress}
           />
 
-          {audioBlob && !isRecording && (
+          {audioBlob && !isRecording && audioBlob.size > 0 && (
             <AudioExportButton 
               audioBlob={audioBlob}
               isDisabled={isProcessing || isTranscribing}
             />
+          )}
+
+          {transcriptionError && !isTranscribing && !isProcessing && (
+            <div className="p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg">
+              <p className="font-medium">エラー:</p>
+              <p>{transcriptionError}</p>
+            </div>
           )}
 
           <TranscriptionResult 
@@ -151,4 +183,4 @@ export default function AudioRecorder() {
   );
 }
 
-export const APP_VERSION = "1.5.0"; // 2025-03-05 録音データ取得の修正
+export const APP_VERSION = "1.6.0"; // 2025-03-05 エラーハンドリング改善

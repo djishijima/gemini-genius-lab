@@ -47,17 +47,18 @@ export async function processAudioChunk(
       throw new Error(`APIエラー: ${errorData.error?.message || '不明なエラー'}`);
     }
 
-    console.log(`チャンク ${chunkIndex + 1} のAPIレスポンス受信`);
+    console.log(`チャンク ${i + 1} のAPIレスポンス受信`);
     const data: SpeechRecognitionResponse = await response.json();
-    console.log('APIレスポンス:', data);
+    console.log('APIレスポンス詳細:', JSON.stringify(data));
 
     if (data.results?.length > 0) {
       return data.results
         .map(result => result.alternatives[0].transcript)
         .join('\n');
+    } else {
+      console.warn('APIからの結果が空です。音声が認識できなかった可能性があります。');
+      return '';
     }
-    
-    return '';
   } catch (error) {
     console.error(`チャンク ${chunkIndex + 1} の処理中にエラー:`, error);
     throw error;

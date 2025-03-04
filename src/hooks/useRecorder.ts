@@ -10,6 +10,7 @@ export function useRecorder(options?: UseRecorderOptions) {
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioStream, setAudioStream] = useState<MediaStream | null>(null);
+  const [recordingError, setRecordingError] = useState<string | null>(null);
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -20,6 +21,7 @@ export function useRecorder(options?: UseRecorderOptions) {
   useEffect(() => {
     if (isRecording) {
       setAudioBlob(null);
+      setRecordingError(null);
     }
   }, [isRecording]);
 
@@ -40,6 +42,7 @@ export function useRecorder(options?: UseRecorderOptions) {
       
       // Clear previous recording data
       setAudioBlob(null);
+      setRecordingError(null);
       audioChunksRef.current = [];
       
       console.log("マイクへのアクセスを要求中...");
@@ -86,6 +89,7 @@ export function useRecorder(options?: UseRecorderOptions) {
 
       recorder.onerror = (event) => {
         console.error("MediaRecorder エラー:", event);
+        setRecordingError("録音中にエラーが発生しました");
         toast({
           title: "録音エラー",
           description: "録音中にエラーが発生しました",
@@ -103,6 +107,7 @@ export function useRecorder(options?: UseRecorderOptions) {
         
         if (audioChunksRef.current.length === 0) {
           console.error("録音データが空です");
+          setRecordingError("録音データが取得できませんでした");
           toast({
             title: "エラー",
             description: "録音データが取得できませんでした",
@@ -115,6 +120,18 @@ export function useRecorder(options?: UseRecorderOptions) {
           const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
           console.log("録音データサイズ:", audioBlob.size, "bytes", "タイプ:", audioBlob.type);
           
+          // Verify the audio blob is valid
+          if (audioBlob.size === 0) {
+            console.error("録音ブロブが空です");
+            setRecordingError("録音データが空です");
+            toast({
+              title: "エラー",
+              description: "録音データが空です",
+              variant: "destructive"
+            });
+            return;
+          }
+          
           // Add a small delay to ensure the blob is fully processed
           setTimeout(() => {
             if (audioBlob.size > 0) {
@@ -122,6 +139,7 @@ export function useRecorder(options?: UseRecorderOptions) {
               setAudioBlob(audioBlob);
             } else {
               console.error("録音ブロブが空です");
+              setRecordingError("録音データが空です");
               toast({
                 title: "エラー",
                 description: "録音データが空です",
@@ -131,6 +149,7 @@ export function useRecorder(options?: UseRecorderOptions) {
           }, 100);
         } catch (error) {
           console.error("Blob作成エラー:", error);
+          setRecordingError("録音データの処理中にエラーが発生しました");
           toast({
             title: "エラー",
             description: "録音データの処理中にエラーが発生しました",
@@ -150,9 +169,10 @@ export function useRecorder(options?: UseRecorderOptions) {
       }
     } catch (error) {
       console.error("Error starting recording:", error);
+      setRecordingError(error instanceof Error ? error.message : "録音の開始に失敗しました");
       toast({
         title: "エラー",
-        description: `録音の開始に失敗しました: ${error.message || "不明なエラー"}`,
+        description: `録音の開始に失敗しました: ${error instanceof Error ? error.message : "不明なエラー"}`,
         variant: "destructive"
       });
     }
@@ -172,6 +192,7 @@ export function useRecorder(options?: UseRecorderOptions) {
         }
       } catch (error) {
         console.error("録音停止エラー:", error);
+        setRecordingError("録音の停止中にエラーが発生しました");
         toast({
           title: "エラー",
           description: "録音の停止中にエラーが発生しました",
@@ -187,6 +208,7 @@ export function useRecorder(options?: UseRecorderOptions) {
     isRecording,
     audioBlob,
     audioStream,
+    recordingError,
     startRecording,
     stopRecording,
     setAudioBlob,

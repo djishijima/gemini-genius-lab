@@ -13,6 +13,10 @@ export async function transcribeAudio(
   try {
     console.log('音声文字起こし開始', audioBlob.type, audioBlob.size);
     
+    if (!audioBlob || audioBlob.size === 0) {
+      throw new Error('有効な音声データがありません。録音が正しく行われなかった可能性があります。');
+    }
+    
     // 進捗状況の初期化
     if (onProgress) {
       onProgress(10);
@@ -25,7 +29,14 @@ export async function transcribeAudio(
     }
     
     // WebM形式をWAV形式に変換
-    let processedBlob = await prepareAudioData(audioBlob);
+    let processedBlob: Blob;
+    try {
+      processedBlob = await prepareAudioData(audioBlob);
+      console.log('変換後の音声データ:', processedBlob.type, processedBlob.size, 'bytes');
+    } catch (error) {
+      console.error('音声データの変換エラー:', error);
+      throw new Error('音声データの変換中にエラーが発生しました。サポートされている形式ではない可能性があります。');
+    }
     
     if (onProgress) {
       onProgress(30);
@@ -35,13 +46,23 @@ export async function transcribeAudio(
     if (processedBlob.size < 1024 * 1024) { // 1MB未満
       console.log('小さいファイルなので直接処理します');
       const transcription = await processAudioChunk(processedBlob, apiKey, 0, 1);
-      if (onPartialResult) {
-        onPartialResult(transcription, true);
+      
+      if (transcription) {
+        if (onPartialResult) {
+          onPartialResult(transcription, true);
+        }
+      } else {
+        console.warn('音声認識結果が空です。音声が認識できなかった可能性があります。');
+        if (onPartialResult) {
+          onPartialResult('音声を認識できませんでした。もう一度録音してみてください。', true);
+        }
       }
+      
       if (onProgress) {
         onProgress(100);
       }
-      return transcription;
+      
+      return transcription || '音声を認識できませんでした。もう一度録音してみてください。';
     }
     
     // audioBlob自体をチャンクに分割する
@@ -53,6 +74,7 @@ export async function transcribeAudio(
     }
 
     let fullTranscription = '';
+    let hasRecognizedAny = false;
 
     for (let i = 0; i < chunks.length; i++) {
       const chunk = chunks[i];
@@ -68,6 +90,7 @@ export async function transcribeAudio(
       console.log(`チャンク ${i + 1} の文字起こし結果:`, transcription);
       
       if (transcription) {
+        hasRecognizedAny = true;
         fullTranscription += `${transcription}\n`;
         
         // 部分的な結果を返す
@@ -80,7 +103,14 @@ export async function transcribeAudio(
     }
 
     if (!fullTranscription.trim()) {
-      throw new Error('文字起こしに失敗しました。音声が明確でないか、ノイズが多い可能性があります。');
+      const errorMessage = '音声を認識できませんでした。もう一度録音してみてください。';
+      
+      if (!hasRecognizedAny) {
+        if (onPartialResult) {
+          onPartialResult(errorMessage, true);
+        }
+        return errorMessage;
+      }
     }
 
     console.log('文字起こし完了:', fullTranscription);
@@ -90,7 +120,7 @@ export async function transcribeAudio(
       onProgress(100);
     }
     
-    return fullTranscription.trim();
+    return fullTranscription.trim() || '音声を認識できませんでした。もう一度録音してみてください。';
   } catch (error) {
     console.error('Speech-to-Text Error:', error);
     throw error;
