@@ -1,4 +1,3 @@
-
 import { useState, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
@@ -35,29 +34,59 @@ export default function AudioRecorder() {
   } = useAudioRecorder();
 
   const onTranscriptionComplete = async (blob: Blob) => {
+    if (!blob || blob.size === 0) {
+      toast({
+        title: "エラー",
+        description: "音声データが空です。録音を再試行してください。",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    console.log("文字起こし処理開始:", blob.type, blob.size, "bytes");
     setIsProcessing(true);
+    setTranscription(''); // クリア
+    
     try {
       await handleTranscription(blob, {
         apiKey: API_KEY,
         onProgress: setTranscriptionProgress,
-        onTranscriptionChange: setTranscription,
+        onTranscriptionChange: (text) => {
+          console.log("文字起こし結果更新:", text);
+          setTranscription(text);
+        },
         onProcessingStateChange: setIsProcessing,
         onTranscribingStateChange: setIsTranscribing
       });
     } catch (error) {
+      console.error("文字起こしエラー:", error);
       toast({
         title: "文字起こしエラー",
         description: error instanceof Error ? error.message : "文字起こし中にエラーが発生しました",
         variant: "destructive"
       });
+      setIsProcessing(false);
+      setIsTranscribing(false);
     }
   };
 
-  const handleStopRecording = () => {
+  const handleStopRecording = async () => {
     stopRecording();
-    if (audioBlob) {
-      onTranscriptionComplete(audioBlob);
-    }
+    
+    // stopRecordingはブロブが後から設定されるため、少し待ってからチェック
+    setTimeout(() => {
+      if (audioBlob) {
+        console.log("録音停止後のブロブ:", audioBlob.type, audioBlob.size, "bytes");
+        onTranscriptionComplete(audioBlob);
+      } else {
+        console.error("録音ブロブが取得できませんでした");
+        toast({
+          title: "録音エラー",
+          description: "録音データが取得できませんでした。もう一度お試しください。",
+          variant: "destructive"
+        });
+      }
+    }, 500); // 少し待ってからブロブをチェック
   };
 
   const handleFileUpload = (file: File) => {
@@ -144,4 +173,4 @@ export default function AudioRecorder() {
   );
 }
 
-export const APP_VERSION = "1.2.0"; // 2025-03-15 リリース - コードをリファクタリング
+export const APP_VERSION = "1.2.1"; // 2025-03-15 リリース - 文字起こし問題を修正

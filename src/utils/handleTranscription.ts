@@ -23,10 +23,10 @@ export async function handleTranscription(
 
   onTranscribingStateChange(true);
   onProgress(10);
-  onTranscriptionChange('');
   
   try {
     console.log('Blob type:', blob.type);
+    console.log('Blob size:', blob.size, 'bytes');
     
     if (blob.size === 0) {
       throw new Error('録音データが空です');
@@ -43,7 +43,6 @@ export async function handleTranscription(
       },
       (partialText, isFinal) => {
         console.log('部分的な文字起こし結果:', partialText, isFinal);
-        // Fixed: Changed to update the transcription directly with string value
         if (isFinal) {
           onTranscriptionChange(partialText + '\n\n');
         } else {
@@ -52,7 +51,7 @@ export async function handleTranscription(
       }
     );
     
-    console.log('文字起こし結果:', result);
+    console.log('文字起こし完了結果:', result);
     onTranscriptionChange(result);
   } catch (error) {
     console.error('Transcription error:', error);

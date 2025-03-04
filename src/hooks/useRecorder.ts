@@ -29,6 +29,10 @@ export function useRecorder(options?: UseRecorderOptions) {
         setAudioStream(null);
       }
       
+      // クリア
+      setAudioBlob(null);
+      audioChunksRef.current = [];
+      
       console.log("マイクへのアクセスを要求中...");
       const stream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
