@@ -45,8 +45,8 @@ export function useRecorder(options?: UseRecorderOptions) {
         throw new Error("お使いのブラウザはMediaRecorderをサポートしていません");
       }
       
-      const options = { mimeType: 'audio/webm' };
-      const recorder = new MediaRecorder(stream, options);
+      const recorderOptions = { mimeType: 'audio/webm' };
+      const recorder = new MediaRecorder(stream, recorderOptions);
       console.log("MediaRecorderが作成されました:", recorder.state);
       
       mediaRecorderRef.current = recorder;
