@@ -1,202 +1,39 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
-import { Progress } from "@/components/ui/progress"
-import {
-  Mic,
-  StopCircle,
-  Upload,
-  RefreshCw,
-  Loader2,
-  ClipboardCopy
-} from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
-import { AudioWaveform } from '@/components/AudioWaveform';
-import { transcribeAudio, processFile } from '@/utils/speechToText';
 
-function formatTime(seconds: number): string {
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = Math.floor(seconds % 60);
-  const formattedMinutes = String(minutes).padStart(2, '0');
-  const formattedSeconds = String(remainingSeconds).padStart(2, '0');
-  return `${formattedMinutes}:${formattedSeconds}`;
-}
+import { useState, useRef } from 'react';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { RefreshCw } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import { transcribeAudio } from '@/utils/speechToText';
+import { useAudioRecorder } from '@/hooks/useAudioRecorder';
+import { AudioRecorderControls } from '@/components/AudioRecorderControls';
+import { TranscriptionProgress } from '@/components/TranscriptionProgress';
+import { TranscriptionResult } from '@/components/TranscriptionResult';
 
 export default function AudioRecorder() {
-  const [isRecording, setIsRecording] = useState(false);
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [transcription, setTranscription] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [transcriptionProgress, setTranscriptionProgress] = useState(0);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const [amplitude, setAmplitude] = useState(0);
-  const [audioStream, setAudioStream] = useState<MediaStream | null>(null);
-  const [audioFileName, setAudioFileName] = useState('');
   const [uploadedFileName, setUploadedFileName] = useState('');
 
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-
   const { toast } = useToast();
-
+  
   const API_KEY = 'AIzaSyB3e3yEOKECnlDtivhi_jPxOpepk8wo6jE';
 
-  const startRecording = async () => {
-    try {
-      if (mediaRecorderRef.current) {
-        mediaRecorderRef.current.stop();
-      }
-      
-      if (audioStream) {
-        for (const track of audioStream.getTracks()) {
-          track.stop();
-        }
-        setAudioStream(null);
-      }
-      
-      console.log("マイクへのアクセスを要求中...");
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        } 
-      });
-      console.log("マイクへのアクセスが許可されました");
-      
-      setAudioStream(stream);
-      
-      if (!window.MediaRecorder) {
-        throw new Error("お使いのブラウザはMediaRecorderをサポートしていません");
-      }
-      
-      const options = { mimeType: 'audio/webm' };
-      const recorder = new MediaRecorder(stream, options);
-      console.log("MediaRecorderが作成されました:", recorder.state);
-      
-      mediaRecorderRef.current = recorder;
-      audioChunksRef.current = [];
-
-      // Create audio context and analyser for amplitude calculation
-      try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const analyser = audioContext.createAnalyser();
-        const source = audioContext.createMediaStreamSource(stream);
-        source.connect(analyser);
-        analyser.fftSize = 256;
-        audioContextRef.current = audioContext;
-        analyserRef.current = analyser;
-        
-        // Calculate amplitude
-        const dataArray = new Uint8Array(analyser.frequencyBinCount);
-        const calculateAmplitude = () => {
-          if (!analyserRef.current || !isRecording) return;
-          
-          analyserRef.current.getByteFrequencyData(dataArray);
-          const sum = dataArray.reduce((acc, value) => acc + value, 0);
-          const avg = sum / dataArray.length;
-          const normalizedAmplitude = avg / 128.0;
-          setAmplitude(normalizedAmplitude > 0 ? normalizedAmplitude : 0.05);
-          
-          if (isRecording) {
-            requestAnimationFrame(calculateAmplitude);
-          }
-        };
-        
-        // Start amplitude calculation
-        requestAnimationFrame(calculateAmplitude);
-      } catch (error) {
-        console.error("AudioContext error:", error);
-      }
-
-      recorder.ondataavailable = (event) => {
-        console.log("データ取得:", event.data.size, "bytes");
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-
-      recorder.onerror = (event) => {
-        console.error("MediaRecorder エラー:", event);
-        toast({
-          title: "録音エラー",
-          description: "録音中にエラーが発生しました",
-          variant: "destructive"
-        });
-      };
-
-      recorder.onstop = async () => {
-        console.log("録音停止");
-        setIsRecording(false);
-        
-        if (audioChunksRef.current.length === 0) {
-          toast({
-            title: "エラー",
-            description: "録音データが取得できませんでした",
-            variant: "destructive"
-          });
-          return;
-        }
-        
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        console.log("録音データサイズ:", audioBlob.size, "bytes");
-        setAudioBlob(audioBlob);
-        setIsProcessing(true);
-        handleTranscription(audioBlob);
-      };
-
-      console.log("録音を開始します...");
-      recorder.start(1000);
-      console.log("録音状態:", recorder.state);
-      
-      setIsRecording(true);
-      setRecordingTime(0);
-      
-      // Start timer for recording time
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-      
-      intervalRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
-
-    } catch (error) {
-      console.error("Error starting recording:", error);
-      toast({
-        title: "エラー",
-        description: `録音の開始に失敗しました: ${error.message || "不明なエラー"}`,
-        variant: "destructive"
-      });
-    }
-  };
-
-  const stopRecording = useCallback(() => {
-    console.log("録音を停止します...");
-    
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      try {
-        if (mediaRecorderRef.current.state === 'recording') {
-          mediaRecorderRef.current.stop();
-          console.log("MediaRecorder停止");
-        }
-      } catch (error) {
-        console.error("録音停止エラー:", error);
-        toast({
-          title: "エラー",
-          description: "録音の停止中にエラーが発生しました",
-          variant: "destructive"
-        });
-      }
-    }
-  }, [toast]);
+  // Use the audio recorder hook
+  const { 
+    isRecording, 
+    audioBlob, 
+    recordingTime, 
+    amplitude, 
+    audioStream, 
+    startRecording, 
+    stopRecording,
+    setAudioBlob
+  } = useAudioRecorder();
 
   const handleTranscription = async (blob: Blob) => {
     setIsTranscribing(true);
@@ -245,6 +82,14 @@ export default function AudioRecorder() {
     }
   };
 
+  const handleStopRecording = () => {
+    stopRecording();
+    if (audioBlob) {
+      setIsProcessing(true);
+      handleTranscription(audioBlob);
+    }
+  };
+
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -290,6 +135,7 @@ export default function AudioRecorder() {
       setUploadProgress(100);
       
       const audioBlob = new Blob([file], { type: file.type });
+      setAudioBlob(audioBlob);
       handleTranscription(audioBlob);
     }, 1000);
   };
@@ -307,53 +153,6 @@ export default function AudioRecorder() {
     }
   };
 
-  useEffect(() => {
-    if (!isRecording && audioStream) {
-      const cleanupAudio = () => {
-        console.log("オーディオリソースのクリーンアップ");
-        
-        for (const track of audioStream.getTracks()) {
-          track.stop();
-        }
-        
-        if (audioContextRef.current) {
-          audioContextRef.current.close();
-        }
-        
-        setAudioStream(null);
-        setAmplitude(0);
-      };
-      
-      const timeoutId = setTimeout(cleanupAudio, 500);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [isRecording, audioStream]);
-
-  useEffect(() => {
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    let interval: number | null = null;
-    
-    if (isRecording) {
-      interval = window.setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
-    }
-    
-    return () => {
-      if (interval !== null) {
-        clearInterval(interval);
-      }
-    };
-  }, [isRecording]);
-
   return (
     <div className="container mx-auto p-4 max-w-3xl">
       <Card>
@@ -365,122 +164,33 @@ export default function AudioRecorder() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="flex flex-col items-center space-y-4 p-6 border rounded-lg bg-muted/10">
-            {isRecording ? (
-              <div className="w-full space-y-4">
-                {isRecording && (
-                  <div className="flex items-center space-x-2 mt-2">
-                    <div className="h-3 w-3 rounded-full bg-red-500 animate-pulse" />
-                    <span className="text-red-500 font-medium">録音中</span>
-                    <span className="ml-2 font-mono text-lg">{formatTime(recordingTime)}</span>
-                  </div>
-                )}
-                {isRecording && (
-                  <div className="mt-4 h-24 bg-muted/20 rounded-md overflow-hidden">
-                    <AudioWaveform isRecording={isRecording} amplitude={amplitude} audioStream={audioStream} />
-                  </div>
-                )}
-                <div className="w-full flex justify-center">
-                  <Button
-                    size="lg"
-                    variant="destructive"
-                    onClick={stopRecording}
-                    className="w-full max-w-md"
-                    disabled={isProcessing || isTranscribing}
-                  >
-                    <StopCircle className="mr-2 h-5 w-5" />
-                    録音を停止
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="w-full flex justify-center">
-                <Button
-                  size="lg"
-                  variant="default"
-                  onClick={startRecording}
-                  className="w-full max-w-md"
-                  disabled={isProcessing || isTranscribing}
-                >
-                  <Mic className="mr-2 h-5 w-5" />
-                  録音を開始
-                </Button>
-              </div>
-            )}
-          </div>
+          <AudioRecorderControls 
+            isRecording={isRecording}
+            recordingTime={recordingTime}
+            amplitude={amplitude}
+            audioStream={audioStream}
+            isProcessing={isProcessing}
+            isTranscribing={isTranscribing}
+            onStartRecording={startRecording}
+            onStopRecording={handleStopRecording}
+            onFileInputClick={() => fileInputRef.current?.click()}
+          />
 
-          <div className="space-y-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="audio/mp3,audio/wav,audio/webm,audio/m4a,audio/ogg,audio/*"
-              onChange={handleFileUpload}
-              className="hidden"
-            />
-            <Button
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full"
-              disabled={isRecording || isProcessing || isTranscribing}
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              音声ファイルをアップロード
-            </Button>
-          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="audio/mp3,audio/wav,audio/webm,audio/m4a,audio/ogg,audio/*"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
 
-          {(isProcessing || isTranscribing) && (
-            <div className="space-y-4 p-4 border rounded-lg bg-muted/10">
-              <p className="text-sm font-medium text-center">
-                {isTranscribing ? "文字起こし処理中..." : "ファイル処理中..."}
-                {transcriptionProgress > 0 && transcriptionProgress < 100 && ` (${Math.round(transcriptionProgress)}%)`}
-              </p>
-              {isProcessing && (
-                <>
-                  <div className="space-y-2">
-                    <Label className="text-sm">ファイルアップロード</Label>
-                    <Progress value={uploadProgress} />
-                    <p className="text-xs text-muted-foreground text-right">{Math.round(uploadProgress)}%</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm">文字起こし</Label>
-                    <Progress value={transcriptionProgress} />
-                    <p className="text-xs text-muted-foreground text-right">{Math.round(transcriptionProgress)}%</p>
-                  </div>
-                </>
-              )}
-              {isTranscribing && (
-                <div className="space-y-2">
-                  <Label className="text-sm">文字起こし</Label>
-                  <Progress value={transcriptionProgress} />
-                  <p className="text-xs text-muted-foreground text-right">{Math.round(transcriptionProgress)}%</p>
-                </div>
-              )}
-            </div>
-          )}
-          {isTranscribing && (
-            <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-md">
-              <div className="flex items-center mb-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2" />
-                <span className="text-lg font-semibold text-blue-500">文字起こし中...</span>
-              </div>
-              <Progress value={transcriptionProgress} className="h-2 mb-2" />
-              <p className="text-sm text-blue-600 dark:text-blue-400">
-                {transcriptionProgress}% 完了
-              </p>
-            </div>
-          )}
-          {isProcessing && !isTranscribing && (
-            <div className="mt-6 p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-md">
-              <div className="flex items-center mb-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-yellow-500 mr-2" />
-                <span className="text-lg font-semibold text-yellow-500">ファイル処理中...</span>
-              </div>
-              <Progress value={uploadProgress} className="h-2 mb-2" />
-              <p className="text-sm text-yellow-600 dark:text-yellow-400">
-                {uploadProgress}% 完了
-              </p>
-            </div>
-          )}
+          <TranscriptionProgress 
+            isProcessing={isProcessing}
+            isTranscribing={isTranscribing}
+            uploadProgress={uploadProgress}
+            transcriptionProgress={transcriptionProgress}
+          />
+
           {audioBlob && !isRecording && (
             <Button
               variant="secondary"
@@ -493,31 +203,10 @@ export default function AudioRecorder() {
             </Button>
           )}
 
-          {transcription && (
-            <div className="mt-6 p-4 border rounded-lg bg-card">
-              <h3 className="text-lg font-semibold mb-2">文字起こし結果</h3>
-              <div className="max-h-60 overflow-y-auto whitespace-pre-wrap bg-muted p-3 rounded text-sm">
-                {isTranscribing && <div className="text-primary animate-pulse">文字起こし中...</div>}
-                {transcription}
-              </div>
-              <div className="flex justify-end mt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    navigator.clipboard.writeText(transcription);
-                    toast({
-                      title: "コピー完了",
-                      description: "文字起こし結果をクリップボードにコピーしました",
-                    });
-                  }}
-                >
-                  <ClipboardCopy className="h-4 w-4 mr-2" />
-                  コピー
-                </Button>
-              </div>
-            </div>
-          )}
+          <TranscriptionResult 
+            transcription={transcription}
+            isTranscribing={isTranscribing}
+          />
         </CardContent>
         <CardFooter className="flex justify-between">
           <div className="text-xs text-muted-foreground">
@@ -529,4 +218,4 @@ export default function AudioRecorder() {
   );
 }
 
-export const APP_VERSION = "1.0.6"; // 2025-03-04 リリース - 波形表示の修正
+export const APP_VERSION = "1.1.0"; // 2025-03-05 リリース - コードをリファクタリング
