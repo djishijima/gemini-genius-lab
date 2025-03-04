@@ -47,7 +47,7 @@ export async function processAudioChunk(
       throw new Error(`APIエラー: ${errorData.error?.message || '不明なエラー'}`);
     }
 
-    console.log(`チャンク ${i + 1} のAPIレスポンス受信`);
+    console.log(`チャンク ${chunkIndex + 1} のAPIレスポンス受信`);
     const data: SpeechRecognitionResponse = await response.json();
     console.log('APIレスポンス詳細:', JSON.stringify(data));
 
