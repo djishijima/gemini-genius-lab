@@ -1,4 +1,3 @@
-
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -24,11 +23,7 @@ export function ApiKeyInput({ apiKey, onChange }: ApiKeyInputProps) {
           className="h-6 w-6"
           onClick={() => setShowApiKey(!showApiKey)}
         >
-          {showApiKey ? (
-            <EyeOff className="h-3 w-3" />
-          ) : (
-            <Eye className="h-3 w-3" />
-          )}
+          {showApiKey ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
         </Button>
       </div>
       <div className={!showApiKey ? "password-input" : ""}>

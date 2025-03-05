@@ -1,5 +1,4 @@
-
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 
 interface UseRecorderOptions {
@@ -11,10 +10,10 @@ export function useRecorder(options?: UseRecorderOptions) {
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioStream, setAudioStream] = useState<MediaStream | null>(null);
   const [recordingError, setRecordingError] = useState<string | null>(null);
-  
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  
+
   const { toast } = useToast();
 
   // Reset audio blob when starting a new recording
@@ -31,7 +30,7 @@ export function useRecorder(options?: UseRecorderOptions) {
       if (mediaRecorderRef.current) {
         mediaRecorderRef.current.stop();
       }
-      
+
       // Clean up any existing audio stream
       if (audioStream) {
         for (const track of audioStream.getTracks()) {
@@ -39,44 +38,44 @@ export function useRecorder(options?: UseRecorderOptions) {
         }
         setAudioStream(null);
       }
-      
+
       // Clear previous recording data
       setAudioBlob(null);
       setRecordingError(null);
       audioChunksRef.current = [];
-      
+
       console.log("マイクへのアクセスを要求中...");
-      const stream = await navigator.mediaDevices.getUserMedia({ 
+      const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: true
-        } 
+          autoGainControl: true,
+        },
       });
       console.log("マイクへのアクセスが許可されました");
-      
+
       setAudioStream(stream);
-      
+
       if (!window.MediaRecorder) {
         throw new Error("お使いのブラウザはMediaRecorderをサポートしていません");
       }
-      
+
       // Prefer webm audio format, but fall back to alternatives if not supported
-      let mimeType = 'audio/webm';
-      if (!MediaRecorder.isTypeSupported('audio/webm')) {
-        if (MediaRecorder.isTypeSupported('audio/mp4')) {
-          mimeType = 'audio/mp4';
-        } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
-          mimeType = 'audio/ogg';
+      let mimeType = "audio/webm";
+      if (!MediaRecorder.isTypeSupported("audio/webm")) {
+        if (MediaRecorder.isTypeSupported("audio/mp4")) {
+          mimeType = "audio/mp4";
+        } else if (MediaRecorder.isTypeSupported("audio/ogg")) {
+          mimeType = "audio/ogg";
         }
       }
-      
+
       const recorderOptions = { mimeType };
       console.log(`使用する録音フォーマット: ${mimeType}`);
-      
+
       const recorder = new MediaRecorder(stream, recorderOptions);
       console.log("MediaRecorderが作成されました:", recorder.state);
-      
+
       mediaRecorderRef.current = recorder;
       audioChunksRef.current = [];
 
@@ -93,33 +92,33 @@ export function useRecorder(options?: UseRecorderOptions) {
         toast({
           title: "録音エラー",
           description: "録音中にエラーが発生しました",
-          variant: "destructive"
+          variant: "destructive",
         });
       };
 
       recorder.onstop = () => {
         console.log("録音停止 - チャンク数:", audioChunksRef.current.length);
         setIsRecording(false);
-        
+
         if (options?.onRecordingStatusChange) {
           options.onRecordingStatusChange(false);
         }
-        
+
         if (audioChunksRef.current.length === 0) {
           console.error("録音データが空です");
           setRecordingError("録音データが取得できませんでした");
           toast({
             title: "エラー",
             description: "録音データが取得できませんでした",
-            variant: "destructive"
+            variant: "destructive",
           });
           return;
         }
-        
+
         try {
           const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
           console.log("録音データサイズ:", audioBlob.size, "bytes", "タイプ:", audioBlob.type);
-          
+
           // Verify the audio blob is valid
           if (audioBlob.size === 0) {
             console.error("録音ブロブが空です");
@@ -127,11 +126,11 @@ export function useRecorder(options?: UseRecorderOptions) {
             toast({
               title: "エラー",
               description: "録音データが空です",
-              variant: "destructive"
+              variant: "destructive",
             });
             return;
           }
-          
+
           // Add a small delay to ensure the blob is fully processed
           setTimeout(() => {
             if (audioBlob.size > 0) {
@@ -143,7 +142,7 @@ export function useRecorder(options?: UseRecorderOptions) {
               toast({
                 title: "エラー",
                 description: "録音データが空です",
-                variant: "destructive"
+                variant: "destructive",
               });
             }
           }, 100);
@@ -153,16 +152,16 @@ export function useRecorder(options?: UseRecorderOptions) {
           toast({
             title: "エラー",
             description: "録音データの処理中にエラーが発生しました",
-            variant: "destructive"
+            variant: "destructive",
           });
         }
       };
 
       console.log("録音を開始します...");
       // Decreased the time slice for more frequent data chunks
-      recorder.start(500); 
+      recorder.start(500);
       console.log("録音状態:", recorder.state);
-      
+
       setIsRecording(true);
       if (options?.onRecordingStatusChange) {
         options.onRecordingStatusChange(true);
@@ -173,17 +172,17 @@ export function useRecorder(options?: UseRecorderOptions) {
       toast({
         title: "エラー",
         description: `録音の開始に失敗しました: ${error instanceof Error ? error.message : "不明なエラー"}`,
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
 
   const stopRecording = useCallback(() => {
     console.log("録音を停止します...");
-    
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       try {
-        if (mediaRecorderRef.current.state === 'recording') {
+        if (mediaRecorderRef.current.state === "recording") {
           // Request final data
           mediaRecorderRef.current.requestData();
           // Then stop the recorder
@@ -196,7 +195,7 @@ export function useRecorder(options?: UseRecorderOptions) {
         toast({
           title: "エラー",
           description: "録音の停止中にエラーが発生しました",
-          variant: "destructive"
+          variant: "destructive",
         });
       }
     } else {

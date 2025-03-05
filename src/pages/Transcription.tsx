@@ -1,4 +1,3 @@
-
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -6,7 +5,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { Wand2, Copy, FileDown, Upload } from "lucide-react";
-import { generateInDesignScript, parsePromptForOptions, analyzeScript, convertInddToScript } from "@/utils/indesignScriptGenerator";
+import {
+  generateInDesignScript,
+  parsePromptForOptions,
+  analyzeScript,
+  convertInddToScript,
+} from "@/utils/indesignScriptGenerator";
 
 const Transcription = () => {
   const [manuscript, setManuscript] = useState("");
@@ -30,10 +34,10 @@ const Transcription = () => {
     const importedOptions = importedScript ? analyzeScript(importedScript) : {};
     const promptOptions = parsePromptForOptions(prompt);
     const options = { ...promptOptions, ...importedOptions };
-    
+
     const script = generateInDesignScript(manuscript, prompt, options);
     setGeneratedScript(script);
-    
+
     toast({
       title: "生成完了",
       description: "InDesignスクリプトの生成が完了しました。",
@@ -46,10 +50,10 @@ const Transcription = () => {
 
     try {
       // InDesignファイル（.indd）の場合は変換処理を実行
-      if (file.name.toLowerCase().endsWith('.indd')) {
+      if (file.name.toLowerCase().endsWith(".indd")) {
         const script = await convertInddToScript(file);
         setImportedScript(script);
-        
+
         // スクリプトの解析結果をプロンプトに反映
         const analysis = analyzeScript(script);
         const newPrompt = [
@@ -60,9 +64,9 @@ const Transcription = () => {
           `・行送り: ${analysis.lineHeight || "未設定"}pt`,
           `・マージン: 上${analysis.marginTop}mm 下${analysis.marginBottom}mm 左${analysis.marginLeft}mm 右${analysis.marginRight}mm`,
         ].join("\n");
-        
+
         setPrompt(newPrompt);
-        
+
         toast({
           title: "InDesignドキュメント変換完了",
           description: "ドキュメントからスクリプトを生成し、設定を反映しました。",
@@ -83,9 +87,9 @@ const Transcription = () => {
         `・行送り: ${analysis.lineHeight || "未設定"}pt`,
         `・マージン: 上${analysis.marginTop}mm 下${analysis.marginBottom}mm 左${analysis.marginLeft}mm 右${analysis.marginRight}mm`,
       ].join("\n");
-      
+
       setPrompt(newPrompt);
-      
+
       toast({
         title: "スクリプトインポート完了",
         description: "インポートしたスクリプトの設定を反映しました。",
@@ -93,7 +97,7 @@ const Transcription = () => {
     } catch (error) {
       toast({
         title: "インポートエラー",
-        description: `ファイルの読み込みに失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`,
+        description: `ファイルの読み込みに失敗しました: ${error instanceof Error ? error.message : "不明なエラー"}`,
         variant: "destructive",
       });
     }
@@ -117,7 +121,7 @@ const Transcription = () => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    
+
     toast({
       title: "ダウンロード完了",
       description: "スクリプトファイルのダウンロードが完了しました。",
@@ -166,9 +170,7 @@ const Transcription = () => {
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[300px] w-full rounded-md border">
-                <pre className="p-4 font-mono text-sm">
-                  {importedScript}
-                </pre>
+                <pre className="p-4 font-mono text-sm">{importedScript}</pre>
               </ScrollArea>
             </CardContent>
           </Card>
@@ -177,9 +179,7 @@ const Transcription = () => {
         <Card>
           <CardHeader>
             <CardTitle>原稿入力</CardTitle>
-            <CardDescription>
-              InDesignで組版したい原稿を入力してください
-            </CardDescription>
+            <CardDescription>InDesignで組版したい原稿を入力してください</CardDescription>
           </CardHeader>
           <CardContent>
             <Textarea
@@ -195,7 +195,7 @@ const Transcription = () => {
           <CardHeader>
             <CardTitle>プロンプト入力</CardTitle>
             <CardDescription>
-              {importedScript 
+              {importedScript
                 ? "インポートしたスクリプトから解析した設定が反映されています。必要に応じて編集してください。"
                 : "組版の指示内容を入力してください。例：縦書き、本文フォントは明朝体、マージン上下20mm左右15mm"}
             </CardDescription>
@@ -212,11 +212,7 @@ const Transcription = () => {
       </div>
 
       <div className="flex justify-center">
-        <Button
-          onClick={handleGenerate}
-          size="lg"
-          className="w-full max-w-md text-lg py-6"
-        >
+        <Button onClick={handleGenerate} size="lg" className="w-full max-w-md text-lg py-6">
           <Wand2 className="mr-2" />
           スクリプトを生成
         </Button>
@@ -241,9 +237,7 @@ const Transcription = () => {
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-[400px] w-full rounded-md border">
-              <pre className="p-4 font-mono text-sm">
-                {generatedScript}
-              </pre>
+              <pre className="p-4 font-mono text-sm">{generatedScript}</pre>
             </ScrollArea>
           </CardContent>
         </Card>

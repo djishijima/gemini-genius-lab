@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 
@@ -11,7 +10,7 @@ export function AudioExportButton({ audioBlob, isDisabled }: AudioExportButtonPr
   const handleAudioExport = () => {
     if (audioBlob) {
       const url = window.URL.createObjectURL(audioBlob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
       a.download = `recording-${new Date().toISOString()}.webm`;
       document.body.appendChild(a);

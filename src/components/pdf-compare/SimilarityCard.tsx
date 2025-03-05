@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React from "react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface SimilarityCardProps {
@@ -18,7 +17,7 @@ export function SimilarityCard({ similarityScore, addedCount, removedCount }: Si
             <div className="text-5xl font-bold bg-gradient-to-r from-[#0EA5E9] to-[#8B5CF6] bg-clip-text text-transparent">
               {similarityScore}%
             </div>
-            <div className="h-16 w-[2px] bg-slate-700"/>
+            <div className="h-16 w-[2px] bg-slate-700" />
             <div className="text-slate-400">
               <div>追加された箇所: {addedCount}</div>
               <div>削除された箇所: {removedCount}</div>

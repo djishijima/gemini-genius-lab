@@ -1,4 +1,3 @@
-
 export interface SpeechRecognitionAlternative {
   transcript: string;
   confidence: number;

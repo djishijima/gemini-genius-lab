@@ -1,9 +1,8 @@
-
-import React from 'react';
+import React from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Difference } from '@/pages/PdfCompare';
-import { Plus, Minus } from 'lucide-react';
+import { Difference } from "@/pages/PdfCompare";
+import { Plus, Minus } from "lucide-react";
 
 interface DiffListProps {
   differences: Difference[];
@@ -12,8 +11,8 @@ interface DiffListProps {
 }
 
 export function DiffList({ differences, selectedDiffIndex, onDiffClick }: DiffListProps) {
-  const addedCount = differences.filter(d => d.added).length;
-  const removedCount = differences.filter(d => d.removed).length;
+  const addedCount = differences.filter((d) => d.added).length;
+  const removedCount = differences.filter((d) => d.removed).length;
 
   return (
     <Card className="col-span-4 bg-slate-800 border border-slate-700">
@@ -36,19 +35,20 @@ export function DiffList({ differences, selectedDiffIndex, onDiffClick }: DiffLi
           <div className="p-2 space-y-1">
             {differences.map((diff, index) => {
               if (!diff.added && !diff.removed) return null;
-              const lines = diff.value.split('\n').filter(line => line.trim() !== '');
-              
+              const lines = diff.value.split("\n").filter((line) => line.trim() !== "");
+
               return (
                 <div
                   key={`diff-${index}`}
                   onClick={() => onDiffClick(index)}
                   className={`
                     p-2 rounded cursor-pointer transition-colors
-                    ${diff.added 
-                      ? 'bg-emerald-600/20 hover:bg-emerald-600/30' 
-                      : 'bg-red-600/20 hover:bg-red-600/30'
+                    ${
+                      diff.added
+                        ? "bg-emerald-600/20 hover:bg-emerald-600/30"
+                        : "bg-red-600/20 hover:bg-red-600/30"
                     }
-                    ${selectedDiffIndex === index ? 'ring-2 ring-blue-500' : ''}
+                    ${selectedDiffIndex === index ? "ring-2 ring-blue-500" : ""}
                   `}
                 >
                   <div className="flex items-center gap-2 text-sm">

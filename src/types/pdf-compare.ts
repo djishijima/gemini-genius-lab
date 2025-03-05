@@ -1,4 +1,3 @@
-
 export interface Difference {
   added?: boolean;
   removed?: boolean;

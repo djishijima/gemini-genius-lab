@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,7 +21,7 @@ export function PDFInputSection({
   onTextChange,
   pdf,
   onPdfChange,
-  inputRef
+  inputRef,
 }: PDFInputSectionProps) {
   return (
     <Card className="bg-slate-800">
@@ -38,11 +37,13 @@ export function PDFInputSection({
           className="min-h-[200px] text-slate-200 bg-slate-700 placeholder:text-slate-400"
         />
         <div className="flex items-center space-x-4">
-          <Label htmlFor={`pdf-${title}`} className="text-slate-200">またはPDFをアップロード:</Label>
-          <Input 
-            type="file" 
+          <Label htmlFor={`pdf-${title}`} className="text-slate-200">
+            またはPDFをアップロード:
+          </Label>
+          <Input
+            type="file"
             id={`pdf-${title}`}
-            accept=".pdf,application/pdf" 
+            accept=".pdf,application/pdf"
             onChange={onPdfChange}
             ref={inputRef}
             className="text-slate-200 bg-slate-700"

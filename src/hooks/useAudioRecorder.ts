@@ -1,8 +1,7 @@
-
-import { useState, useRef, useEffect } from 'react';
-import { useRecorder } from './useRecorder';
-import { useRecordingTimer } from './useRecordingTimer';
-import { setupAudioAnalyzer, calculateAmplitude } from '@/utils/audioAnalyzer';
+import { useState, useRef, useEffect } from "react";
+import { useRecorder } from "./useRecorder";
+import { useRecordingTimer } from "./useRecordingTimer";
+import { setupAudioAnalyzer, calculateAmplitude } from "@/utils/audioAnalyzer";
 
 interface UseAudioRecorderOptions {
   onAmplitudeChange?: (amplitude: number) => void;
@@ -13,22 +12,22 @@ export function useAudioRecorder(options?: UseAudioRecorderOptions) {
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
 
-  const { 
-    isRecording, 
-    audioBlob, 
+  const {
+    isRecording,
+    audioBlob,
     audioStream,
-    startRecording: startMediaRecording, 
-    stopRecording: stopMediaRecording, 
+    startRecording: startMediaRecording,
+    stopRecording: stopMediaRecording,
     setAudioBlob,
-    recordingError
+    recordingError,
   } = useRecorder({
     onRecordingStatusChange: (recording) => {
       if (!recording) {
         setAmplitude(0);
       }
-    }
+    },
   });
-  
+
   const recordingTime = useRecordingTimer(isRecording);
 
   // Update parent component with amplitude value when it changes
@@ -45,7 +44,7 @@ export function useAudioRecorder(options?: UseAudioRecorderOptions) {
         const { audioContext, analyser } = setupAudioAnalyzer(audioStream);
         audioContextRef.current = audioContext;
         analyserRef.current = analyser;
-        
+
         calculateAmplitude(analyser, isRecording, setAmplitude);
       } catch (error) {
         console.error("AudioContext error:", error);
@@ -58,22 +57,22 @@ export function useAudioRecorder(options?: UseAudioRecorderOptions) {
     if (!isRecording && audioStream) {
       const cleanupAudio = () => {
         console.log("オーディオリソースのクリーンアップ");
-        
+
         if (audioStream) {
           for (const track of audioStream.getTracks()) {
             track.stop();
           }
         }
-        
-        if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-          audioContextRef.current.close().catch(err => {
+
+        if (audioContextRef.current && audioContextRef.current.state !== "closed") {
+          audioContextRef.current.close().catch((err) => {
             console.error("AudioContext close error:", err);
           });
         }
-        
+
         setAmplitude(0);
       };
-      
+
       // Give a little time before cleanup to ensure all data is processed
       const timeoutId = setTimeout(cleanupAudio, 1000);
       return () => clearTimeout(timeoutId);

@@ -1,4 +1,3 @@
-
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 
@@ -23,15 +22,9 @@ export function ModeToggle() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setTheme("light")}>
-          ライト
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")}>
-          ダーク
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")}>
-          システム
-        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setTheme("light")}>ライト</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setTheme("dark")}>ダーク</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setTheme("system")}>システム</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

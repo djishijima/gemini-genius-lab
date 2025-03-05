@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,7 +26,7 @@ export function GeminiForm() {
     const options = parsePromptForOptions(prompt);
     const script = generateInDesignScript(manuscript, prompt, options);
     setGeneratedScript(script);
-    
+
     toast({
       title: "生成完了",
       description: "InDesignスクリプトの生成が完了しました。",
@@ -52,7 +51,7 @@ export function GeminiForm() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    
+
     toast({
       title: "ダウンロード完了",
       description: "スクリプトファイルのダウンロードが完了しました。",
@@ -128,21 +127,11 @@ export function GeminiForm() {
                 </CardDescription>
               </div>
               <div className="flex gap-2">
-                <Button
-                  onClick={handleCopy}
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                >
+                <Button onClick={handleCopy} variant="outline" size="sm" className="gap-2">
                   <Copy className="w-4 h-4" />
                   コピー
                 </Button>
-                <Button
-                  onClick={handleDownload}
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                >
+                <Button onClick={handleDownload} variant="outline" size="sm" className="gap-2">
                   <FileDown className="w-4 h-4" />
                   ダウンロード
                 </Button>
@@ -151,9 +140,7 @@ export function GeminiForm() {
           </CardHeader>
           <CardContent className="pt-6">
             <ScrollArea className="h-[400px] w-full rounded-md border border-slate-700">
-              <pre className="p-4 text-slate-100 font-mono text-sm">
-                {generatedScript}
-              </pre>
+              <pre className="p-4 text-slate-100 font-mono text-sm">{generatedScript}</pre>
             </ScrollArea>
           </CardContent>
         </Card>

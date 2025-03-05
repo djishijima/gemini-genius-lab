@@ -1,0 +1,2 @@
+# Ignore third-party React type errors
+**/node_modules/@types/react/index.d.ts

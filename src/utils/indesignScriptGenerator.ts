@@ -1,7 +1,7 @@
 interface ScriptOptions {
-  pageWidth?: number;  // mm
+  pageWidth?: number; // mm
   pageHeight?: number; // mm
-  marginTop?: number;  // mm
+  marginTop?: number; // mm
   marginBottom?: number;
   marginLeft?: number;
   marginRight?: number;
@@ -12,8 +12,8 @@ interface ScriptOptions {
 }
 
 const DEFAULT_OPTIONS: ScriptOptions = {
-  pageWidth: 210,    // A4
-  pageHeight: 297,   // A4
+  pageWidth: 210, // A4
+  pageHeight: 297, // A4
   marginTop: 20,
   marginBottom: 20,
   marginLeft: 15,
@@ -21,10 +21,14 @@ const DEFAULT_OPTIONS: ScriptOptions = {
   fontFamily: "KozMinPro-Regular",
   fontSize: 10,
   lineHeight: 15,
-  isVertical: false
+  isVertical: false,
 };
 
-export function generateInDesignScript(manuscript: string, prompt: string, options: Partial<ScriptOptions> = {}): string {
+export function generateInDesignScript(
+  manuscript: string,
+  prompt: string,
+  options: Partial<ScriptOptions> = {},
+): string {
   const scriptOptions = { ...DEFAULT_OPTIONS, ...options };
   const isVertical = prompt.includes("縦書き") || scriptOptions.isVertical;
 
@@ -72,7 +76,7 @@ try {
   });
   
   // テキスト挿入
-  textFrame.contents = "${manuscript.replace(/"/g, '\\"').replace(/\n/g, '\\n')}";
+  textFrame.contents = "${manuscript.replace(/"/g, '\\"').replace(/\n/g, "\\n")}";
   textFrame.texts[0].applyParagraphStyle(style);
   
   alert("スクリプトの実行が完了しました。");
@@ -83,15 +87,15 @@ try {
 
 export function parsePromptForOptions(prompt: string): Partial<ScriptOptions> {
   const options: Partial<ScriptOptions> = {};
-  
+
   options.isVertical = prompt.includes("縦書き");
-  
+
   if (prompt.includes("明朝")) {
     options.fontFamily = "KozMinPro-Regular";
   } else if (prompt.includes("ゴシック")) {
     options.fontFamily = "KozGoPro-Regular";
   }
-  
+
   // マージンの検出
   const marginMatch = prompt.match(/マージン[上下左右\d\s]*(\d+)mm/);
   if (marginMatch) {
@@ -101,45 +105,45 @@ export function parsePromptForOptions(prompt: string): Partial<ScriptOptions> {
     options.marginLeft = margin;
     options.marginRight = margin;
   }
-  
+
   return options;
 }
 
 export function analyzeScript(script: string): Partial<ScriptOptions> {
   const options: Partial<ScriptOptions> = {};
-  
+
   // 縦書きの検出
-  options.isVertical = script.includes('verticalText = true');
-  
+  options.isVertical = script.includes("verticalText = true");
+
   // フォントの検出
   const fontMatch = script.match(/appliedFont: "([^"]+)"/);
   if (fontMatch) {
     options.fontFamily = fontMatch[1];
   }
-  
+
   // フォントサイズの検出
   const sizeMatch = script.match(/pointSize: (\d+)/);
   if (sizeMatch) {
     options.fontSize = parseInt(sizeMatch[1]);
   }
-  
+
   // 行送りの検出
   const leadingMatch = script.match(/leading: (\d+)/);
   if (leadingMatch) {
     options.lineHeight = parseInt(leadingMatch[1]);
   }
-  
+
   // マージンの検出
   const marginTopMatch = script.match(/marginPreferences\.top = "(\d+)mm"/);
   const marginBottomMatch = script.match(/marginPreferences\.bottom = "(\d+)mm"/);
   const marginLeftMatch = script.match(/marginPreferences\.left = "(\d+)mm"/);
   const marginRightMatch = script.match(/marginPreferences\.right = "(\d+)mm"/);
-  
+
   if (marginTopMatch) options.marginTop = parseInt(marginTopMatch[1]);
   if (marginBottomMatch) options.marginBottom = parseInt(marginBottomMatch[1]);
   if (marginLeftMatch) options.marginLeft = parseInt(marginLeftMatch[1]);
   if (marginRightMatch) options.marginRight = parseInt(marginRightMatch[1]);
-  
+
   return options;
 }
 
@@ -147,17 +151,22 @@ export async function convertInddToScript(file: File): Promise<string> {
   // InDesignドキュメントのバイナリデータを解析して設定を抽出
   const buffer = await file.arrayBuffer();
   const view = new DataView(buffer);
-  
+
   // InDesignファイルのヘッダーを確認（マジックナンバー）
-  const signature = String.fromCharCode(view.getUint8(0), view.getUint8(1), view.getUint8(2), view.getUint8(3));
-  if (signature !== 'INDD') {
-    throw new Error('無効なInDesignファイルです');
+  const signature = String.fromCharCode(
+    view.getUint8(0),
+    view.getUint8(1),
+    view.getUint8(2),
+    view.getUint8(3),
+  );
+  if (signature !== "INDD") {
+    throw new Error("無効なInDesignファイルです");
   }
 
   // 基本的な設定を抽出（実際のInDesignファイル構造に基づいて実装が必要）
   const options: ScriptOptions = {
-    pageWidth: 210,    // A4
-    pageHeight: 297,   // A4
+    pageWidth: 210, // A4
+    pageHeight: 297, // A4
     marginTop: 20,
     marginBottom: 20,
     marginLeft: 15,
@@ -165,7 +174,7 @@ export async function convertInddToScript(file: File): Promise<string> {
     fontFamily: "KozMinPro-Regular",
     fontSize: 10,
     lineHeight: 15,
-    isVertical: false
+    isVertical: false,
   };
 
   // 抽出した設定からスクリプトを生成

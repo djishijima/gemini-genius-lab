@@ -1,7 +1,6 @@
-
-import React from 'react';
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import type { Difference } from '@/types/pdf-compare';
+import type { Difference } from "@/types/pdf-compare";
 
 interface ComparisonViewProps {
   pdf1Text: string;
@@ -27,15 +26,23 @@ export function ComparisonView({ pdf1Text, pdf2Text, differences, onScroll }: Co
               className="left-content bg-gray-50 p-4 rounded-lg overflow-auto max-h-[600px]"
               onScroll={onScroll}
             >
-              {pdf1Text.split('\n').map((line, index) => {
-                const isDiffStart = differences.some(diff =>
-                  diff.removed && diff.value && pdf1Text.includes(diff.value) && 
-                  pdf1Text.indexOf(diff.value) === pdf1Text.split('\n').slice(0, index + 1).join('\n').indexOf(diff.value)
+              {pdf1Text.split("\n").map((line, index) => {
+                const isDiffStart = differences.some(
+                  (diff) =>
+                    diff.removed &&
+                    diff.value &&
+                    pdf1Text.includes(diff.value) &&
+                    pdf1Text.indexOf(diff.value) ===
+                      pdf1Text
+                        .split("\n")
+                        .slice(0, index + 1)
+                        .join("\n")
+                        .indexOf(diff.value),
                 );
                 return (
                   <div
                     key={`original-${index}`}
-                    className={`mb-2 ${isDiffStart ? 'bg-red-100 p-2 rounded' : ''}`}
+                    className={`mb-2 ${isDiffStart ? "bg-red-100 p-2 rounded" : ""}`}
                   >
                     {line}
                   </div>
@@ -49,15 +56,23 @@ export function ComparisonView({ pdf1Text, pdf2Text, differences, onScroll }: Co
               className="right-content bg-gray-50 p-4 rounded-lg overflow-auto max-h-[600px]"
               onScroll={onScroll}
             >
-              {pdf2Text.split('\n').map((line, index) => {
-                const isDiffStart = differences.some(diff =>
-                  diff.added && diff.value && pdf2Text.includes(diff.value) && 
-                  pdf2Text.indexOf(diff.value) === pdf2Text.split('\n').slice(0, index + 1).join('\n').indexOf(diff.value)
+              {pdf2Text.split("\n").map((line, index) => {
+                const isDiffStart = differences.some(
+                  (diff) =>
+                    diff.added &&
+                    diff.value &&
+                    pdf2Text.includes(diff.value) &&
+                    pdf2Text.indexOf(diff.value) ===
+                      pdf2Text
+                        .split("\n")
+                        .slice(0, index + 1)
+                        .join("\n")
+                        .indexOf(diff.value),
                 );
                 return (
                   <div
                     key={`new-${index}`}
-                    className={`mb-2 ${isDiffStart ? 'bg-green-100 p-2 rounded' : ''}`}
+                    className={`mb-2 ${isDiffStart ? "bg-green-100 p-2 rounded" : ""}`}
                   >
                     {line}
                   </div>

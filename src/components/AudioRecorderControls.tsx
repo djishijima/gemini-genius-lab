@@ -1,7 +1,6 @@
-
 import { Button } from "@/components/ui/button";
 import { Mic, StopCircle } from "lucide-react";
-import { formatTime } from '@/utils/formatTime';
+import { formatTime } from "@/utils/formatTime";
 
 interface AudioRecorderControlsProps {
   isRecording: boolean;
@@ -23,7 +22,7 @@ export function AudioRecorderControls({
   isProcessing,
   isTranscribing,
   onStartRecording,
-  onStopRecording
+  onStopRecording,
 }: AudioRecorderControlsProps) {
   return (
     <div className="flex flex-col items-center space-y-4 p-6 border rounded-lg bg-muted/10">

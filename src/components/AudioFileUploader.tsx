@@ -1,5 +1,4 @@
-
-import { useRef } from 'react';
+import { useRef } from "react";
 import { useToast } from "@/components/ui/use-toast";
 
 interface AudioFileUploaderProps {
@@ -19,18 +18,31 @@ export function AudioFileUploader({ onFileUpload, isDisabled }: AudioFileUploade
       toast({
         title: "ファイルサイズエラー",
         description: "ファイルサイズは100MB以下にしてください",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
-    const supportedTypes = ['audio/mp3', 'audio/wav', 'audio/webm', 'audio/m4a', 'audio/ogg', 'audio/*'];
-    if (!supportedTypes.includes(file.type) && !file.name.endsWith('.mp3') && !file.name.endsWith('.wav') && 
-        !file.name.endsWith('.webm') && !file.name.endsWith('.m4a') && !file.name.endsWith('.ogg')) {
+    const supportedTypes = [
+      "audio/mp3",
+      "audio/wav",
+      "audio/webm",
+      "audio/m4a",
+      "audio/ogg",
+      "audio/*",
+    ];
+    if (
+      !supportedTypes.includes(file.type) &&
+      !file.name.endsWith(".mp3") &&
+      !file.name.endsWith(".wav") &&
+      !file.name.endsWith(".webm") &&
+      !file.name.endsWith(".m4a") &&
+      !file.name.endsWith(".ogg")
+    ) {
       toast({
         title: "ファイル形式エラー",
         description: "サポートされているファイル形式: MP3, WAV, WEBM, M4A, OGG",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }

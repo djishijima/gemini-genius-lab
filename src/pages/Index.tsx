@@ -1,8 +1,7 @@
-
 import { Button } from "@/components/ui/button";
 import { FileText, Mic, FileDiff, Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import Joyride, { CallBackProps } from 'react-joyride';
+import Joyride, { CallBackProps } from "react-joyride";
 import { homeSteps } from "@/config/tour-steps";
 import { useToast } from "@/components/ui/use-toast";
 import { useEffect, useState } from "react";
@@ -13,7 +12,7 @@ export default function Index() {
   const [runTour, setRunTour] = useState(false);
 
   useEffect(() => {
-    const hasSeenTour = localStorage.getItem('hasSeenHomeTour');
+    const hasSeenTour = localStorage.getItem("hasSeenHomeTour");
     if (!hasSeenTour) {
       setRunTour(true);
     }
@@ -22,14 +21,14 @@ export default function Index() {
   const handleJoyrideCallback = (data: CallBackProps) => {
     const { status } = data;
     if (status === "finished" || status === "skipped") {
-      localStorage.setItem('hasSeenHomeTour', 'true');
+      localStorage.setItem("hasSeenHomeTour", "true");
       toast({
         title: "チュートリアル完了",
         description: "ツアーガイドが完了しました。いつでも設定から再表示できます。",
       });
     }
   };
-  
+
   return (
     <div className="container mx-auto p-6">
       <Joyride
@@ -43,11 +42,11 @@ export default function Index() {
           close: "閉じる",
           last: "完了",
           next: "次へ",
-          skip: "スキップ"
+          skip: "スキップ",
         }}
         styles={{
           options: {
-            primaryColor: '#0EA5E9',
+            primaryColor: "#0EA5E9",
             zIndex: 1000,
           },
         }}

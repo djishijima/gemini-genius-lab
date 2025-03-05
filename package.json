@@ -8,7 +8,9 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check:types": "tsc --noEmit",
+    "check:types:ide": "tsc --noEmit --project tsconfig.ide.json"
   },
   "dependencies": {
     "@google-cloud/vertexai": "^1.9.3",
