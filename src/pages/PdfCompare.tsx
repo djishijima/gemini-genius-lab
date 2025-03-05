@@ -25,6 +25,13 @@ try {
   // react-pdfのワーカー設定
   pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
   console.log('PDF.js worker initialized successfully with react-pdf');
+  
+  // PDF.jsが実際に利用可能かチェック
+  if (typeof pdfjsLib.getDocument === 'function') {
+    console.log('PDF.js is fully loaded and ready to use');
+  } else {
+    console.warn('PDF.js might not be fully loaded');
+  }
 } catch (error) {
   console.error('Error initializing PDF.js worker with react-pdf:', error);
 }
@@ -54,7 +61,8 @@ const PdfCompare: React.FC = () => {
   const [progress, setProgress] = useState<number>(0);
   const [numPages1, setNumPages1] = useState<number>(0);
   const [numPages2, setNumPages2] = useState<number>(0);
-  const [displayMode, setDisplayMode] = useState<'text' | 'highlight' | 'overlay' | 'iframe' | 'iframe-overlay'>('text');
+  // 初期表示モードをiframe-overlayに変更
+  const [displayMode, setDisplayMode] = useState<'text' | 'highlight' | 'overlay' | 'iframe' | 'iframe-overlay'>('iframe-overlay');
   const fileInput1Ref = useRef<HTMLInputElement>(null);
   const fileInput2Ref = useRef<HTMLInputElement>(null);
   const leftScrollRef = useRef<HTMLDivElement>(null);
@@ -245,8 +253,45 @@ const PdfCompare: React.FC = () => {
   // PDFファイルをURLに変換する関数
   const getPdfUrl = (file: File | null) => {
     if (!file) return null;
-    return URL.createObjectURL(file);
+    try {
+      const url = URL.createObjectURL(file);
+      console.log('Created Blob URL for PDF:', url);
+      return url;
+    } catch (error) {
+      console.error('Failed to create Blob URL:', error);
+      return null;
+    }
   };
+  
+  // 全てのBlobURLを管理する配列
+  const [createdUrls, setCreatedUrls] = useState<string[]>([]);
+  
+  // BlobURLを作成し、説明配列に追加する関数
+  const createAndTrackBlobUrl = (file: File | null) => {
+    if (!file) return null;
+    try {
+      const url = URL.createObjectURL(file);
+      setCreatedUrls(prev => [...prev, url]);
+      return url;
+    } catch (error) {
+      console.error('Failed to create tracked Blob URL:', error);
+      return null;
+    }
+  };
+  
+  // コンポーネントアンマウント時に作成したBlobURLを破棄
+  useEffect(() => {
+    return () => {
+      createdUrls.forEach(url => {
+        try {
+          URL.revokeObjectURL(url);
+          console.log('Revoked Blob URL:', url);
+        } catch (error) {
+          console.error('Failed to revoke Blob URL:', error);
+        }
+      });
+    };
+  }, [createdUrls]);
 
   const PDFInputSectionComponent = PDFInputSection;
 
