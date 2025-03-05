@@ -14,11 +14,14 @@ import { DiffDisplay } from "@/components/pdf-compare/DiffDisplay";
 import { DiffList } from "@/components/pdf-compare/DiffList";
 import { PdfOverlayView } from "@/components/pdf-compare/PdfOverlayView";
 import { PdfHighlightView } from "@/components/pdf-compare/PdfHighlightView";
+// Import PDF.js worker for text extraction
 import "pdfjs-dist/build/pdf.worker.entry";
+// Import react-pdf components
 import { Document, Page, pdfjs } from "react-pdf";
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
+// Set one consistent worker source for both pdfjsLib and react-pdf
+const workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
 
 interface DiffResult {
   value: string;
@@ -375,7 +378,12 @@ const PdfCompare: React.FC = () => {
                   Document,
                   { 
                     file: pdf1,
-                    onLoadSuccess: (pdf) => onDocumentLoadSuccess(pdf, true) 
+                    onLoadSuccess: (pdf) => onDocumentLoadSuccess(pdf, true),
+                    onLoadError: (error) => {
+                      console.error('PDF1 load error:', error);
+                    },
+                    loading: React.createElement('div', { className: 'p-4 text-center' }, 'PDFを読み込み中...'),
+                    error: React.createElement('div', { className: 'p-4 text-center text-red-500' }, 'PDFの読み込みに失敗しました。ファイルを確認してください。')
                   },
                   Array.from(new Array(numPages1 || 5), (el, index) =>
                     React.createElement(Page, {
@@ -418,7 +426,12 @@ const PdfCompare: React.FC = () => {
                   Document,
                   { 
                     file: pdf2,
-                    onLoadSuccess: (pdf) => onDocumentLoadSuccess(pdf, false) 
+                    onLoadSuccess: (pdf) => onDocumentLoadSuccess(pdf, false),
+                    onLoadError: (error) => {
+                      console.error('PDF2 load error:', error);
+                    },
+                    loading: React.createElement('div', { className: 'p-4 text-center' }, 'PDFを読み込み中...'),
+                    error: React.createElement('div', { className: 'p-4 text-center text-red-500' }, 'PDFの読み込みに失敗しました。ファイルを確認してください。')
                   },
                   Array.from(new Array(numPages2 || 5), (el, index) =>
                     React.createElement(Page, {

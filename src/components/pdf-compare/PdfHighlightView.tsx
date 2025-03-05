@@ -45,7 +45,14 @@ export function PdfHighlightView({
     return (
       <div className="pdf-with-highlights relative border rounded">
         <ScrollArea className="h-[calc(100vh-25rem)]">
-          <Document file={file}>
+          <Document 
+            file={file}
+            onLoadError={(error) => {
+              console.error('PDF load error:', error);
+            }}
+            loading={<div className="p-4 text-center">PDFを読み込み中...</div>}
+            error={<div className="p-4 text-center text-red-500">PDFの読み込みに失敗しました。ファイルを確認してください。</div>}
+          >
             {Array.from(new Array(pageCount), (_, i) => (
               <div key={`page_${i + 1}`} className="relative mb-4">
                 <Page

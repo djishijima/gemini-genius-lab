@@ -62,7 +62,14 @@ export function PdfOverlayView({ pdf1, pdf2, numPages1, numPages2 }: PdfOverlayV
       <div className="pdf-container relative w-full h-[calc(100vh-20rem)] overflow-hidden border rounded">
         {pdf1 && (
           <div className="pdf-layer pdf-layer-bottom absolute top-0 left-0 w-full h-full z-10">
-            <Document file={pdf1}>
+            <Document 
+              file={pdf1}
+              onLoadError={(error) => {
+                console.error('PDF1 load error:', error);
+              }}
+              loading={<div className="p-4 text-center">PDFを読み込み中...</div>}
+              error={<div className="p-4 text-center text-red-500">PDFの読み込みに失敗しました。ファイルを確認してください。</div>}
+            >
               <Page 
                 pageNumber={currentPage <= (numPages1 || 1) ? currentPage : 1} 
                 renderAnnotationLayer={true}
@@ -80,7 +87,14 @@ export function PdfOverlayView({ pdf1, pdf2, numPages1, numPages2 }: PdfOverlayV
                  opacity, 
                  mixBlendMode: 'difference' 
                }}>
-            <Document file={pdf2}>
+            <Document 
+              file={pdf2}
+              onLoadError={(error) => {
+                console.error('PDF2 load error:', error);
+              }}
+              loading={<div className="p-4 text-center">PDFを読み込み中...</div>}
+              error={<div className="p-4 text-center text-red-500">PDFの読み込みに失敗しました。ファイルを確認してください。</div>}
+            >
               <Page 
                 pageNumber={currentPage <= (numPages2 || 1) ? currentPage : 1} 
                 renderAnnotationLayer={true}
