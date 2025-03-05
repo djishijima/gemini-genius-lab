@@ -15,26 +15,49 @@ import { DiffList } from "@/components/pdf-compare/DiffList";
 import { PdfOverlayView } from "@/components/pdf-compare/PdfOverlayView";
 import { PdfHighlightView } from "@/components/pdf-compare/PdfHighlightView";
 // Import react-pdf components and worker
-import { Document, Page, pdfjs } from "react-pdf";
-import "pdfjs-dist/build/pdf.worker.entry";
+import { Document, Page } from "react-pdf";
+import { pdfjs } from 'react-pdf';
 import { IframePdfViewer } from "@/components/pdf-compare/IframePdfViewer";
 import { IframeOverlayView } from "@/components/pdf-compare/IframeOverlayView";
 import { PdfVisualDiffView } from "@/components/pdf-compare/PdfVisualDiffView";
+import { SideBySidePdfView } from "@/components/pdf-compare/SideBySidePdfView";
 
 // PDF.jsワーカーの設定
+// react-pdfが内部で使用するpdfjsの設定
 try {
-  // react-pdfのワーカー設定
-  pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
-  console.log('PDF.js worker initialized successfully with react-pdf');
+  // react-pdf用の設定
+  // バージョン不一致の問題を解決するために、ネットワークからロードするCDNを使用
+  const pdfjsCDN = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+  pdfjs.GlobalWorkerOptions.workerSrc = pdfjsCDN;
+  
+  // CMapリソースの設定を追加
+  // グローバル変数として定義して、全てのDocumentコンポーネントからアクセスできるようにする
+  window.pdfjsOptions = {
+    cMapUrl: '/cmaps/',
+    cMapPacked: true,
+  };
+  
+  // react-pdfに対しても適用
+  pdfjs.GlobalWorkerOptions.workerSrc = pdfjsCDN;
+  
+  // バックアップとして、ローカルのワーカーも設定
+  if (pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+  }
+  
+  console.log('PDF.js worker settings updated to use CDN version');
+  console.log(`react-pdf version's PDF.js: ${pdfjs.version}`);
+  if (pdfjsLib) {
+    console.log(`Direct PDF.js version: ${pdfjsLib.version}`);
+  }
+  
+  // コンソールに設定情報を出力
+  console.log('PDF.js setup with options:', window.pdfjsOptions);
   
   // PDF.jsが実際に利用可能かチェック
-  if (typeof pdfjsLib.getDocument === 'function') {
-    console.log('PDF.js is fully loaded and ready to use');
-  } else {
-    console.warn('PDF.js might not be fully loaded');
-  }
+  console.log('PDF.js setup completed');
 } catch (error) {
-  console.error('Error initializing PDF.js worker with react-pdf:', error);
+  console.error('Error initializing PDF.js worker:', error);
 }
 
 interface DiffResult {
@@ -47,6 +70,40 @@ interface Difference extends DiffResult {
   lines1?: number[];
   lines2?: number[];
 }
+
+// PDF.jsのインポートを確認するための関数を追加
+const checkPdfJsSetup = () => {
+  console.log("PDF.js setup check...");
+  console.log("pdfjs.version:", pdfjs.version);
+  console.log("pdfjs.GlobalWorkerOptions.workerSrc:", pdfjs.GlobalWorkerOptions.workerSrc);
+  console.log("pdfjsLib version check:", typeof pdfjsLib.getDocument);
+  // PDF.jsのCMapリソースを確認
+  console.log("Checking if CMap files are accessible...");
+  fetch('/cmaps/Adobe-Japan1-UCS2.bcmap')
+    .then(response => {
+      if (response.ok) {
+        console.log("CMap resource is accessible!");
+      } else {
+        console.error("CMap resource is NOT accessible. Status:", response.status);
+      }
+    })
+    .catch(error => {
+      console.error("Error fetching CMap resource:", error);
+    });
+
+  // Workerファイルのアクセス確認
+  fetch('/pdf.worker.min.js')
+    .then(response => {
+      if (response.ok) {
+        console.log("Worker file is accessible!");
+      } else {
+        console.error("Worker file is NOT accessible. Status:", response.status);
+      }
+    })
+    .catch(error => {
+      console.error("Error fetching worker file:", error);
+    });
+};
 
 const PdfCompare: React.FC = () => {
   const navigate = useNavigate();
@@ -63,7 +120,7 @@ const PdfCompare: React.FC = () => {
   const [numPages1, setNumPages1] = useState<number>(0);
   const [numPages2, setNumPages2] = useState<number>(0);
   // 初期表示モードをiframe-overlayに変更
-  const [displayMode, setDisplayMode] = useState<'text' | 'highlight' | 'overlay' | 'iframe' | 'iframe-overlay' | 'visual-diff'>('iframe-overlay');
+  const [displayMode, setDisplayMode] = useState<'text' | 'highlight' | 'overlay' | 'iframe' | 'iframe-overlay' | 'visual-diff' | 'side-by-side'>('iframe-overlay');
   const fileInput1Ref = useRef<HTMLInputElement>(null);
   const fileInput2Ref = useRef<HTMLInputElement>(null);
   const leftScrollRef = useRef<HTMLDivElement>(null);
@@ -253,10 +310,12 @@ const PdfCompare: React.FC = () => {
   
   // PDFファイルをURLに変換する関数
   const getPdfUrl = (file: File | null) => {
+    console.log("getPdfUrl called with file:", file ? file.name : "null");
     if (!file) return null;
     try {
       const url = URL.createObjectURL(file);
       console.log('Created Blob URL for PDF:', url);
+      setCreatedUrls(prev => [...prev, url]);
       return url;
     } catch (error) {
       console.error('Failed to create Blob URL:', error);
@@ -280,6 +339,12 @@ const PdfCompare: React.FC = () => {
     }
   };
   
+  // ページロード時にPDF.jsの設定を確認
+  useEffect(() => {
+    checkPdfJsSetup();
+    console.log("Component loaded, checking dependencies...");
+  }, []);
+
   // コンポーネントアンマウント時に作成したBlobURLを破棄
   useEffect(() => {
     return () => {
@@ -446,6 +511,17 @@ const PdfCompare: React.FC = () => {
                   React.createElement(FileText, { className: "mr-1 h-4 w-4" }),
                   "視覚的差分表示",
                 ),
+                React.createElement(
+                  Button,
+                  {
+                    variant: displayMode === 'side-by-side' ? "default" : "ghost",
+                    size: "sm",
+                    onClick: () => setDisplayMode("side-by-side"),
+                    className: "flex items-center",
+                  },
+                  React.createElement(FileText, { className: "mr-1 h-4 w-4" }),
+                  "ページ比較表示",
+                ),
               ),
             ),
           ),
@@ -475,6 +551,7 @@ const PdfCompare: React.FC = () => {
                     onLoadError: (error) => {
                       console.error('PDF1 load error:', error);
                     },
+                    options: window.pdfjsOptions,
                     loading: React.createElement('div', { className: 'p-4 text-center' }, 'PDFを読み込み中...'),
                     error: React.createElement('div', { className: 'p-4 text-center text-red-500' }, 'PDFの読み込みに失敗しました。ファイルを確認してください。')
                   },
@@ -523,6 +600,7 @@ const PdfCompare: React.FC = () => {
                     onLoadError: (error) => {
                       console.error('PDF2 load error:', error);
                     },
+                    options: window.pdfjsOptions,
                     loading: React.createElement('div', { className: 'p-4 text-center' }, 'PDFを読み込み中...'),
                     error: React.createElement('div', { className: 'p-4 text-center text-red-500' }, 'PDFの読み込みに失敗しました。ファイルを確認してください。')
                   },
@@ -599,6 +677,14 @@ const PdfCompare: React.FC = () => {
             numPages1: numPages1,
             numPages2: numPages2,
             differences: differences
+          }),
+
+          // ページ比較表示モード（左右に並べて表示）
+          displayMode === 'side-by-side' && React.createElement(SideBySidePdfView, {
+            pdf1: pdf1,
+            pdf2: pdf2,
+            numPages1: numPages1,
+            numPages2: numPages2
           }),
         ),
     ),

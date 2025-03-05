@@ -5,6 +5,16 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
+// TypeScript定義
+declare global {
+  interface Window {
+    pdfjsOptions: {
+      cMapUrl: string;
+      cMapPacked: boolean;
+    };
+  }
+}
+
 interface PdfHighlightViewProps {
   pdf1: File | null;
   pdf2: File | null;
@@ -58,7 +68,7 @@ export function PdfHighlightView({
     pageCount: number,
     isOriginal: boolean
   }) => {
-    if (!file) return null;
+    if (!fileUrl) return null;
     
     const relevantDiffs = differences.filter(diff => 
       isOriginal ? diff.removed : diff.added
@@ -69,8 +79,9 @@ export function PdfHighlightView({
         <ScrollArea className="h-[calc(100vh-25rem)]">
           <Document 
             file={fileUrl}
+            options={window.pdfjsOptions}
             onLoadError={(error) => {
-              console.error('PDF load error:', error);
+              console.error(`PDF load error: ${error.message || JSON.stringify(error)}`);
             }}
             loading={<div className="p-4 text-center">PDFを読み込み中...</div>}
             error={<div className="p-4 text-center text-red-500">PDFの読み込みに失敗しました。ファイルを確認してください。</div>}
