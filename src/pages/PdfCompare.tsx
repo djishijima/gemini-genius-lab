@@ -3,7 +3,8 @@ import type { FC } from "react";
 import { diffWords } from "diff";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowLeft, Layers, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import * as pdfjsLib from "pdfjs-dist";
 import type { TextItem } from "pdfjs-dist/types/src/display/api";
@@ -11,6 +12,8 @@ import { PDFInputSection } from "@/components/pdf-compare/PDFInputSection";
 import { SimilarityCard } from "@/components/pdf-compare/SimilarityCard";
 import { DiffDisplay } from "@/components/pdf-compare/DiffDisplay";
 import { DiffList } from "@/components/pdf-compare/DiffList";
+import { PdfOverlayView } from "@/components/pdf-compare/PdfOverlayView";
+import { PdfHighlightView } from "@/components/pdf-compare/PdfHighlightView";
 import "pdfjs-dist/build/pdf.worker.entry";
 import { Document, Page, pdfjs } from "react-pdf";
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
@@ -40,6 +43,9 @@ const PdfCompare: React.FC = () => {
   const [similarityScore, setSimilarityScore] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
   const [progress, setProgress] = useState<number>(0);
+  const [numPages1, setNumPages1] = useState<number>(0);
+  const [numPages2, setNumPages2] = useState<number>(0);
+  const [displayMode, setDisplayMode] = useState<'text' | 'highlight' | 'overlay'>('text');
   const fileInput1Ref = useRef<HTMLInputElement>(null);
   const fileInput2Ref = useRef<HTMLInputElement>(null);
   const leftScrollRef = useRef<HTMLDivElement>(null);
@@ -215,6 +221,15 @@ const PdfCompare: React.FC = () => {
       comparePdfs();
     }
   }, [pdf1, pdf2, comparePdfs]);
+  
+  // PDF読み込み時にページ数を更新
+  const onDocumentLoadSuccess = (pdf: any, isPdf1: boolean) => {
+    if (isPdf1) {
+      setNumPages1(pdf.numPages);
+    } else {
+      setNumPages2(pdf.numPages);
+    }
+  };
 
   const PDFInputSectionComponent = PDFInputSection;
 
@@ -285,16 +300,57 @@ const PdfCompare: React.FC = () => {
           { className: "grid gap-6" },
           React.createElement(
             "div",
-            { className: "flex items-center justify-between" },
+            { className: "flex items-center justify-between mb-4" },
             React.createElement(
-              Button,
-              {
-                variant: "outline",
-                onClick: () => setShowSimilarity(!showSimilarity),
-                className: "text-slate-200",
-              },
-              "\u985E\u4F3C\u5EA6\u8868\u793A: ",
-              showSimilarity ? "\u975E\u8868\u793A" : "\u8868\u793A",
+              "div",
+              { className: "flex items-center space-x-4" },
+              React.createElement(
+                Button,
+                {
+                  variant: "outline",
+                  onClick: () => setShowSimilarity(!showSimilarity),
+                  className: "text-slate-200",
+                },
+                "\u985E\u4F3C\u5EA6\u8868\u793A: ",
+                showSimilarity ? "\u975E\u8868\u793A" : "\u8868\u793A",
+              ),
+              React.createElement(
+                "div",
+                { className: "flex items-center space-x-2 border rounded-md p-1" },
+                React.createElement(
+                  Button,
+                  {
+                    variant: displayMode === 'text' ? "default" : "ghost",
+                    size: "sm",
+                    onClick: () => setDisplayMode("text"),
+                    className: "flex items-center",
+                  },
+                  React.createElement(FileText, { className: "mr-1 h-4 w-4" }),
+                  "テキスト表示",
+                ),
+                React.createElement(
+                  Button,
+                  {
+                    variant: displayMode === 'highlight' ? "default" : "ghost",
+                    size: "sm",
+                    onClick: () => setDisplayMode("highlight"),
+                    className: "flex items-center",
+                  },
+                  React.createElement(FileText, { className: "mr-1 h-4 w-4" }),
+                  "ハイライト表示",
+                ),
+                React.createElement(
+                  Button,
+                  {
+                    variant: displayMode === 'overlay' ? "default" : "ghost",
+                    size: "sm",
+                    onClick: () => setDisplayMode("overlay"),
+                    className: "flex items-center",
+                  },
+                  React.createElement(Layers, { className: "mr-1 h-4 w-4" }),
+                  "オーバーレイ表示",
+                ),
+              ),
             ),
           ),
           showSimilarity &&
@@ -303,7 +359,9 @@ const PdfCompare: React.FC = () => {
               addedCount: differences.filter((d) => d.added).length,
               removedCount: differences.filter((d) => d.removed).length,
             }),
-          React.createElement(
+
+          // 表示モードに応じたコンポーネントを表示
+          displayMode === 'text' && React.createElement(
             "div",
             { className: "grid grid-cols-12 gap-6 h-[calc(100vh-28rem)]" },
             React.createElement(
@@ -315,8 +373,11 @@ const PdfCompare: React.FC = () => {
                 { className: "pdf-viewer h-[calc(100vh-40rem)] overflow-auto border rounded" },
                 React.createElement(
                   Document,
-                  { file: pdf1 },
-                  Array.from(new Array(5), (el, index) =>
+                  { 
+                    file: pdf1,
+                    onLoadSuccess: (pdf) => onDocumentLoadSuccess(pdf, true) 
+                  },
+                  Array.from(new Array(numPages1 || 5), (el, index) =>
                     React.createElement(Page, {
                       key: `page_${index + 1}`,
                       pageNumber: index + 1,
@@ -355,8 +416,11 @@ const PdfCompare: React.FC = () => {
                 { className: "pdf-viewer h-[calc(100vh-40rem)] overflow-auto border rounded" },
                 React.createElement(
                   Document,
-                  { file: pdf2 },
-                  Array.from(new Array(5), (el, index) =>
+                  { 
+                    file: pdf2,
+                    onLoadSuccess: (pdf) => onDocumentLoadSuccess(pdf, false) 
+                  },
+                  Array.from(new Array(numPages2 || 5), (el, index) =>
                     React.createElement(Page, {
                       key: `page_${index + 1}`,
                       pageNumber: index + 1,
@@ -378,6 +442,25 @@ const PdfCompare: React.FC = () => {
               }),
             ),
           ),
+          
+          // ハイライト表示モード
+          displayMode === 'highlight' && React.createElement(PdfHighlightView, {
+            pdf1: pdf1,
+            pdf2: pdf2,
+            differences: differences,
+            numPages1: numPages1,
+            numPages2: numPages2,
+            selectedDiffIndex: selectedDiffIndex,
+            onDiffClick: jumpToDiff
+          }),
+          
+          // オーバーレイ表示モード
+          displayMode === 'overlay' && React.createElement(PdfOverlayView, {
+            pdf1: pdf1,
+            pdf2: pdf2,
+            numPages1: numPages1,
+            numPages2: numPages2
+          }),
         ),
     ),
   );
