@@ -19,6 +19,7 @@ import { Document, Page, pdfjs } from "react-pdf";
 import "pdfjs-dist/build/pdf.worker.entry";
 import { IframePdfViewer } from "@/components/pdf-compare/IframePdfViewer";
 import { IframeOverlayView } from "@/components/pdf-compare/IframeOverlayView";
+import { PdfVisualDiffView } from "@/components/pdf-compare/PdfVisualDiffView";
 
 // PDF.jsワーカーの設定
 try {
@@ -62,7 +63,7 @@ const PdfCompare: React.FC = () => {
   const [numPages1, setNumPages1] = useState<number>(0);
   const [numPages2, setNumPages2] = useState<number>(0);
   // 初期表示モードをiframe-overlayに変更
-  const [displayMode, setDisplayMode] = useState<'text' | 'highlight' | 'overlay' | 'iframe' | 'iframe-overlay'>('iframe-overlay');
+  const [displayMode, setDisplayMode] = useState<'text' | 'highlight' | 'overlay' | 'iframe' | 'iframe-overlay' | 'visual-diff'>('iframe-overlay');
   const fileInput1Ref = useRef<HTMLInputElement>(null);
   const fileInput2Ref = useRef<HTMLInputElement>(null);
   const leftScrollRef = useRef<HTMLDivElement>(null);
@@ -434,6 +435,17 @@ const PdfCompare: React.FC = () => {
                   React.createElement(Layers, { className: "mr-1 h-4 w-4" }),
                   "iframeオーバーレイ",
                 ),
+                React.createElement(
+                  Button,
+                  {
+                    variant: displayMode === 'visual-diff' ? "default" : "ghost",
+                    size: "sm",
+                    onClick: () => setDisplayMode("visual-diff"),
+                    className: "flex items-center",
+                  },
+                  React.createElement(FileText, { className: "mr-1 h-4 w-4" }),
+                  "視覚的差分表示",
+                ),
               ),
             ),
           ),
@@ -578,6 +590,15 @@ const PdfCompare: React.FC = () => {
           displayMode === 'iframe-overlay' && React.createElement(IframeOverlayView, {
             pdf1: pdf1,
             pdf2: pdf2
+          }),
+          
+          // 視覚的差分表示モード
+          displayMode === 'visual-diff' && React.createElement(PdfVisualDiffView, {
+            pdf1: pdf1,
+            pdf2: pdf2,
+            numPages1: numPages1,
+            numPages2: numPages2,
+            differences: differences
           }),
         ),
     ),
