@@ -17,15 +17,17 @@ import { PdfHighlightView } from "@/components/pdf-compare/PdfHighlightView";
 // Import react-pdf components and worker
 import { Document, Page, pdfjs } from "react-pdf";
 import "pdfjs-dist/build/pdf.worker.entry";
+import { IframePdfViewer } from "@/components/pdf-compare/IframePdfViewer";
+import { IframeOverlayView } from "@/components/pdf-compare/IframeOverlayView";
 
-// PDFJSの明示的な初期化
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.js',
-  import.meta.url,
-).toString();
-
-// react-pdfのワーカー設定
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+// PDF.jsワーカーの設定
+try {
+  // react-pdfのワーカー設定
+  pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+  console.log('PDF.js worker initialized successfully with react-pdf');
+} catch (error) {
+  console.error('Error initializing PDF.js worker with react-pdf:', error);
+}
 
 interface DiffResult {
   value: string;
@@ -52,7 +54,7 @@ const PdfCompare: React.FC = () => {
   const [progress, setProgress] = useState<number>(0);
   const [numPages1, setNumPages1] = useState<number>(0);
   const [numPages2, setNumPages2] = useState<number>(0);
-  const [displayMode, setDisplayMode] = useState<'text' | 'highlight' | 'overlay'>('text');
+  const [displayMode, setDisplayMode] = useState<'text' | 'highlight' | 'overlay' | 'iframe' | 'iframe-overlay'>('text');
   const fileInput1Ref = useRef<HTMLInputElement>(null);
   const fileInput2Ref = useRef<HTMLInputElement>(null);
   const leftScrollRef = useRef<HTMLDivElement>(null);
@@ -365,6 +367,28 @@ const PdfCompare: React.FC = () => {
                   React.createElement(Layers, { className: "mr-1 h-4 w-4" }),
                   "オーバーレイ表示",
                 ),
+                React.createElement(
+                  Button,
+                  {
+                    variant: displayMode === 'iframe' ? "default" : "ghost",
+                    size: "sm",
+                    onClick: () => setDisplayMode("iframe"),
+                    className: "flex items-center",
+                  },
+                  React.createElement(Layers, { className: "mr-1 h-4 w-4" }),
+                  "iframe表示",
+                ),
+                React.createElement(
+                  Button,
+                  {
+                    variant: displayMode === 'iframe-overlay' ? "default" : "ghost",
+                    size: "sm",
+                    onClick: () => setDisplayMode("iframe-overlay"),
+                    className: "flex items-center",
+                  },
+                  React.createElement(Layers, { className: "mr-1 h-4 w-4" }),
+                  "iframeオーバーレイ",
+                ),
               ),
             ),
           ),
@@ -485,6 +509,30 @@ const PdfCompare: React.FC = () => {
             pdf2: pdf2,
             numPages1: numPages1,
             numPages2: numPages2
+          }),
+          
+          // iframe表示モード
+          displayMode === 'iframe' && React.createElement(
+            "div",
+            { className: "grid grid-cols-2 gap-6 h-[calc(100vh-28rem)]" },
+            React.createElement(
+              "div",
+              { className: "h-full" },
+              React.createElement("h2", { className: "text-lg font-bold mb-2" }, "元のPDF"),
+              React.createElement(IframePdfViewer, { file: pdf1 })
+            ),
+            React.createElement(
+              "div",
+              { className: "h-full" },
+              React.createElement("h2", { className: "text-lg font-bold mb-2" }, "新しいPDF"),
+              React.createElement(IframePdfViewer, { file: pdf2 })
+            )
+          ),
+          
+          // iframeオーバーレイモード
+          displayMode === 'iframe-overlay' && React.createElement(IframeOverlayView, {
+            pdf1: pdf1,
+            pdf2: pdf2
           }),
         ),
     ),
