@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import type { Difference } from '@/types/pdf-compare';
 import { Card } from '@/components/ui/card';
@@ -26,13 +26,35 @@ export function PdfHighlightView({
 }: PdfHighlightViewProps) {
   const [currentTab, setCurrentTab] = useState('original');
   
+  // PDF ファイルを URL に変換する関数
+  const getPdfUrl = (file: File | null) => {
+    if (!file) return null;
+    return URL.createObjectURL(file);
+  };
+  
+  // PDF URL オブジェクトを保持するための状態
+  const [pdf1Url, setPdf1Url] = useState<string | null>(null);
+  const [pdf2Url, setPdf2Url] = useState<string | null>(null);
+  
+  // コンポーネントがマウントされた時に URL を作成
+  useEffect(() => {
+    if (pdf1) setPdf1Url(getPdfUrl(pdf1));
+    if (pdf2) setPdf2Url(getPdfUrl(pdf2));
+    
+    // クリーンアップ関数
+    return () => {
+      if (pdf1Url) URL.revokeObjectURL(pdf1Url);
+      if (pdf2Url) URL.revokeObjectURL(pdf2Url);
+    };
+  }, [pdf1, pdf2]);
+
   // PDFとハイライトを組み合わせて表示するコンポーネント
   const PdfWithHighlights = ({ 
-    file, 
+    fileUrl, 
     pageCount, 
     isOriginal 
   }: { 
-    file: File | null, 
+    fileUrl: string | null, 
     pageCount: number,
     isOriginal: boolean
   }) => {
@@ -46,7 +68,7 @@ export function PdfHighlightView({
       <div className="pdf-with-highlights relative border rounded">
         <ScrollArea className="h-[calc(100vh-25rem)]">
           <Document 
-            file={file}
+            file={fileUrl}
             onLoadError={(error) => {
               console.error('PDF load error:', error);
             }}
@@ -100,14 +122,14 @@ export function PdfHighlightView({
         </TabsList>
         <TabsContent value="original">
           <PdfWithHighlights 
-            file={pdf1} 
+            fileUrl={pdf1Url} 
             pageCount={numPages1 || 0} 
             isOriginal={true} 
           />
         </TabsContent>
         <TabsContent value="new">
           <PdfWithHighlights 
-            file={pdf2} 
+            fileUrl={pdf2Url} 
             pageCount={numPages2 || 0} 
             isOriginal={false} 
           />

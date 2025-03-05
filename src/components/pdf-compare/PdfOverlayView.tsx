@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { Slider } from '@/components/ui/slider';
 import { Label } from '@/components/ui/label';
@@ -15,6 +15,28 @@ export function PdfOverlayView({ pdf1, pdf2, numPages1, numPages2 }: PdfOverlayV
   const [scale, setScale] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
   const maxPages = Math.max(numPages1 || 1, numPages2 || 1);
+  
+  // PDF ファイルを URL に変換する関数
+  const getPdfUrl = (file: File | null) => {
+    if (!file) return null;
+    return URL.createObjectURL(file);
+  };
+  
+  // PDF URL オブジェクトを保持するための状態
+  const [pdf1Url, setPdf1Url] = useState<string | null>(null);
+  const [pdf2Url, setPdf2Url] = useState<string | null>(null);
+  
+  // コンポーネントがマウントされた時に URL を作成
+  useEffect(() => {
+    if (pdf1) setPdf1Url(getPdfUrl(pdf1));
+    if (pdf2) setPdf2Url(getPdfUrl(pdf2));
+    
+    // クリーンアップ関数
+    return () => {
+      if (pdf1Url) URL.revokeObjectURL(pdf1Url);
+      if (pdf2Url) URL.revokeObjectURL(pdf2Url);
+    };
+  }, [pdf1, pdf2]);
 
   return (
     <div className="pdf-overlay-container space-y-4">
@@ -63,7 +85,7 @@ export function PdfOverlayView({ pdf1, pdf2, numPages1, numPages2 }: PdfOverlayV
         {pdf1 && (
           <div className="pdf-layer pdf-layer-bottom absolute top-0 left-0 w-full h-full z-10">
             <Document 
-              file={pdf1}
+              file={pdf1Url}
               onLoadError={(error) => {
                 console.error('PDF1 load error:', error);
               }}
@@ -88,7 +110,7 @@ export function PdfOverlayView({ pdf1, pdf2, numPages1, numPages2 }: PdfOverlayV
                  mixBlendMode: 'difference' 
                }}>
             <Document 
-              file={pdf2}
+              file={pdf2Url}
               onLoadError={(error) => {
                 console.error('PDF2 load error:', error);
               }}

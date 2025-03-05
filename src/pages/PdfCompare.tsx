@@ -14,14 +14,18 @@ import { DiffDisplay } from "@/components/pdf-compare/DiffDisplay";
 import { DiffList } from "@/components/pdf-compare/DiffList";
 import { PdfOverlayView } from "@/components/pdf-compare/PdfOverlayView";
 import { PdfHighlightView } from "@/components/pdf-compare/PdfHighlightView";
-// Import PDF.js worker for text extraction
-import "pdfjs-dist/build/pdf.worker.entry";
-// Import react-pdf components
+// Import react-pdf components and worker
 import { Document, Page, pdfjs } from "react-pdf";
-// Set one consistent worker source for both pdfjsLib and react-pdf
-const workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
-pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
-pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+import "pdfjs-dist/build/pdf.worker.entry";
+
+// PDFJSの明示的な初期化
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.js',
+  import.meta.url,
+).toString();
+
+// react-pdfのワーカー設定
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 interface DiffResult {
   value: string;
@@ -229,9 +233,17 @@ const PdfCompare: React.FC = () => {
   const onDocumentLoadSuccess = (pdf: any, isPdf1: boolean) => {
     if (isPdf1) {
       setNumPages1(pdf.numPages);
+      console.log('PDF1読み込み成功:', pdf.numPages, 'ページ');
     } else {
       setNumPages2(pdf.numPages);
+      console.log('PDF2読み込み成功:', pdf.numPages, 'ページ');
     }
+  };
+  
+  // PDFファイルをURLに変換する関数
+  const getPdfUrl = (file: File | null) => {
+    if (!file) return null;
+    return URL.createObjectURL(file);
   };
 
   const PDFInputSectionComponent = PDFInputSection;
@@ -377,7 +389,7 @@ const PdfCompare: React.FC = () => {
                 React.createElement(
                   Document,
                   { 
-                    file: pdf1,
+                    file: getPdfUrl(pdf1),
                     onLoadSuccess: (pdf) => onDocumentLoadSuccess(pdf, true),
                     onLoadError: (error) => {
                       console.error('PDF1 load error:', error);
@@ -425,7 +437,7 @@ const PdfCompare: React.FC = () => {
                 React.createElement(
                   Document,
                   { 
-                    file: pdf2,
+                    file: getPdfUrl(pdf2),
                     onLoadSuccess: (pdf) => onDocumentLoadSuccess(pdf, false),
                     onLoadError: (error) => {
                       console.error('PDF2 load error:', error);
