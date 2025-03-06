@@ -84,9 +84,29 @@ const AudioRecorder: React.FC = () => {
     try {
       await startRecording();
       setIsRecording(true);
+
+      // WebAudioAPIとMediaStreamを取得するための処理
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          }
+        });
+        setAudioStream(stream);
+        console.log("マイクストリームを取得しました", stream.id);
+      } catch (micError) {
+        console.error("マイク取得エラー:", micError);
+        toast({
+          title: "マイクエラー",
+          description: String(micError),
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       toast({
-        title: "Recording Error",
+        title: "録音エラー",
         description: String(error),
         variant: "destructive",
       });
@@ -140,6 +160,22 @@ const AudioRecorder: React.FC = () => {
           <CardDescription>音声を録音してリアルタイムで文字起こしを行います。</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          <div className="bg-muted/20 p-3 rounded-lg border border-muted-foreground/30">
+            <h3 className="text-sm font-medium mb-2">ステータス</h3>
+            <div className="flex items-center space-x-2 text-sm">
+              <span className="font-semibold">マイク:</span>
+              <span className={`${audioStream ? 'text-green-500' : 'text-red-500'}`}>
+                {audioStream ? '接続中' : '未接続'}
+              </span>
+              {recorderIsRecording && (
+                <span className="ml-4 flex items-center">
+                  <span className="h-2 w-2 bg-red-500 rounded-full animate-pulse mr-2"></span>
+                  <span className="text-red-500 font-medium">録音進行中</span>
+                </span>
+              )}
+            </div>
+          </div>
+          
           <AudioRecorderControls
             isRecording={recorderIsRecording}
             recordingTime={recordingTime || 0}
@@ -175,6 +211,6 @@ const AudioRecorder: React.FC = () => {
   );
 };
 
-export const APP_VERSION = "1.6.0"; // 2025-03-05 エラーハンドリング改善
+export const APP_VERSION = "1.7.0"; // 2025-03-06 録音視覚的フィードバック強化
 
 export default AudioRecorder;

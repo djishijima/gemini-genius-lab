@@ -96,21 +96,25 @@ export function PdfHighlightView({
                   className="mb-4"
                 />
                 <div className="highlight-layer absolute top-0 left-0 w-full h-full pointer-events-none">
-                  {/* ここにハイライトを表示する。実際の実装ではpdfjs-distのテキストレイヤーと連携する必要がある */}
+                  {/* 差分ハイライト表示コンテンツ */}
                   {relevantDiffs.map((diff, index) => (
                     <div 
                       key={`highlight-${index}`}
-                      className={`highlight-item absolute ${isOriginal ? 'bg-red-300/50' : 'bg-green-300/50'} p-1 rounded`}
+                      className={`absolute p-1 rounded-sm ${isOriginal ? 'bg-red-200 bg-opacity-50' : 'bg-green-200 bg-opacity-50'} border ${isOriginal ? 'border-red-400' : 'border-green-400'} ${selectedDiffIndex === index ? 'ring-2 ring-blue-500' : ''}`}
                       style={{
-                        top: `${Math.random() * 80}%`,  // 本来はテキスト位置から計算する
+                        // ダミー位置を設定（実際にはより高度な計算が必要）
+                        top: `${Math.random() * 90}%`,
                         left: `${Math.random() * 80}%`,
-                        width: `${Math.min(200, Math.random() * 300)}px`,
+                        width: `${Math.min(150, Math.max(50, diff.value.length / 5))}px`,
                         height: '20px',
                         opacity: selectedDiffIndex === index ? 1 : 0.7,
                         transform: selectedDiffIndex === index ? 'scale(1.05)' : 'scale(1)',
-                        transition: 'all 0.2s ease'
+                        transition: 'all 0.2s ease',
+                        cursor: 'pointer',
+                        pointerEvents: 'auto' // クリック可能にする
                       }}
                       onClick={() => onDiffClick(index)}
+                      title={diff.value.substring(0, 50) + (diff.value.length > 50 ? '...' : '')}
                     >
                       <span className="text-xs">{diff.value.substring(0, 30)}...</span>
                     </div>

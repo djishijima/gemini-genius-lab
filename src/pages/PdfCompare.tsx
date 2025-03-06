@@ -119,8 +119,12 @@ const PdfCompare: React.FC = () => {
   const [progress, setProgress] = useState<number>(0);
   const [numPages1, setNumPages1] = useState<number>(0);
   const [numPages2, setNumPages2] = useState<number>(0);
-  // 初期表示モードをiframe-overlayに変更
-  const [displayMode, setDisplayMode] = useState<'text' | 'highlight' | 'overlay' | 'iframe' | 'iframe-overlay' | 'visual-diff' | 'side-by-side'>('iframe-overlay');
+  // 表示モードをシンプルにし、初期表示をチャットモードに設定
+  const [displayMode, setDisplayMode] = useState<'chat' | 'text' | 'side-by-side' | 'highlight'>('chat');
+  // チャットメッセージを管理する状態
+  const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'assistant', content: string }>>([]);
+  const [userInput, setUserInput] = useState('');
+  const [aiAnalysis, setAiAnalysis] = useState<string>('');
   const fileInput1Ref = useRef<HTMLInputElement>(null);
   const fileInput2Ref = useRef<HTMLInputElement>(null);
   const leftScrollRef = useRef<HTMLDivElement>(null);
@@ -175,6 +179,41 @@ const PdfCompare: React.FC = () => {
     }
   };
 
+  // AI分析結果を生成する関数
+  const generateAiAnalysis = useCallback((diffs: Difference[], similarityScore: number) => {
+    // 差分の重要度を判断
+    const criticalDiffs = diffs.filter(diff => {
+      // 追加されたものや削除されたものを重要と判断
+      return (diff.added || diff.removed) && diff.value.length > 10;
+    });
+    
+    // 重要な差分トップ5を抓える
+    const topDiffs = criticalDiffs.slice(0, 5);
+    
+    // AI分析コメントの生成
+    let analysis = `ドキュメントの類似度は${Math.round(similarityScore * 100)}%です。\n`;
+    
+    if (criticalDiffs.length === 0) {
+      analysis += `重要な差分は見つかりませんでした。変更は小規模もしくは書式のみの可能性があります。`;
+    } else {
+      analysis += `主要な差分ポイント：\n`;
+      
+      topDiffs.forEach((diff, index) => {
+        analysis += `${index + 1}. `;
+        if (diff.added) {
+          analysis += `[追加] ${diff.value.substring(0, 50)}${diff.value.length > 50 ? '...' : ''}\n`;
+        } else if (diff.removed) {
+          analysis += `[削除] ${diff.value.substring(0, 50)}${diff.value.length > 50 ? '...' : ''}\n`;
+        }
+      });
+      
+      analysis += `\n合計 ${criticalDiffs.length} 箇所の重要な差分が見つかりました。`;
+    }
+    
+    setAiAnalysis(analysis);
+    return analysis;
+  }, []);
+
   const comparePdfs = useCallback(async () => {
     if ((!text1 && !pdf1) || (!text2 && !pdf2)) {
       alert("テキストを入力するかPDFをアップロードしてください。");
@@ -198,14 +237,96 @@ const PdfCompare: React.FC = () => {
 
       const similarityScore = calculateSimilarity(diffResult, textContent1, textContent2);
       setSimilarityScore(similarityScore);
+      
+      // AI分析を生成
+      const analysis = generateAiAnalysis(differencesWithLines, similarityScore);
+      
+      // 初期チャットメッセージを設定
+      setChatMessages([
+        {
+          role: 'assistant',
+          content: `2つのPDFを比較しました。類似度は${Math.round(similarityScore * 100)}%です。差分は${differencesWithLines.filter(d => d.added || d.removed).length}箇所あります。詳細について質問してください。`
+        }
+      ]);
     } catch (error) {
       console.error("比較中にエラーが発生しました:", error);
       alert("比較中にエラーが発生しました。");
     } finally {
       setLoading(false);
-      setProgress(0);
+      setProgress(100);
     }
-  }, [pdf1, pdf2, text1, text2, extractFileContent]);
+  }, [pdf1, pdf2, text1, text2, extractFileContent, generateAiAnalysis]);
+
+  // ユーザーメッセージを送信し、AI応答を生成する関数
+  const handleSendMessage = useCallback(() => {
+    if (!userInput.trim() || !differences.length) return;
+    
+    // ユーザーメッセージを追加
+    const newMessages = [
+      ...chatMessages,
+      { role: 'user', content: userInput }
+    ];
+    setChatMessages(newMessages);
+    setUserInput('');
+    
+    // AI応答を生成（実際のAPIコールに置き換えることも可能）
+    setTimeout(() => {
+      const aiResponse = generateAiResponse(userInput, differences, similarityScore, pdf1Text, pdf2Text);
+      setChatMessages(prevMessages => [...prevMessages, { role: 'assistant', content: aiResponse }]);
+    }, 500);
+  }, [userInput, chatMessages, differences, similarityScore, pdf1Text, pdf2Text]);
+  
+  // AI応答を生成する関数
+  const generateAiResponse = (query: string, diffs: Difference[], score: number, text1: string, text2: string): string => {
+    const queryLower = query.toLowerCase();
+    
+    // 主要な差分を抽出
+    const addedDiffs = diffs.filter(d => d.added).map(d => d.value);
+    const removedDiffs = diffs.filter(d => d.removed).map(d => d.value);
+    
+    // クエリタイプに応じた応答の生成
+    if (queryLower.includes('類似') || queryLower.includes('似てる') || queryLower.includes('似ている')) {
+      return `類似度は${Math.round(score * 100)}%です。\n` + 
+             `${score > 0.9 ? 'とても似ています。' : score > 0.7 ? 'やや似ています。' : score > 0.5 ? '部分的に似ています。' : 'あまり似ていません。'}`;
+    }
+    
+    if (queryLower.includes('追加') || queryLower.includes('加え')) {
+      if (addedDiffs.length === 0) {
+        return '新しいドキュメントに追加された重要なテキストは見つかりませんでした。';
+      }
+      
+      let response = `新しいドキュメントには${addedDiffs.length}箇所の追加があります。主な追加内容：\n`;
+      addedDiffs.slice(0, 5).forEach((diff, i) => {
+        response += `${i+1}. ${diff.substring(0, 100)}${diff.length > 100 ? '...' : ''}\n`;
+      });
+      return response;
+    }
+    
+    if (queryLower.includes('削除') || queryLower.includes('除去')) {
+      if (removedDiffs.length === 0) {
+        return '元のドキュメントから削除された重要なテキストは見つかりませんでした。';
+      }
+      
+      let response = `元のドキュメントから${removedDiffs.length}箇所の削除があります。主な削除内容：\n`;
+      removedDiffs.slice(0, 5).forEach((diff, i) => {
+        response += `${i+1}. ${diff.substring(0, 100)}${diff.length > 100 ? '...' : ''}\n`;
+      });
+      return response;
+    }
+    
+    if (queryLower.includes('要約') || queryLower.includes('サマリ')) {
+      return `2つのドキュメントの比較サマリー：\n` +
+             `- 類似度: ${Math.round(score * 100)}%\n` +
+             `- 追加された箇所: ${addedDiffs.length}\n` +
+             `- 削除された箇所: ${removedDiffs.length}\n` +
+             `- 主な変更点: ${diffs.filter(d => d.added || d.removed).length > 0 ? 
+               '文書の構成や内容に変更があります。' : '主に書式や小さな変更のみです。'}`;
+    }
+    
+    // デフォルトの応答
+    return `2つのPDFを比較した結果、類似度は${Math.round(score * 100)}%、${diffs.filter(d => d.added || d.removed).length}箇所の差分があります。\n` +
+           `具体的な内容について質問する場合は、「追加された内容は？」「削除された内容は？」「要約してください」などと質問してください。`;
+  };
 
   const processDifferences = (diffResult: DiffResult[], text1: string, text2: string) => {
     let currentLine1 = 1;
@@ -445,6 +566,18 @@ const PdfCompare: React.FC = () => {
               React.createElement(
                 "div",
                 { className: "flex items-center space-x-2 border rounded-md p-1" },
+                // シンプルな表示モード切り替えボタン
+                React.createElement(
+                  Button,
+                  {
+                    variant: displayMode === 'chat' ? "default" : "ghost",
+                    size: "sm",
+                    onClick: () => setDisplayMode("chat"),
+                    className: "flex items-center",
+                  },
+                  React.createElement(FileText, { className: "mr-1 h-4 w-4" }),
+                  "AIチャット分析",
+                ),
                 React.createElement(
                   Button,
                   {
@@ -454,7 +587,7 @@ const PdfCompare: React.FC = () => {
                     className: "flex items-center",
                   },
                   React.createElement(FileText, { className: "mr-1 h-4 w-4" }),
-                  "テキスト表示",
+                  "テキスト比較",
                 ),
                 React.createElement(
                   Button,
@@ -465,51 +598,7 @@ const PdfCompare: React.FC = () => {
                     className: "flex items-center",
                   },
                   React.createElement(FileText, { className: "mr-1 h-4 w-4" }),
-                  "ハイライト表示",
-                ),
-                React.createElement(
-                  Button,
-                  {
-                    variant: displayMode === 'overlay' ? "default" : "ghost",
-                    size: "sm",
-                    onClick: () => setDisplayMode("overlay"),
-                    className: "flex items-center",
-                  },
-                  React.createElement(Layers, { className: "mr-1 h-4 w-4" }),
-                  "オーバーレイ表示",
-                ),
-                React.createElement(
-                  Button,
-                  {
-                    variant: displayMode === 'iframe' ? "default" : "ghost",
-                    size: "sm",
-                    onClick: () => setDisplayMode("iframe"),
-                    className: "flex items-center",
-                  },
-                  React.createElement(Layers, { className: "mr-1 h-4 w-4" }),
-                  "iframe表示",
-                ),
-                React.createElement(
-                  Button,
-                  {
-                    variant: displayMode === 'iframe-overlay' ? "default" : "ghost",
-                    size: "sm",
-                    onClick: () => setDisplayMode("iframe-overlay"),
-                    className: "flex items-center",
-                  },
-                  React.createElement(Layers, { className: "mr-1 h-4 w-4" }),
-                  "iframeオーバーレイ",
-                ),
-                React.createElement(
-                  Button,
-                  {
-                    variant: displayMode === 'visual-diff' ? "default" : "ghost",
-                    size: "sm",
-                    onClick: () => setDisplayMode("visual-diff"),
-                    className: "flex items-center",
-                  },
-                  React.createElement(FileText, { className: "mr-1 h-4 w-4" }),
-                  "視覚的差分表示",
+                  "PDF差分ハイライト",
                 ),
                 React.createElement(
                   Button,
@@ -520,7 +609,7 @@ const PdfCompare: React.FC = () => {
                     className: "flex items-center",
                   },
                   React.createElement(FileText, { className: "mr-1 h-4 w-4" }),
-                  "ページ比較表示",
+                  "ページ比較",
                 ),
               ),
             ),
@@ -686,6 +775,68 @@ const PdfCompare: React.FC = () => {
             numPages1: numPages1,
             numPages2: numPages2
           }),
+          
+          // チャットモード表示
+          displayMode === 'chat' && React.createElement(
+            "div",
+            { className: "mt-4 flex flex-col h-[calc(100vh-30rem)]" },
+            React.createElement(
+              "div",
+              { className: "flex-grow overflow-auto border rounded p-4 bg-gray-50" },
+              chatMessages.map((message, index) => (
+                React.createElement(
+                  "div",
+                  { 
+                    key: index,
+                    className: `mb-4 p-3 rounded-lg ${
+                      message.role === 'user' 
+                        ? 'bg-blue-100 ml-12' 
+                        : 'bg-white mr-12 border'
+                    }`
+                  },
+                  React.createElement(
+                    "div",
+                    { className: "font-bold mb-1" },
+                    message.role === 'user' ? "あなた" : "AIアシスタント"
+                  ),
+                  React.createElement(
+                    "div",
+                    { className: "whitespace-pre-wrap" },
+                    message.content
+                  )
+                )
+              ))
+            ),
+            React.createElement(
+              "div",
+              { className: "flex mt-4" },
+              React.createElement(
+                "textarea",
+                {
+                  className: "flex-grow p-2 border rounded",
+                  placeholder: "質問を入力してください...",
+                  value: userInput,
+                  onChange: (e) => setUserInput(e.target.value),
+                  onKeyDown: (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  },
+                  rows: 2
+                }
+              ),
+              React.createElement(
+                "button",
+                {
+                  className: "ml-2 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-400",
+                  onClick: handleSendMessage,
+                  disabled: !userInput.trim() || !differences.length
+                },
+                "送信"
+              )
+            )
+          ),
         ),
     ),
   );
