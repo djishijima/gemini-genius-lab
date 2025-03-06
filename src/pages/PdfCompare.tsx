@@ -21,6 +21,7 @@ import { IframePdfViewer } from "@/components/pdf-compare/IframePdfViewer";
 import { IframeOverlayView } from "@/components/pdf-compare/IframeOverlayView";
 import { PdfVisualDiffView } from "@/components/pdf-compare/PdfVisualDiffView";
 import { SideBySidePdfView } from "@/components/pdf-compare/SideBySidePdfView";
+import { useToast } from "@/components/ui/use-toast";
 
 // PDF.jsワーカーの設定
 // グローバル変数を定義（TypeScriptのため）
@@ -131,6 +132,7 @@ const checkPdfJsSetup = () => {
 
 const PdfCompare: React.FC = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [pdf1, setPdf1] = useState<File | null>(null);
   const [pdf2, setPdf2] = useState<File | null>(null);
   const [text1, setText1] = useState<string>("");
@@ -672,6 +674,11 @@ const PdfCompare: React.FC = () => {
                     onLoadSuccess: (pdf) => onDocumentLoadSuccess(pdf, true),
                     onLoadError: (error) => {
                       console.error('PDF1 load error:', error);
+                      toast({
+                        title: "PDF読み込みエラー",
+                        description: `元のPDFの表示に問題が発生しました: ${error?.message || 'unknown error'}`,
+                        variant: "destructive",
+                      });
                     },
                     options: window.pdfjsOptions,
                     loading: React.createElement('div', { className: 'p-4 text-center' }, 'PDFを読み込み中...'),
@@ -687,6 +694,7 @@ const PdfCompare: React.FC = () => {
                     }),
                   ),
                 ),
+              },
               ),
               React.createElement(DiffDisplay, {
                 differences: differences,
@@ -721,6 +729,11 @@ const PdfCompare: React.FC = () => {
                     onLoadSuccess: (pdf) => onDocumentLoadSuccess(pdf, false),
                     onLoadError: (error) => {
                       console.error('PDF2 load error:', error);
+                      toast({
+                        title: "PDF読み込みエラー",
+                        description: `新しいPDFの表示に問題が発生しました: ${error?.message || 'unknown error'}`,
+                        variant: "destructive",
+                      });
                     },
                     options: window.pdfjsOptions,
                     loading: React.createElement('div', { className: 'p-4 text-center' }, 'PDFを読み込み中...'),
