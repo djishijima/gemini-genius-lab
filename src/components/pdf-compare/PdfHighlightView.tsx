@@ -23,6 +23,8 @@ interface PdfHighlightViewProps {
   numPages2: number;
   selectedDiffIndex: number | null;
   onDiffClick: (index: number) => void;
+  // エラーハンドリング用のコールバック関数を追加
+  onError?: (error: Error) => void;
 }
 
 export function PdfHighlightView({ 
@@ -32,7 +34,8 @@ export function PdfHighlightView({
   numPages1, 
   numPages2,
   selectedDiffIndex,
-  onDiffClick
+  onDiffClick,
+  onError
 }: PdfHighlightViewProps) {
   const [currentTab, setCurrentTab] = useState('original');
   
@@ -82,6 +85,9 @@ export function PdfHighlightView({
             options={window.pdfjsOptions}
             onLoadError={(error) => {
               console.error(`PDF load error: ${error.message || JSON.stringify(error)}`);
+              if (onError) {
+                onError(error);
+              }
             }}
             loading={<div className="p-4 text-center">PDFを読み込み中...</div>}
             error={<div className="p-4 text-center text-red-500">PDFの読み込みに失敗しました。ファイルを確認してください。</div>}

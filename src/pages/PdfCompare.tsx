@@ -38,12 +38,13 @@ const initPdfJs = () => {
   try {
     // react-pdfのワーカー設定
     // CDNからワーカーをロードして互換性問題を回避
-    const pdfjsCDN = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+    const pdfjsVersion = pdfjs.version || '3.4.120';
+    const pdfjsCDN = `https://unpkg.com/pdfjs-dist@${pdfjsVersion}/build/pdf.worker.min.js`;
     pdfjs.GlobalWorkerOptions.workerSrc = pdfjsCDN;
     
     // PDF表示オプションをグローバル変数として設定
     window.pdfjsOptions = {
-      cMapUrl: 'https://unpkg.com/pdfjs-dist@3.4.120/cmaps/',
+      cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjsVersion}/cmaps/`,
       cMapPacked: true,
     };
     
@@ -52,12 +53,26 @@ const initPdfJs = () => {
       pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsCDN;
     }
     
+    // 事前にCDNリソースへの接続を確認
     console.log('PDF.js設定完了:', {
-      'react-pdfバージョン': pdfjs.version,
-      'PDF.jsバージョン': pdfjsLib?.version,
+      'react-pdfバージョン': pdfjsVersion,
+      'PDF.jsバージョン': pdfjsLib?.version || 'unknown',
       'ワーカーURL': pdfjs.GlobalWorkerOptions.workerSrc,
       'オプション': window.pdfjsOptions
     });
+    
+    // CDNリソースの可用性をプリフェッチで確認
+    fetch(pdfjsCDN, { method: 'HEAD' })
+      .then(response => {
+        if (response.ok) {
+          console.log('PDF.js Worker is accessible');
+        } else {
+          console.warn('PDF.js Worker might not be accessible, status:', response.status);
+        }
+      })
+      .catch(err => {
+        console.warn('Failed to prefetch PDF.js Worker:', err);
+      });
     
     return true;
   } catch (error) {
@@ -128,8 +143,18 @@ const PdfCompare: React.FC = () => {
   const [progress, setProgress] = useState<number>(0);
   const [numPages1, setNumPages1] = useState<number>(0);
   const [numPages2, setNumPages2] = useState<number>(0);
-  // 表示モードをシンプルにし、初期表示をチャットモードに設定
+  // 表示モードを設定（PDF比較機能を強化）
   const [displayMode, setDisplayMode] = useState<'chat' | 'text' | 'side-by-side' | 'highlight' | 'visual-diff' | 'overlay'>('chat');
+  
+  // PDF表示モードのラベルとアイコンをわかりやすく定義
+  const displayModes = [
+    { id: 'chat', label: 'AIチャット分析', icon: FileText },
+    { id: 'text', label: 'テキスト比較', icon: FileText },
+    { id: 'highlight', label: 'PDF差分ハイライト', icon: FileText, tooltip: '元のPDFに差分をハイライト表示' },
+    { id: 'overlay', label: 'オーバーレイ表示', icon: Layers, tooltip: '2つのPDFを重ねて表示' },
+    { id: 'side-by-side', label: 'ページ比較', icon: FileText },
+    { id: 'visual-diff', label: '視覚的差分', icon: FileText },
+  ];
   // チャットメッセージを管理する状態
   const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'assistant', content: string }>>([]);
   const [userInput, setUserInput] = useState('');
@@ -438,17 +463,33 @@ const PdfCompare: React.FC = () => {
     }
   };
   
-  // PDFファイルをURLに変換する関数
+  // PDFファイルをURLに変換する関数 - エラーハンドリングを強化
   const getPdfUrl = (file: File | null) => {
     console.log("getPdfUrl called with file:", file ? file.name : "null");
     if (!file) return null;
     try {
+      // PDFファイルのMIMEタイプチェック
+      if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+        console.warn('Warning: File may not be a valid PDF:', file.type, file.name);
+      }
+      
       const url = URL.createObjectURL(file);
       console.log('Created Blob URL for PDF:', url);
       setCreatedUrls(prev => [...prev, url]);
+      
+      // URLが正しく生成されたか確認
+      if (!url.startsWith('blob:')) {
+        console.warn('Generated URL does not appear to be a blob URL:', url);
+      }
+      
       return url;
     } catch (error) {
       console.error('Failed to create Blob URL:', error);
+      toast({
+        title: "PDFファイルエラー",
+        description: `PDFファイルの処理中にエラーが発生しました: ${error instanceof Error ? error.message : '不明なエラー'}`,
+        variant: "destructive",
+      });
       return null;
     }
   };
@@ -575,73 +616,34 @@ const PdfCompare: React.FC = () => {
               React.createElement(
                 "div",
                 { className: "flex items-center space-x-2 border rounded-md p-1" },
-                // シンプルな表示モード切り替えボタン
-                React.createElement(
-                  Button,
-                  {
-                    variant: displayMode === 'chat' ? "default" : "ghost",
-                    size: "sm",
-                    onClick: () => setDisplayMode("chat"),
-                    className: "flex items-center",
-                  },
-                  React.createElement(FileText, { className: "mr-1 h-4 w-4" }),
-                  "AIチャット分析",
-                ),
-                React.createElement(
-                  Button,
-                  {
-                    variant: displayMode === 'text' ? "default" : "ghost",
-                    size: "sm",
-                    onClick: () => setDisplayMode("text"),
-                    className: "flex items-center",
-                  },
-                  React.createElement(FileText, { className: "mr-1 h-4 w-4" }),
-                  "テキスト比較",
-                ),
-                React.createElement(
-                  Button,
-                  {
-                    variant: displayMode === 'highlight' ? "default" : "ghost",
-                    size: "sm",
-                    onClick: () => setDisplayMode("highlight"),
-                    className: "flex items-center",
-                  },
-                  React.createElement(FileText, { className: "mr-1 h-4 w-4" }),
-                  "PDF差分ハイライト",
-                ),
-                React.createElement(
-                  Button,
-                  {
-                    variant: displayMode === 'side-by-side' ? "default" : "ghost",
-                    size: "sm",
-                    onClick: () => setDisplayMode("side-by-side"),
-                    className: "flex items-center",
-                  },
-                  React.createElement(FileText, { className: "mr-1 h-4 w-4" }),
-                  "ページ比較",
-                ),
-                React.createElement(
-                  Button,
-                  {
-                    variant: displayMode === 'visual-diff' ? "default" : "ghost",
-                    size: "sm",
-                    onClick: () => setDisplayMode("visual-diff"),
-                    className: "flex items-center",
-                  },
-                  React.createElement(FileText, { className: "mr-1 h-4 w-4" }),
-                  "視覚的差分",
-                ),
-                React.createElement(
-                  Button,
-                  {
-                    variant: displayMode === 'overlay' ? "default" : "ghost",
-                    size: "sm",
-                    onClick: () => setDisplayMode("overlay"),
-                    className: "flex items-center",
-                  },
-                  React.createElement(FileText, { className: "mr-1 h-4 w-4" }),
-                  "オーバーレイ",
-                ),
+                // 表示モード切り替えボタン（改良版）
+                ...displayModes.map(mode => {
+                  return React.createElement(
+                    Button,
+                    {
+                      key: mode.id,
+                      variant: displayMode === mode.id ? "default" : "ghost",
+                      size: "sm",
+                      onClick: () => setDisplayMode(mode.id as any),
+                      className: "flex items-center",
+                      title: mode.tooltip,
+                      // PDF関連の機能を強調表示
+                      style: (mode.id === 'highlight' || mode.id === 'overlay') ? {
+                        position: 'relative',
+                        boxShadow: displayMode === mode.id ? 'none' : '0 0 0 1px #e9ecef',
+                        background: displayMode === mode.id ? undefined : 'rgba(237, 242, 247, 0.2)',
+                      } : undefined
+                    },
+                    React.createElement(mode.icon, { className: "mr-1 h-4 w-4" }),
+                    mode.label,
+                    // PDFハイライトとオーバーレイ機能を強調表示
+                    (mode.id === 'highlight' || mode.id === 'overlay') && 
+                      React.createElement('span', {
+                        className: 'absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center',
+                        style: { fontSize: '0.6rem' },
+                      })
+                  );
+                }),
               ),
             ),
           ),
@@ -747,7 +749,7 @@ const PdfCompare: React.FC = () => {
             ),
           ),
           
-          // ハイライト表示モード
+          // ハイライト表示モード - 強化バージョン
           displayMode === 'highlight' && React.createElement(PdfHighlightView, {
             pdf1: pdf1,
             pdf2: pdf2,
@@ -755,15 +757,35 @@ const PdfCompare: React.FC = () => {
             numPages1: numPages1,
             numPages2: numPages2,
             selectedDiffIndex: selectedDiffIndex,
-            onDiffClick: jumpToDiff
+            onDiffClick: jumpToDiff,
+            // エラーハンドリングを追加
+            onError: (error) => {
+              console.error('PDF Highlight View error:', error);
+              toast({
+                title: "PDF読み込みエラー",
+                description: `PDFの表示に問題が発生しました: ${error?.message || 'unknown error'}`,
+                variant: "destructive",
+              });
+            }
           }),
           
-          // オーバーレイ表示モード
+          // オーバーレイ表示モード - 強化バージョン
           displayMode === 'overlay' && React.createElement(PdfOverlayView, {
             pdf1: pdf1,
             pdf2: pdf2,
             numPages1: numPages1,
-            numPages2: numPages2
+            numPages2: numPages2,
+            // オーバーレイビューに追加のプロパティを渡す
+            initialOpacity: 0.5,
+            initialBlendMode: 'difference',
+            onError: (error) => {
+              console.error('PDF Overlay View error:', error);
+              toast({
+                title: "PDF読み込みエラー",
+                description: `PDFの表示に問題が発生しました: ${error?.message || 'unknown error'}`,
+                variant: "destructive",
+              });
+            }
           }),
           
           // iframe表示モード

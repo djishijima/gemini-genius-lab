@@ -11,13 +11,26 @@ interface PdfOverlayViewProps {
   pdf2: File | null;
   numPages1: number;
   numPages2: number;
+  // 初期設定用プロパティ
+  initialOpacity?: number;
+  initialBlendMode?: string;
+  // エラーハンドリング用のコールバック
+  onError?: (error: Error) => void;
 }
 
-export function PdfOverlayView({ pdf1, pdf2, numPages1, numPages2 }: PdfOverlayViewProps) {
-  const [opacity, setOpacity] = useState(0.5);
+export function PdfOverlayView({ 
+  pdf1, 
+  pdf2, 
+  numPages1, 
+  numPages2, 
+  initialOpacity = 0.5,
+  initialBlendMode = 'normal',
+  onError
+}: PdfOverlayViewProps) {
+  const [opacity, setOpacity] = useState(initialOpacity);
   const [scale, setScale] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
-  const [blendMode, setBlendMode] = useState<string>('normal');
+  const [blendMode, setBlendMode] = useState<string>(initialBlendMode);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const maxPages = Math.max(numPages1 || 1, numPages2 || 1);
@@ -150,6 +163,9 @@ export function PdfOverlayView({ pdf1, pdf2, numPages1, numPages2 }: PdfOverlayV
               file={pdf1Url}
               onLoadError={(error) => {
                 console.error('PDF1 load error:', error);
+                if (onError) {
+                  onError(error);
+                }
               }}
               loading={<div className="p-4 text-center">PDFを読み込み中...</div>}
               error={<div className="p-4 text-center text-red-500">PDFの読み込みに失敗しました。ファイルを確認してください。</div>}
@@ -175,6 +191,9 @@ export function PdfOverlayView({ pdf1, pdf2, numPages1, numPages2 }: PdfOverlayV
               file={pdf2Url}
               onLoadError={(error) => {
                 console.error('PDF2 load error:', error);
+                if (onError) {
+                  onError(error);
+                }
               }}
               loading={<div className="p-4 text-center">PDFを読み込み中...</div>}
               error={<div className="p-4 text-center text-red-500">PDFの読み込みに失敗しました。ファイルを確認してください。</div>}
