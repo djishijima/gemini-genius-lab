@@ -23,42 +23,51 @@ import { PdfVisualDiffView } from "@/components/pdf-compare/PdfVisualDiffView";
 import { SideBySidePdfView } from "@/components/pdf-compare/SideBySidePdfView";
 
 // PDF.jsワーカーの設定
-// react-pdfが内部で使用するpdfjsの設定
-try {
-  // react-pdf用の設定
-  // バージョン不一致の問題を解決するために、ネットワークからロードするCDNを使用
-  const pdfjsCDN = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
-  pdfjs.GlobalWorkerOptions.workerSrc = pdfjsCDN;
-  
-  // CMapリソースの設定を追加
-  // グローバル変数として定義して、全てのDocumentコンポーネントからアクセスできるようにする
-  window.pdfjsOptions = {
-    cMapUrl: '/cmaps/',
-    cMapPacked: true,
-  };
-  
-  // react-pdfに対しても適用
-  pdfjs.GlobalWorkerOptions.workerSrc = pdfjsCDN;
-  
-  // バックアップとして、ローカルのワーカーも設定
-  if (pdfjsLib) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+// グローバル変数を定義（TypeScriptのため）
+declare global {
+  interface Window {
+    pdfjsOptions: {
+      cMapUrl: string;
+      cMapPacked: boolean;
+    };
   }
-  
-  console.log('PDF.js worker settings updated to use CDN version');
-  console.log(`react-pdf version's PDF.js: ${pdfjs.version}`);
-  if (pdfjsLib) {
-    console.log(`Direct PDF.js version: ${pdfjsLib.version}`);
-  }
-  
-  // コンソールに設定情報を出力
-  console.log('PDF.js setup with options:', window.pdfjsOptions);
-  
-  // PDF.jsが実際に利用可能かチェック
-  console.log('PDF.js setup completed');
-} catch (error) {
-  console.error('Error initializing PDF.js worker:', error);
 }
+
+// PDF.jsの設定を安全に初期化する
+const initPdfJs = () => {
+  try {
+    // react-pdfのワーカー設定
+    // CDNからワーカーをロードして互換性問題を回避
+    const pdfjsCDN = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+    pdfjs.GlobalWorkerOptions.workerSrc = pdfjsCDN;
+    
+    // PDF表示オプションをグローバル変数として設定
+    window.pdfjsOptions = {
+      cMapUrl: 'https://unpkg.com/pdfjs-dist@3.4.120/cmaps/',
+      cMapPacked: true,
+    };
+    
+    // pdfjs-distライブラリに対してもグローバル設定を適用
+    if (pdfjsLib) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsCDN;
+    }
+    
+    console.log('PDF.js設定完了:', {
+      'react-pdfバージョン': pdfjs.version,
+      'PDF.jsバージョン': pdfjsLib?.version,
+      'ワーカーURL': pdfjs.GlobalWorkerOptions.workerSrc,
+      'オプション': window.pdfjsOptions
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('PDF.js初期化エラー:', error);
+    return false;
+  }
+};
+
+// 初期化を実行
+const pdfJsInitialized = initPdfJs();
 
 interface DiffResult {
   value: string;
@@ -120,7 +129,7 @@ const PdfCompare: React.FC = () => {
   const [numPages1, setNumPages1] = useState<number>(0);
   const [numPages2, setNumPages2] = useState<number>(0);
   // 表示モードをシンプルにし、初期表示をチャットモードに設定
-  const [displayMode, setDisplayMode] = useState<'chat' | 'text' | 'side-by-side' | 'highlight'>('chat');
+  const [displayMode, setDisplayMode] = useState<'chat' | 'text' | 'side-by-side' | 'highlight' | 'visual-diff' | 'overlay'>('chat');
   // チャットメッセージを管理する状態
   const [chatMessages, setChatMessages] = useState<Array<{ role: 'user' | 'assistant', content: string }>>([]);
   const [userInput, setUserInput] = useState('');
@@ -610,6 +619,28 @@ const PdfCompare: React.FC = () => {
                   },
                   React.createElement(FileText, { className: "mr-1 h-4 w-4" }),
                   "ページ比較",
+                ),
+                React.createElement(
+                  Button,
+                  {
+                    variant: displayMode === 'visual-diff' ? "default" : "ghost",
+                    size: "sm",
+                    onClick: () => setDisplayMode("visual-diff"),
+                    className: "flex items-center",
+                  },
+                  React.createElement(FileText, { className: "mr-1 h-4 w-4" }),
+                  "視覚的差分",
+                ),
+                React.createElement(
+                  Button,
+                  {
+                    variant: displayMode === 'overlay' ? "default" : "ghost",
+                    size: "sm",
+                    onClick: () => setDisplayMode("overlay"),
+                    className: "flex items-center",
+                  },
+                  React.createElement(FileText, { className: "mr-1 h-4 w-4" }),
+                  "オーバーレイ",
                 ),
               ),
             ),

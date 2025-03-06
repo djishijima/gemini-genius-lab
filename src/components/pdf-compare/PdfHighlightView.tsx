@@ -97,28 +97,59 @@ export function PdfHighlightView({
                 />
                 <div className="highlight-layer absolute top-0 left-0 w-full h-full pointer-events-none">
                   {/* 差分ハイライト表示コンテンツ */}
-                  {relevantDiffs.map((diff, index) => (
-                    <div 
-                      key={`highlight-${index}`}
-                      className={`absolute p-1 rounded-sm ${isOriginal ? 'bg-red-200 bg-opacity-50' : 'bg-green-200 bg-opacity-50'} border ${isOriginal ? 'border-red-400' : 'border-green-400'} ${selectedDiffIndex === index ? 'ring-2 ring-blue-500' : ''}`}
-                      style={{
-                        // ダミー位置を設定（実際にはより高度な計算が必要）
-                        top: `${Math.random() * 90}%`,
-                        left: `${Math.random() * 80}%`,
-                        width: `${Math.min(150, Math.max(50, diff.value.length / 5))}px`,
-                        height: '20px',
-                        opacity: selectedDiffIndex === index ? 1 : 0.7,
-                        transform: selectedDiffIndex === index ? 'scale(1.05)' : 'scale(1)',
-                        transition: 'all 0.2s ease',
-                        cursor: 'pointer',
-                        pointerEvents: 'auto' // クリック可能にする
-                      }}
-                      onClick={() => onDiffClick(index)}
-                      title={diff.value.substring(0, 50) + (diff.value.length > 50 ? '...' : '')}
-                    >
-                      <span className="text-xs">{diff.value.substring(0, 30)}...</span>
-                    </div>
-                  ))}
+                  {/* 所属するページにのみハイライトを表示 */}
+                  {relevantDiffs
+                    .filter(diff => {
+                      const pageLines = isOriginal ? diff.lines1 : diff.lines2;
+                      // ページ番号が計算可能な場合のみフィルタリング
+                      if (!pageLines || pageLines.length === 0) return true; // 安全策：ページ情報がない場合は表示
+                      
+                      // 単純なページ判定ロジック - 先頭の行番号からページを推定
+                      // 1ページあたり約50行と仮定
+                      const estimatedPage = Math.floor((pageLines[0] - 1) / 50) + 1;
+                      return estimatedPage === i + 1; // 現在のページに関連する差分のみ表示
+                    })
+                    .map((diff, index) => {
+                      // 表示位置の計算（ページ内で設定）
+                      const pageLines = isOriginal ? diff.lines1 : diff.lines2;
+                      let positionY = 20; // デフォルト値
+                      
+                      if (pageLines && pageLines.length > 0) {
+                        // 行番号に基づいたページ内の相対位置計算
+                        const lineInPage = (pageLines[0] - 1) % 50;
+                        positionY = (lineInPage / 50) * 100; // ページ内での相対位置（50行を100%として）
+                      }
+                      
+                      // 差分の長さに応じた幅を計算
+                      const diffWidth = Math.min(80, Math.max(20, (diff.value.length / 50) * 30));
+                      
+                      return (
+                        <div 
+                          key={`highlight-${index}`}
+                          className={`absolute p-1 rounded-sm ${isOriginal ? 'bg-red-200 bg-opacity-50' : 'bg-green-200 bg-opacity-50'} border ${isOriginal ? 'border-red-400' : 'border-green-400'} ${selectedDiffIndex === index ? 'ring-2 ring-blue-500' : ''}`}
+                          style={{
+                            top: `${positionY}%`,
+                            left: `${10 + (index % 3) * 5}%`, // 左右に分散させる
+                            width: `${diffWidth}%`,
+                            minWidth: '100px',
+                            minHeight: '24px',
+                            maxWidth: '80%',
+                            opacity: selectedDiffIndex === index ? 1 : 0.7,
+                            transform: selectedDiffIndex === index ? 'scale(1.05)' : 'scale(1)',
+                            transition: 'all 0.2s ease',
+                            cursor: 'pointer',
+                            pointerEvents: 'auto', // クリック可能にする
+                            zIndex: selectedDiffIndex === index ? 10 : 1
+                          }}
+                          onClick={() => onDiffClick(index)}
+                          title={diff.value.substring(0, 50) + (diff.value.length > 50 ? '...' : '')}
+                        >
+                          <span className="text-xs line-clamp-2 overflow-hidden">
+                            {diff.value.substring(0, 100)}...
+                          </span>
+                        </div>
+                      );
+                   })}
                 </div>
               </div>
             ))}
@@ -132,8 +163,8 @@ export function PdfHighlightView({
     <Card className="pdf-highlight-view">
       <Tabs value={currentTab} onValueChange={setCurrentTab}>
         <TabsList className="w-full">
-          <TabsTrigger value="original" className="flex-1">元のPDF</TabsTrigger>
-          <TabsTrigger value="new" className="flex-1">新しいPDF</TabsTrigger>
+          <TabsTrigger value="original" className="flex-1">元のPDF（削除差分ハイライト）</TabsTrigger>
+          <TabsTrigger value="new" className="flex-1">新しいPDF（追加差分ハイライト）</TabsTrigger>
         </TabsList>
         <TabsContent value="original">
           <PdfWithHighlights 

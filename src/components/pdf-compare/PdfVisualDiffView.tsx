@@ -22,6 +22,8 @@ export function PdfVisualDiffView({ pdf1, pdf2, numPages1, numPages2, difference
   const [loading, setLoading] = useState(false);
   const [highlightMode, setHighlightMode] = useState<'additions' | 'removals' | 'both'>('both');
   const [showOriginalInOverlay, setShowOriginalInOverlay] = useState(false);
+  const [opacity, setOpacity] = useState(0.5);
+  const [blendMode, setBlendMode] = useState<'normal' | 'difference' | 'exclusion' | 'multiply' | 'screen'>('difference');
   const canvasRef1 = useRef<HTMLCanvasElement>(null);
   const canvasRef2 = useRef<HTMLCanvasElement>(null);
   const diffCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -125,41 +127,41 @@ export function PdfVisualDiffView({ pdf1, pdf2, numPages1, numPages2, difference
         const diff = Math.abs(r1 - r2) + Math.abs(g1 - g2) + Math.abs(b1 - b2);
         const threshold = 30; // 閾値（調整可能）
         
-        if (showOriginalInOverlay) {
-          // オリジナルの上に差分をオーバーレイするモード
-          diffData.data[i] = r1;
-          diffData.data[i + 1] = g1;
-          diffData.data[i + 2] = b1;
-          diffData.data[i + 3] = a1;
-          
-          if (diff > threshold) {
-            if ((highlightMode === 'additions' || highlightMode === 'both') && hasAdditions) {
-              // 追加された内容（オリジナルにはなくて新しいPDFにある）は緑色でハイライト
-              if (a1 < a2) {
-                diffData.data[i] = 0;
-                diffData.data[i + 1] = 255;
-                diffData.data[i + 2] = 0;
-                diffData.data[i + 3] = 180;
-              }
-            }
-            
-            if ((highlightMode === 'removals' || highlightMode === 'both') && hasRemovals) {
-              // 削除された内容（オリジナルにあって新しいPDFにない）は赤色でハイライト
-              if (a1 > a2) {
-                diffData.data[i] = 255;
-                diffData.data[i + 1] = 0;
-                diffData.data[i + 2] = 0;
-                diffData.data[i + 3] = 180;
-              }
-            }
+        // ブレンドモードに応じた処理
+        if (blendMode === 'normal') {
+          // 通常モード - 片方のPDFを不透明度付きで表示
+          if (showOriginalInOverlay) {
+            // オリジナルPDFをベースに表示
+            diffData.data[i] = r1;
+            diffData.data[i + 1] = g1;
+            diffData.data[i + 2] = b1;
+            // 新しいPDFを透明度付きでブレンド
+            const alpha = opacity;
+            diffData.data[i] = Math.round(r1 * (1 - alpha) + r2 * alpha);
+            diffData.data[i + 1] = Math.round(g1 * (1 - alpha) + g2 * alpha);
+            diffData.data[i + 2] = Math.round(b1 * (1 - alpha) + b2 * alpha);
+            diffData.data[i + 3] = Math.max(a1, a2 * opacity);
+          } else {
+            // 新しいPDFをベースに表示
+            diffData.data[i] = r2;
+            diffData.data[i + 1] = g2;
+            diffData.data[i + 2] = b2;
+            // オリジナルPDFを透明度付きでブレンド
+            const alpha = opacity;
+            diffData.data[i] = Math.round(r2 * (1 - alpha) + r1 * alpha);
+            diffData.data[i + 1] = Math.round(g2 * (1 - alpha) + g1 * alpha);
+            diffData.data[i + 2] = Math.round(b2 * (1 - alpha) + b1 * alpha);
+            diffData.data[i + 3] = Math.max(a2, a1 * opacity);
           }
-        } else {
-          // 差分のみを表示するモード
-          diffData.data[i] = 255;
-          diffData.data[i + 1] = 255;
-          diffData.data[i + 2] = 255;
-          diffData.data[i + 3] = 0; // 透明に初期化
+        } 
+        else if (blendMode === 'difference') {
+          // 差分モード - 色の差分を強調表示
+          diffData.data[i] = Math.abs(r1 - r2);
+          diffData.data[i + 1] = Math.abs(g1 - g2);
+          diffData.data[i + 2] = Math.abs(b1 - b2);
+          diffData.data[i + 3] = Math.max(a1, a2) * opacity;
           
+          // 差分がある場合にハイライト
           if (diff > threshold) {
             if ((highlightMode === 'additions' || highlightMode === 'both') && hasAdditions) {
               if (a1 < a2) {
@@ -167,7 +169,7 @@ export function PdfVisualDiffView({ pdf1, pdf2, numPages1, numPages2, difference
                 diffData.data[i] = 0;
                 diffData.data[i + 1] = 255;
                 diffData.data[i + 2] = 0;
-                diffData.data[i + 3] = 255;
+                diffData.data[i + 3] = 200;
               }
             }
             
@@ -177,7 +179,74 @@ export function PdfVisualDiffView({ pdf1, pdf2, numPages1, numPages2, difference
                 diffData.data[i] = 255;
                 diffData.data[i + 1] = 0;
                 diffData.data[i + 2] = 0;
-                diffData.data[i + 3] = 255;
+                diffData.data[i + 3] = 200;
+              }
+            }
+          }
+        }
+        else if (blendMode === 'exclusion') {
+          // 除外モード - より柔らかい差分表示
+          diffData.data[i] = r1 + r2 - (2 * r1 * r2) / 255;
+          diffData.data[i + 1] = g1 + g2 - (2 * g1 * g2) / 255;
+          diffData.data[i + 2] = b1 + b2 - (2 * b1 * b2) / 255;
+          diffData.data[i + 3] = Math.max(a1, a2) * opacity;
+        }
+        else {
+          // デフォルトの差分表示モード
+          if (showOriginalInOverlay) {
+            // オリジナルの上に差分をオーバーレイするモード
+            diffData.data[i] = r1;
+            diffData.data[i + 1] = g1;
+            diffData.data[i + 2] = b1;
+            diffData.data[i + 3] = a1;
+            
+            if (diff > threshold) {
+              if ((highlightMode === 'additions' || highlightMode === 'both') && hasAdditions) {
+                // 追加された内容（オリジナルにはなくて新しいPDFにある）は緑色でハイライト
+                if (a1 < a2) {
+                  diffData.data[i] = 0;
+                  diffData.data[i + 1] = 255;
+                  diffData.data[i + 2] = 0;
+                  diffData.data[i + 3] = 180 * opacity;
+                }
+              }
+              
+              if ((highlightMode === 'removals' || highlightMode === 'both') && hasRemovals) {
+                // 削除された内容（オリジナルにあって新しいPDFにない）は赤色でハイライト
+                if (a1 > a2) {
+                  diffData.data[i] = 255;
+                  diffData.data[i + 1] = 0;
+                  diffData.data[i + 2] = 0;
+                  diffData.data[i + 3] = 180 * opacity;
+                }
+              }
+            }
+          } else {
+            // 差分のみを表示するモード
+            diffData.data[i] = 255;
+            diffData.data[i + 1] = 255;
+            diffData.data[i + 2] = 255;
+            diffData.data[i + 3] = 0; // 透明に初期化
+            
+            if (diff > threshold) {
+              if ((highlightMode === 'additions' || highlightMode === 'both') && hasAdditions) {
+                if (a1 < a2) {
+                  // 追加（緑）
+                  diffData.data[i] = 0;
+                  diffData.data[i + 1] = 255;
+                  diffData.data[i + 2] = 0;
+                  diffData.data[i + 3] = 255 * opacity;
+                }
+              }
+              
+              if ((highlightMode === 'removals' || highlightMode === 'both') && hasRemovals) {
+                if (a1 > a2) {
+                  // 削除（赤）
+                  diffData.data[i] = 255;
+                  diffData.data[i + 1] = 0;
+                  diffData.data[i + 2] = 0;
+                  diffData.data[i + 3] = 255 * opacity;
+                }
               }
             }
           }
