@@ -1,14 +1,13 @@
 
-import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { DisplayMode } from "@/types/pdf-compare";
+import type { DisplayMode } from "@/types/pdf-compare";
 
 interface PdfCompareControlsProps {
   loading: boolean;
   progress: number;
-  displayMode: string;
-  setDisplayMode: (mode: any) => void;
+  displayMode: 'overlay' | 'side-by-side';
+  setDisplayMode: (mode: 'overlay' | 'side-by-side') => void;
   comparePdfs: () => void;
   showSimilarity: boolean;
   setShowSimilarity: (show: boolean) => void;
@@ -64,20 +63,15 @@ export function PdfCompareControls({
                   onClick={() => setDisplayMode(mode.id)}
                   className="flex items-center"
                   title={mode.tooltip}
-                  style={(mode.id === 'highlight' || mode.id === 'overlay') ? {
+                  style={{
                     position: 'relative',
                     boxShadow: displayMode === mode.id ? 'none' : '0 0 0 1px #e9ecef',
                     background: displayMode === mode.id ? undefined : 'rgba(237, 242, 247, 0.2)',
-                  } : undefined}
+                  }}
                 >
                   <mode.icon className="mr-1 h-4 w-4" />
                   {mode.label}
-                  {(mode.id === 'highlight' || mode.id === 'overlay') && 
-                    <span
-                      className='absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center'
-                      style={{ fontSize: '0.6rem' }}
-                    />
-                  }
+                  {/* 新機能マーカーを削除 */}
                 </Button>
               );
             })}

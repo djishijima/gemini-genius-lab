@@ -33,10 +33,12 @@ export interface DiffHighlight {
   isLeft: boolean;
 }
 
+import type { LucideIcon } from 'lucide-react';
+
 export interface DisplayMode {
-  id: 'chat' | 'text' | 'side-by-side' | 'highlight' | 'visual-diff' | 'overlay';
+  id: 'overlay' | 'side-by-side';
   label: string;
-  icon: React.FC<any>;
+  icon: LucideIcon;
   tooltip?: string;
 }
 
