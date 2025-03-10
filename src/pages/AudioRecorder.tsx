@@ -40,11 +40,16 @@ const AudioRecorder: FC = () => {
     stopRecording,
     isRecording: recorderIsRecording,
     recordingTime,
+  }: {
+    startRecording: () => Promise<void>;
+    stopRecording: () => void;
+    isRecording: boolean;
+    recordingTime: number;
   } = useAudioRecorder();
 
   // 環境変数からAPIキーを取得
-  const API_KEY = (import.meta as any).env?.VITE_GOOGLE_API_KEY || "YOUR_API_KEY_HERE";
-
+  const apiKey = import.meta.env?.VITE_GOOGLE_API_KEY || "YOUR_API_KEY_HERE";
+  
   const handleTranscriptionProcess = useCallback(
     async (blob: Blob) => {
       if (!blob || blob.size === 0) {
@@ -59,7 +64,7 @@ const AudioRecorder: FC = () => {
       // 音声データの詳細ログ
       console.log("==== 文字起こし処理開始 ====");
       console.log(`音声データ: type=${blob.type}, size=${blob.size} bytes`);
-      console.log(`APIキー: ${API_KEY ? (API_KEY.substring(0, 5) + '...') : '未設定'}`);
+      console.log(`APIキー: ${apiKey ? `${apiKey.substring(0, 5)}...` : '未設定'}`);
       
       setIsProcessing(true);
       setTranscription(null); // クリア
@@ -69,7 +74,7 @@ const AudioRecorder: FC = () => {
         console.log("文字起こし関数呼び出し:");
         
         const result = await handleTranscription(blob, {
-          apiKey: API_KEY,
+          apiKey,
           onProgress: (progress: number) => {
             console.log("文字起こし進捗:", progress);
             setTranscriptionProgress(progress);
@@ -101,7 +106,7 @@ const AudioRecorder: FC = () => {
         setIsTranscribing(false);
       }
     },
-    [toast, API_KEY],
+    [toast, apiKey],
   );
 
   const handleRecording = useCallback(async () => {
@@ -184,7 +189,7 @@ const AudioRecorder: FC = () => {
       console.log("Actual MIME type being used:", mediaRecorder.mimeType);
       
       // マイク入力レベルを確認するためのメーター
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const audioContext = new (window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)();
       const analyser = audioContext.createAnalyser();
       const microphone = audioContext.createMediaStreamSource(audioStream);
       microphone.connect(analyser);

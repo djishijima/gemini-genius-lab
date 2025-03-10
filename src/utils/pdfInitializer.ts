@@ -3,6 +3,9 @@ import * as pdfjsLib from "pdfjs-dist";
 import { pdfjs } from 'react-pdf';
 import type { TextItem } from "pdfjs-dist/types/src/display/api";
 
+// PDFjs APIとWorkerのバージョンを統一する定数
+const PDF_VERSION = '3.11.174';
+
 // pdfjsLibとpdfjs（react-pdf）のバージョン確認
 console.log('pdfjs-dist version:', pdfjsLib.version);
 console.log('react-pdf pdfjs version:', pdfjs.version);
@@ -20,10 +23,10 @@ declare global {
 // PDF.jsの設定を安全に初期化する
 export const initPdfJs = (): boolean => {
   try {
-    console.log('PDF.js初期化を開始します - v3.11.174');
+    console.log(`PDF.js初期化を開始します - v${PDF_VERSION}`);
     
     // 全ての環境で動作するようCDNからワーカーを読み込む
-    const cdnBase = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174';
+    const cdnBase = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDF_VERSION}`;
     const workerSrc = `${cdnBase}/build/pdf.worker.min.js`;
     const fallbackWorkerSrc = '/pdf.worker.min.js'; // フォールバックワーカーのパス
     
@@ -92,9 +95,12 @@ export const extractFileContent = async (file: File): Promise<string> => {
         // PDF読み込みオプションを定義（window.pdfjsOptionsに依存しない）
         const pdfOptions = {
           data: typedArray,
-          cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
+          cMapUrl: `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDF_VERSION}/cmaps/`,
           cMapPacked: true,
           useSystemFonts: true, // システムフォントを使用して改善
+          // APIとWorkerのバージョン整合性を確保
+          apiVersion: PDF_VERSION,
+          workerVersion: PDF_VERSION
         };
         
         // ループを使用してPDF読み込みを試行
