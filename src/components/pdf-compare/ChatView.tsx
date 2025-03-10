@@ -20,7 +20,7 @@ export function ChatView({
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(initialMessages.length > 0 
     ? initialMessages 
     : [{ 
-        role: 'assistant', 
+        role: 'assistant' as const, 
         content: `2つのPDFを比較しました。類似度は${Math.round(similarityScore * 100)}%です。差分は${differences.filter(d => d.added || d.removed).length}箇所あります。詳細について質問してください。` 
       }]
   );
@@ -31,9 +31,9 @@ export function ChatView({
     if (!userInput.trim() || !differences.length) return;
     
     // ユーザーメッセージを追加
-    const newMessages = [
+    const newMessages: ChatMessage[] = [
       ...chatMessages,
-      { role: 'user', content: userInput }
+      { role: 'user' as const, content: userInput }
     ];
     setChatMessages(newMessages);
     setUserInput('');
@@ -41,7 +41,7 @@ export function ChatView({
     // AI応答を生成
     setTimeout(() => {
       const aiResponse = generateAiResponse(userInput, differences, similarityScore, pdf1Text, pdf2Text);
-      setChatMessages(prevMessages => [...prevMessages, { role: 'assistant', content: aiResponse }]);
+      setChatMessages(prevMessages => [...prevMessages, { role: 'assistant' as const, content: aiResponse }]);
     }, 500);
   }, [userInput, chatMessages, differences, similarityScore, pdf1Text, pdf2Text]);
 

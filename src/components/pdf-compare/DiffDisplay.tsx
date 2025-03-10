@@ -1,7 +1,8 @@
+
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Difference } from "@/pages/PdfCompare";
+import { Difference } from "@/types/pdf-compare";
 import { Minus, Plus } from "lucide-react";
 
 interface DiffDisplayProps {

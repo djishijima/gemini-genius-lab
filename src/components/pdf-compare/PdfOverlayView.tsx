@@ -6,6 +6,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 
+type BlendMode = 'normal' | 'multiply' | 'screen' | 'overlay' | 'darken' | 'lighten' | 
+  'color-dodge' | 'color-burn' | 'hard-light' | 'soft-light' | 'difference' | 'exclusion' | 
+  'hue' | 'saturation' | 'color' | 'luminosity';
+
 interface PdfOverlayViewProps {
   pdf1: File | null;
   pdf2: File | null;
@@ -13,7 +17,7 @@ interface PdfOverlayViewProps {
   numPages2: number;
   // 初期設定用プロパティ
   initialOpacity?: number;
-  initialBlendMode?: string;
+  initialBlendMode?: BlendMode;
   // エラーハンドリング用のコールバック
   onError?: (error: Error) => void;
 }
@@ -30,7 +34,7 @@ export function PdfOverlayView({
   const [opacity, setOpacity] = useState(initialOpacity);
   const [scale, setScale] = useState(1);
   const [currentPage, setCurrentPage] = useState(1);
-  const [blendMode, setBlendMode] = useState<string>(initialBlendMode);
+  const [blendMode, setBlendMode] = useState<BlendMode>(initialBlendMode as BlendMode);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const maxPages = Math.max(numPages1 || 1, numPages2 || 1);
@@ -99,7 +103,7 @@ export function PdfOverlayView({
             <Label htmlFor="scale-control">拡大縮小: {scale.toFixed(2)}倍</Label>
             <Select
               value={blendMode}
-              onValueChange={(value: string) => setBlendMode(value)}
+              onValueChange={(value: string) => setBlendMode(value as BlendMode)}
             >
               <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder="ブレンドモード" />
