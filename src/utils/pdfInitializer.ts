@@ -16,11 +16,11 @@ declare global {
 // PDF.jsの設定を安全に初期化する
 export const initPdfJs = (): boolean => {
   try {
+    // PDFJSのバージョンを取得（APIとWorkerのバージョンを一致させるために重要）
+    const pdfjsVersion = '3.11.174';  // 現在のWorkerバージョンに合わせる
+    
     // react-pdfのワーカー設定
-    // CDNからワーカーをロードして互換性問題を回避
-    const pdfjsVersion = pdfjs.version || '3.4.120';
-    const pdfjsCDN = `https://unpkg.com/pdfjs-dist@${pdfjsVersion}/build/pdf.worker.min.js`;
-    pdfjs.GlobalWorkerOptions.workerSrc = pdfjsCDN;
+    pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsVersion}/build/pdf.worker.min.js`;
     
     // PDF表示オプションをグローバル変数として設定
     window.pdfjsOptions = {
@@ -30,29 +30,14 @@ export const initPdfJs = (): boolean => {
     
     // pdfjs-distライブラリに対してもグローバル設定を適用
     if (pdfjsLib) {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsCDN;
+      pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjs.GlobalWorkerOptions.workerSrc;
     }
     
-    // 事前にCDNリソースへの接続を確認
     console.log('PDF.js設定完了:', {
-      'react-pdfバージョン': pdfjsVersion,
-      'PDF.jsバージョン': pdfjsLib?.version || 'unknown',
+      'バージョン': pdfjsVersion,
       'ワーカーURL': pdfjs.GlobalWorkerOptions.workerSrc,
       'オプション': window.pdfjsOptions
     });
-    
-    // CDNリソースの可用性をプリフェッチで確認
-    fetch(pdfjsCDN, { method: 'HEAD' })
-      .then(response => {
-        if (response.ok) {
-          console.log('PDF.js Worker is accessible');
-        } else {
-          console.warn('PDF.js Worker might not be accessible, status:', response.status);
-        }
-      })
-      .catch(err => {
-        console.warn('Failed to prefetch PDF.js Worker:', err);
-      });
     
     return true;
   } catch (error) {
@@ -64,36 +49,8 @@ export const initPdfJs = (): boolean => {
 // PDF.jsのインポートを確認するための関数
 export const checkPdfJsSetup = () => {
   console.log("PDF.js setup check...");
-  console.log("pdfjs.version:", pdfjs.version);
   console.log("pdfjs.GlobalWorkerOptions.workerSrc:", pdfjs.GlobalWorkerOptions.workerSrc);
   console.log("pdfjsLib version check:", typeof pdfjsLib.getDocument);
-  
-  // PDF.jsのCMapリソースを確認
-  console.log("Checking if CMap files are accessible...");
-  fetch('/cmaps/Adobe-Japan1-UCS2.bcmap')
-    .then(response => {
-      if (response.ok) {
-        console.log("CMap resource is accessible!");
-      } else {
-        console.error("CMap resource is NOT accessible. Status:", response.status);
-      }
-    })
-    .catch(error => {
-      console.error("Error fetching CMap resource:", error);
-    });
-
-  // Workerファイルのアクセス確認
-  fetch('/pdf.worker.min.js')
-    .then(response => {
-      if (response.ok) {
-        console.log("Worker file is accessible!");
-      } else {
-        console.error("Worker file is NOT accessible. Status:", response.status);
-      }
-    })
-    .catch(error => {
-      console.error("Error fetching worker file:", error);
-    });
 };
 
 // PDFからテキストを抽出する関数
@@ -103,8 +60,15 @@ export const extractFileContent = async (file: File): Promise<string> => {
     reader.onload = async () => {
       try {
         const typedArray = new Uint8Array(reader.result as ArrayBuffer);
-        const pdf = await pdfjsLib.getDocument(typedArray).promise;
+        const loadingTask = pdfjsLib.getDocument({
+          data: typedArray,
+          cMapUrl: window.pdfjsOptions.cMapUrl,
+          cMapPacked: window.pdfjsOptions.cMapPacked,
+        });
+        
+        const pdf = await loadingTask.promise;
         let fullText = "";
+        
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);
           const textContent = await page.getTextContent();
@@ -115,6 +79,7 @@ export const extractFileContent = async (file: File): Promise<string> => {
         }
         resolve(fullText);
       } catch (error) {
+        console.error("PDF読み込み中のエラー:", error);
         reject(error);
       }
     };
@@ -134,11 +99,6 @@ export const getPdfUrl = (file: File | null) => {
     
     const url = URL.createObjectURL(file);
     console.log('Created Blob URL for PDF:', url);
-    
-    // URLが正しく生成されたか確認
-    if (!url.startsWith('blob:')) {
-      console.warn('Generated URL does not appear to be a blob URL:', url);
-    }
     
     return url;
   } catch (error) {
