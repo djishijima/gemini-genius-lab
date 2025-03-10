@@ -70,11 +70,21 @@ function convertToMono(buffer: AudioBuffer): Float32Array {
 
 export async function convertAudioToWav(audioBlob: Blob): Promise<Blob> {
   try {
+    console.log("Converting audio blob:", audioBlob.type, audioBlob.size, "bytes");
+    
+    // WebMまたはOpus形式のままでAPIに送信する場合は変換をスキップ
+    if (audioBlob.type.includes('webm') || audioBlob.type.includes('opus')) {
+      console.log("Using native format for API:", audioBlob.type);
+      return audioBlob;
+    }
+    
     const audioContext = new AudioContext();
     const arrayBuffer = await audioBlob.arrayBuffer();
 
     // デコードしてオーディオバッファに変換
+    console.log("Decoding audio data...");
     const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    console.log("Audio decoded successfully. Channels:", audioBuffer.numberOfChannels, "Duration:", audioBuffer.duration);
 
     // モノラルに変換
     const monoData = convertToMono(audioBuffer);
@@ -87,11 +97,14 @@ export async function convertAudioToWav(audioBlob: Blob): Promise<Blob> {
 
     // WAVヘッダーとPCMデータを結合
     const wavBlob = new Blob([wavHeader, pcmData.buffer], { type: "audio/wav" });
+    console.log("WAV conversion complete:", wavBlob.size, "bytes");
 
     return wavBlob;
   } catch (error) {
     console.error("Audio conversion error:", error);
-    throw error;
+    // エラーが発生した場合は元のBlobを返す（APIが直接処理できる場合がある）
+    console.log("Returning original blob due to conversion error");
+    return audioBlob;
   }
 }
 

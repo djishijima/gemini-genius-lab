@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import type React from "react";
+import type { FC } from "react";
 import {
   Card,
   CardContent,
@@ -16,7 +16,7 @@ import { TranscriptionResult } from "@/components/TranscriptionResult";
 import { AudioExportButton } from "@/components/AudioExportButton";
 import { handleTranscription } from "@/utils/handleTranscription";
 
-const AudioRecorder: React.FC = () => {
+const AudioRecorder: FC = () => {
   const [transcription, setTranscription] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -34,7 +34,8 @@ const AudioRecorder: React.FC = () => {
     recordingTime,
   } = useAudioRecorder();
 
-  const API_KEY = "AIzaSyB3e3yEOKECnlDtivhi_jPxOpepk8wo6jE";
+  // 環境変数からAPIキーを取得
+  const API_KEY = (import.meta as any).env?.VITE_GOOGLE_API_KEY || "AIzaSyB3e3yEOKECnlDtivhi_jPxOpepk8wo6jE";
 
   const handleTranscriptionProcess = useCallback(
     async (blob: Blob) => {
@@ -128,21 +129,45 @@ const AudioRecorder: React.FC = () => {
 
   useEffect(() => {
     if (!recorderIsRecording || !audioStream) return;
-
+    
+    console.log("MediaRecorder設定開始", audioStream.id);
+    const chunks: BlobPart[] = [];
+    
     const mediaRecorder = new MediaRecorder(audioStream);
     mediaRecorder.ondataavailable = (event) => {
+      console.log("MediaRecorder data available:", event.data.size, "bytes");
       if (event.data.size > 0) {
-        setAudioBlob(event.data);
-        handleTranscriptionProcess(event.data);
+        chunks.push(event.data);
+      }
+    };
+    
+    mediaRecorder.onstop = () => {
+      console.log("MediaRecorder stopped, processing chunks:", chunks.length);
+      if (chunks.length > 0) {
+        // MediaRecorderの元のMIMEタイプを使用
+        const blob = new Blob(chunks, { type: mediaRecorder.mimeType });
+        console.log("Created blob:", blob.type, blob.size, "bytes");
+        setAudioBlob(blob);
+        handleTranscriptionProcess(blob);
+      } else {
+        console.error("録音データがありません");
+        toast({
+          title: "録音エラー",
+          description: "録音データを取得できませんでした",
+          variant: "destructive",
+        });
       }
     };
 
-    mediaRecorder.start();
+    // より短い間隔でデータを取得するために時間指定（ミリ秒）
+    mediaRecorder.start(1000);
+    console.log("MediaRecorder started with timeslice 1000ms");
 
     return () => {
+      console.log("Cleaning up MediaRecorder");
       mediaRecorder.stop();
     };
-  }, [recorderIsRecording, audioStream, handleTranscriptionProcess]);
+  }, [recorderIsRecording, audioStream, handleTranscriptionProcess, toast]);
 
   useEffect(() => {
     if (pendingTranscription && audioBlob && audioBlob.size > 0) {
@@ -169,7 +194,7 @@ const AudioRecorder: React.FC = () => {
               </span>
               {recorderIsRecording && (
                 <span className="ml-4 flex items-center">
-                  <span className="h-2 w-2 bg-red-500 rounded-full animate-pulse mr-2"></span>
+                  <span className="h-2 w-2 bg-red-500 rounded-full animate-pulse mr-2" />
                   <span className="text-red-500 font-medium">録音進行中</span>
                 </span>
               )}

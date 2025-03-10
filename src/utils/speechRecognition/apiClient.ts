@@ -1,4 +1,4 @@
-import { SpeechRecognitionResponse } from "./types";
+import type { SpeechRecognitionResponse } from "./types";
 
 // 個々のオーディオチャンクを処理する関数
 export async function processAudioChunk(
@@ -8,6 +8,11 @@ export async function processAudioChunk(
   totalChunks: number,
 ): Promise<string> {
   try {
+    if (!apiKey || apiKey.trim() === "") {
+      console.error("APIキーが設定されていません");
+      throw new Error("APIキーが設定されていません");
+    }
+    
     // バイナリデータをBase64にエンコード
     const buffer = await chunk.arrayBuffer();
     const base64Data = btoa(
@@ -15,6 +20,7 @@ export async function processAudioChunk(
     );
 
     console.log(`チャンク ${chunkIndex + 1}/${totalChunks} のAPIリクエスト送信`);
+    console.log(`チャンクのサイズ: ${chunk.size} bytes, タイプ: ${chunk.type}`);
 
     const response = await fetch(
       `https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`,
@@ -25,9 +31,11 @@ export async function processAudioChunk(
         },
         body: JSON.stringify({
           config: {
-            encoding: "LINEAR16",
+            encoding: "WEBM_OPUS",
             sampleRateHertz: 44100,
             languageCode: "ja-JP",
+            audioChannelCount: 1,
+            enableSeparateRecognitionPerChannel: false,
             enableAutomaticPunctuation: true,
             model: "default",
             useEnhanced: true,
@@ -51,10 +59,10 @@ export async function processAudioChunk(
 
     if (data.results?.length > 0) {
       return data.results.map((result) => result.alternatives[0].transcript).join("\n");
-    } else {
-      console.warn("APIからの結果が空です。音声が認識できなかった可能性があります。");
-      return "";
     }
+    
+    console.warn("APIからの結果が空です。音声が認識できなかった可能性があります。");
+    return "";
   } catch (error) {
     console.error(`チャンク ${chunkIndex + 1} の処理中にエラー:`, error);
     throw error;
