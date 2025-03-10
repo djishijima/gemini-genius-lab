@@ -48,24 +48,39 @@ const AudioRecorder: FC = () => {
         return;
       }
 
-      console.log("文字起こし処理開始:", blob.type, blob.size, "bytes");
+      // 音声データの詳細ログ
+      console.log("==== 文字起こし処理開始 ====");
+      console.log(`音声データ: type=${blob.type}, size=${blob.size} bytes`);
+      console.log(`APIキー: ${API_KEY ? (API_KEY.substring(0, 5) + '...') : '未設定'}`); 
+      
       setIsProcessing(true);
       setTranscription(""); // クリア
 
       try {
-        await handleTranscription(blob, {
+        // 引数を明示的にログ出力
+        console.log("文字起こし関数呼び出し:");
+        
+        const result = await handleTranscription(blob, {
           apiKey: API_KEY,
           onProgress: (progress) => {
             console.log("文字起こし進捗:", progress);
             setTranscriptionProgress(progress);
           },
           onTranscriptionChange: (text) => {
-            console.log("文字起こし結果更新:", text);
+            console.log(`文字起こし結果更新: "${text}", 長さ: ${text.length}`);
             setTranscription(text);
           },
-          onProcessingStateChange: setIsProcessing,
-          onTranscribingStateChange: setIsTranscribing,
+          onProcessingStateChange: (state) => {
+            console.log(`処理状態変更: ${state}`);
+            setIsProcessing(state);
+          },
+          onTranscribingStateChange: (state) => {
+            console.log(`文字起こし状態変更: ${state}`);
+            setIsTranscribing(state);
+          },
         });
+        
+        console.log(`文字起こし完了、結果: ${result ? "成功" : "空の結果"}`);
       } catch (error) {
         console.error(`文字起こしエラー: ${error}`);
         toast({
@@ -133,9 +148,32 @@ const AudioRecorder: FC = () => {
     console.log("MediaRecorder設定開始", audioStream.id);
     const chunks: BlobPart[] = [];
     
-    const mediaRecorder = new MediaRecorder(audioStream);
+    // MediaRecorderのMIMEタイプとビットレートを明示的に指定
+    const options = {
+      mimeType: 'audio/webm;codecs=opus',
+      audioBitsPerSecond: 128000
+    };
+    
+    let mediaRecorder: MediaRecorder;
+    try {
+      // 優先的にWebMフォーマットで録音を試みる
+      if (MediaRecorder.isTypeSupported(options.mimeType)) {
+        console.log(`${options.mimeType} はサポートされています。使用します。`);
+        mediaRecorder = new MediaRecorder(audioStream, options);
+      } else {
+        // フォールバックとして、ブラウザのデフォルト設定を使用
+        console.log(`${options.mimeType} はサポートされていません。デフォルト設定を使用します。`);
+        mediaRecorder = new MediaRecorder(audioStream);
+      }
+      console.log("MediaRecorder created with mimeType:", mediaRecorder.mimeType);
+    } catch (error) {
+      console.error("MediaRecorder creation error:", error);
+      // 最終手段としてデフォルト設定を使用
+      mediaRecorder = new MediaRecorder(audioStream);
+    }
+    
     mediaRecorder.ondataavailable = (event) => {
-      console.log("MediaRecorder data available:", event.data.size, "bytes");
+      console.log("MediaRecorder data available:", event.data.size, "bytes", "type:", event.data.type);
       if (event.data.size > 0) {
         chunks.push(event.data);
       }
@@ -144,8 +182,10 @@ const AudioRecorder: FC = () => {
     mediaRecorder.onstop = () => {
       console.log("MediaRecorder stopped, processing chunks:", chunks.length);
       if (chunks.length > 0) {
-        // MediaRecorderの元のMIMEタイプを使用
-        const blob = new Blob(chunks, { type: mediaRecorder.mimeType });
+        // 明示的にMIMEタイプを指定
+        const mimeType = mediaRecorder.mimeType || 'audio/webm;codecs=opus';
+        console.log("Using MIME type for blob:", mimeType);
+        const blob = new Blob(chunks, { type: mimeType });
         console.log("Created blob:", blob.type, blob.size, "bytes");
         setAudioBlob(blob);
         handleTranscriptionProcess(blob);
