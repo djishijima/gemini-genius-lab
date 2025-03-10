@@ -5,7 +5,7 @@ import type { TextItem } from "pdfjs-dist/types/src/display/api";
 
 // PDFjs APIとWorkerのバージョンを統一する定数
 // 引数として渡す場合は、文字列として渡す必要があるためバージョンを固定します
-const PDF_VERSION = '2.16.105'; // WorkerとAPIバージョンを一致させるために下げる
+const PDF_VERSION = '3.1.174'; // WorkerとAPIバージョンを一致させる
 
 // pdfjsLibとpdfjs（react-pdf）のバージョン確認
 console.log('pdfjs-dist version:', pdfjsLib.version);
@@ -34,6 +34,9 @@ export const initPdfJs = (): boolean => {
     
     // react-pdfとpdfjs-distの両方にワーカーを設定
     try {
+      // バージョン情報をログ出力
+      console.log(`設定するバージョン: ${PDF_VERSION}`);
+      
       pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
       pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
     } catch (e) {
@@ -109,10 +112,17 @@ export const extractFileContent = async (file: File): Promise<string> => {
           isEvalSupported: true,
           isOffscreenCanvasSupported: true,
           canvasMaxAreaInBytes: 0, // キャンバスサイズ制限を設けない
+          // バージョン一致を確保するための設定を追加
+          verbosity: 0, // ログを最小限にする
+          ignoreErrors: true, // レンダリングエラーを無視する
         };
         
         // ワーカーオプションを明示的に設定
-        pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDF_VERSION}/build/pdf.worker.min.js`;
+        // APIとWorkerのバージョンを一致させる
+        const workerUrl = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDF_VERSION}/build/pdf.worker.min.js`;
+        pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+        pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+        console.log(`Worker URLを再設定: ${workerUrl}`);
         
         // ループを使用してPDF読み込みを試行
         const loadingTask = pdfjsLib.getDocument(pdfOptions);
