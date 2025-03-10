@@ -39,7 +39,11 @@ export function AudioRecorderControls({
           // AudioContextの初期化
           if (!audioContext) {
             console.log('音声分析のAudioContextを初期化中...');
-            audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+            // 明示的な型定義でanyを回避
+            type AudioContextType = typeof AudioContext
+            type WebkitAudioContextType = typeof AudioContext
+            const AudioContextClass = window.AudioContext || ((window as unknown as {webkitAudioContext: WebkitAudioContextType}).webkitAudioContext);
+            audioContext = new AudioContextClass();
             const source = audioContext.createMediaStreamSource(audioStream);
             analyser = audioContext.createAnalyser();
             // 小さい値に設定してパフォーマンスを改善
@@ -66,8 +70,8 @@ export function AudioRecorderControls({
             
             // 正規化と強調
             const normalizedValues = values.map(v => {
-              // 非線形なスケーリングで視覚的に分かりやすくする
-              const normalized = Math.pow(v / maxValue, 0.7) * 100;
+              // 非線形なスケーリングで視覚的に分かりやすくする - Math.powの代わりに**演算子を使用
+              const normalized = ((v / maxValue) ** 0.7) * 100;
               return Math.min(100, Math.max(15, normalized));
             });
             
@@ -122,7 +126,7 @@ export function AudioRecorderControls({
             <div className="flex items-end justify-center space-x-1 h-12 w-full mt-2">
               {audioLevel.map((level, index) => (
                 <div 
-                  key={index}
+                  key={`wave-bar-${index}-${level.toFixed(2)}`}
                   className="w-4 bg-red-500 rounded-t-md transition-all duration-75 transform hover:scale-110"
                   style={{ 
                     height: `${level}%`,

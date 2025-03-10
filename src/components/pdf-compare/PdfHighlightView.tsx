@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import type { Difference } from '@/types/pdf-compare';
 import { Card } from '@/components/ui/card';
@@ -40,10 +40,10 @@ export function PdfHighlightView({
   const [currentTab, setCurrentTab] = useState('original');
   
   // PDF ファイルを URL に変換する関数
-  const getPdfUrl = (file: File | null) => {
+  const getPdfUrl = useCallback((file: File | null) => {
     if (!file) return null;
     return URL.createObjectURL(file);
-  };
+  }, []);
   
   // PDF URL オブジェクトを保持するための状態
   const [pdf1Url, setPdf1Url] = useState<string | null>(null);
@@ -59,7 +59,7 @@ export function PdfHighlightView({
       if (pdf1Url) URL.revokeObjectURL(pdf1Url);
       if (pdf2Url) URL.revokeObjectURL(pdf2Url);
     };
-  }, [pdf1, pdf2]);
+  }, [pdf1, pdf2, getPdfUrl, pdf1Url, pdf2Url]);
 
   // PDFとハイライトを組み合わせて表示するコンポーネント
   const PdfWithHighlights = ({ 
@@ -82,7 +82,10 @@ export function PdfHighlightView({
         <ScrollArea className="h-[calc(100vh-25rem)]">
           <Document 
             file={fileUrl}
-            options={window.pdfjsOptions}
+            options={{
+              cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
+              cMapPacked: true
+            }}
             onLoadError={(error) => {
               console.error(`PDF load error: ${error.message || JSON.stringify(error)}`);
               if (onError) {
@@ -130,8 +133,9 @@ export function PdfHighlightView({
                       const diffWidth = Math.min(80, Math.max(20, (diff.value.length / 50) * 30));
                       
                       return (
-                        <div 
-                          key={`highlight-${index}`}
+                        <button 
+                          type="button"
+                          key={`highlight-${diff.lines1?.[0] || ''}-${diff.lines2?.[0] || ''}-${index}`}
                           className={`absolute p-1 rounded-sm ${isOriginal ? 'bg-red-200 bg-opacity-50' : 'bg-green-200 bg-opacity-50'} border ${isOriginal ? 'border-red-400' : 'border-green-400'} ${selectedDiffIndex === index ? 'ring-2 ring-blue-500' : ''}`}
                           style={{
                             top: `${positionY}%`,
@@ -148,12 +152,13 @@ export function PdfHighlightView({
                             zIndex: selectedDiffIndex === index ? 10 : 1
                           }}
                           onClick={() => onDiffClick(index)}
+                          aria-pressed={selectedDiffIndex === index}
                           title={diff.value.substring(0, 50) + (diff.value.length > 50 ? '...' : '')}
                         >
                           <span className="text-xs line-clamp-2 overflow-hidden">
                             {diff.value.substring(0, 100)}...
                           </span>
-                        </div>
+                        </button>
                       );
                    })}
                 </div>

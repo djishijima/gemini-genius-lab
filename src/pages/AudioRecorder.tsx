@@ -148,24 +148,54 @@ const AudioRecorder: FC = () => {
     console.log("MediaRecorder設定開始", audioStream.id);
     const chunks: BlobPart[] = [];
     
-    // MediaRecorderのMIMEタイプとビットレートを明示的に指定
-    const options = {
-      mimeType: 'audio/webm;codecs=opus',
-      audioBitsPerSecond: 128000
-    };
+    // 最適なMIMEタイプを見つけるための優先順位リスト
+    const mimeOptions = [
+      { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 128000 },
+      { mimeType: 'audio/webm', audioBitsPerSecond: 128000 },
+      { mimeType: 'audio/ogg;codecs=opus', audioBitsPerSecond: 128000 },
+      { mimeType: 'audio/mp4', audioBitsPerSecond: 128000 },
+      { mimeType: 'audio/ogg', audioBitsPerSecond: 128000 }
+    ];
     
     let mediaRecorder: MediaRecorder;
+    let selectedOptions = {};
+    
     try {
-      // 優先的にWebMフォーマットで録音を試みる
-      if (MediaRecorder.isTypeSupported(options.mimeType)) {
-        console.log(`${options.mimeType} はサポートされています。使用します。`);
-        mediaRecorder = new MediaRecorder(audioStream, options);
-      } else {
-        // フォールバックとして、ブラウザのデフォルト設定を使用
-        console.log(`${options.mimeType} はサポートされていません。デフォルト設定を使用します。`);
-        mediaRecorder = new MediaRecorder(audioStream);
+      // 各MIMEタイプを試してサポートされているものを見つける
+      for (const opt of mimeOptions) {
+        if (MediaRecorder.isTypeSupported(opt.mimeType)) {
+          selectedOptions = opt;
+          console.log(`サポートされているMIMEタイプを使用: ${opt.mimeType}`);
+          break;
+        }
       }
-      console.log("MediaRecorder created with mimeType:", mediaRecorder.mimeType);
+      
+      // 選択されたオプションでMediaRecorderを作成
+      mediaRecorder = new MediaRecorder(audioStream, selectedOptions);
+      console.log("MediaRecorder created with options:", selectedOptions);
+      console.log("Actual MIME type being used:", mediaRecorder.mimeType);
+      
+      // マイク入力レベルを確認するためのメーター
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const analyser = audioContext.createAnalyser();
+      const microphone = audioContext.createMediaStreamSource(audioStream);
+      microphone.connect(analyser);
+      analyser.fftSize = 256;
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+      
+      // 音声レベルのログを定期的に出力
+      const logAudioLevel = () => {
+        analyser.getByteFrequencyData(dataArray);
+        const average = dataArray.reduce((sum, value) => sum + value, 0) / bufferLength;
+        console.log(`マイク音声レベル: ${average.toFixed(2)}`);
+        
+        if (mediaRecorder.state === "recording") {
+          setTimeout(logAudioLevel, 1000);
+        }
+      };
+      
+      logAudioLevel();
     } catch (error) {
       console.error("MediaRecorder creation error:", error);
       // 最終手段としてデフォルト設定を使用
@@ -199,9 +229,23 @@ const AudioRecorder: FC = () => {
       }
     };
 
-    // より短い間隔でデータを取得するために時間指定（ミリ秒）
+    // 短いタイムスライスで頻繁にデータを取得 - 一部のブラウザでは長いスライスが問題になることがある
     mediaRecorder.start(1000);
-    console.log("MediaRecorder started with timeslice 1000ms");
+    console.log("MediaRecorder started with timeslice 1000ms, MIME type:", mediaRecorder.mimeType);
+    
+    // 定期的に録音状態を確認し、データをリクエスト
+    const checkInterval = setInterval(() => {
+      if (mediaRecorder && mediaRecorder.state === "recording") {
+        console.log("MediaRecorder check - state:", mediaRecorder.state);
+        // 中間データをリクエスト（データが実際に記録されていることを確認）
+        mediaRecorder.requestData();
+      } else {
+        clearInterval(checkInterval);
+      }
+    }, 2000);
+    
+    // コンソールに明示的な指示を表示
+    console.warn('重要: マイクに向かって話してください。音声が検出されているか確認します。');
 
     return () => {
       console.log("Cleaning up MediaRecorder");

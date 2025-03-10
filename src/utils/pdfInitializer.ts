@@ -3,6 +3,10 @@ import * as pdfjsLib from "pdfjs-dist";
 import { pdfjs } from 'react-pdf';
 import type { TextItem } from "pdfjs-dist/types/src/display/api";
 
+// pdfjsLibとpdfjs（react-pdf）のバージョン確認
+console.log('pdfjs-dist version:', pdfjsLib.version);
+console.log('react-pdf pdfjs version:', pdfjs.version);
+
 // グローバル変数の型定義
 declare global {
   interface Window {
@@ -16,25 +20,46 @@ declare global {
 // PDF.jsの設定を安全に初期化する
 export const initPdfJs = (): boolean => {
   try {
-    // PDFJSのバージョンを取得（APIとWorkerのバージョンを一致させるために重要）
-    const pdfjsVersion = '3.11.174';  // 現在のWorkerバージョンに合わせる
+    console.log('PDF.js初期化を開始します - v3.11.174');
     
-    // react-pdfのワーカー設定
-    pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsVersion}/build/pdf.worker.min.js`;
+    // 全ての環境で動作するようCDNからワーカーを読み込む
+    const cdnBase = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174';
+    const workerSrc = `${cdnBase}/build/pdf.worker.min.js`;
+    const fallbackWorkerSrc = '/pdf.worker.min.js'; // フォールバックワーカーのパス
     
-    // PDF表示オプションをグローバル変数として設定
+    // react-pdfとpdfjs-distの両方にワーカーを設定
+    try {
+      pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+      pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+    } catch (e) {
+      console.warn('Worker設定エラー:', e);
+      // ローカルフォールバックを試行
+      try {
+        pdfjs.GlobalWorkerOptions.workerSrc = fallbackWorkerSrc;
+        pdfjsLib.GlobalWorkerOptions.workerSrc = fallbackWorkerSrc;
+      } catch (e2) {
+        console.error('フォールバック設定にも失敗:', e2);
+      }
+    }
+    
+    // CMap設定
+    const cMapUrl = `${cdnBase}/cmaps/`;
     window.pdfjsOptions = {
-      cMapUrl: `https://unpkg.com/pdfjs-dist@${pdfjsVersion}/cmaps/`,
+      cMapUrl: cMapUrl,
       cMapPacked: true,
     };
     
-    // pdfjs-distライブラリに対してもグローバル設定を適用
-    if (pdfjsLib) {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjs.GlobalWorkerOptions.workerSrc;
+    // グローバルオプションがアクセス可能か確認
+    if (!window.pdfjsOptions) {
+      console.warn('window.pdfjsOptionsが設定できていません。直接オプションを使用します。');
     }
     
+    console.log('PDF.js正常に設定完了:', { 
+      'worker': pdfjs.GlobalWorkerOptions.workerSrc,
+      'version': pdfjsLib.version
+    });
+    
     console.log('PDF.js設定完了:', {
-      'バージョン': pdfjsVersion,
       'ワーカーURL': pdfjs.GlobalWorkerOptions.workerSrc,
       'オプション': window.pdfjsOptions
     });
@@ -59,12 +84,21 @@ export const extractFileContent = async (file: File): Promise<string> => {
     const reader = new FileReader();
     reader.onload = async () => {
       try {
+        console.log('PDF読み込み開始:', file.name, file.size, 'bytes');
         const typedArray = new Uint8Array(reader.result as ArrayBuffer);
-        const loadingTask = pdfjsLib.getDocument({
+        // ロギングを追加して問題のトラッキングを改善
+        console.log('ArrayBuffer取得:', typedArray.length, 'bytes');
+        
+        // PDF読み込みオプションを定義（window.pdfjsOptionsに依存しない）
+        const pdfOptions = {
           data: typedArray,
-          cMapUrl: window.pdfjsOptions.cMapUrl,
-          cMapPacked: window.pdfjsOptions.cMapPacked,
-        });
+          cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
+          cMapPacked: true,
+          useSystemFonts: true, // システムフォントを使用して改善
+        };
+        
+        // ループを使用してPDF読み込みを試行
+        const loadingTask = pdfjsLib.getDocument(pdfOptions);
         
         const pdf = await loadingTask.promise;
         let fullText = "";

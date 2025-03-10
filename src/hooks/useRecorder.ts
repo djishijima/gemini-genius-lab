@@ -60,17 +60,26 @@ export function useRecorder(options?: UseRecorderOptions) {
         throw new Error("お使いのブラウザはMediaRecorderをサポートしていません");
       }
 
-      // Prefer webm audio format, but fall back to alternatives if not supported
-      let mimeType = "audio/webm";
-      if (!MediaRecorder.isTypeSupported("audio/webm")) {
-        if (MediaRecorder.isTypeSupported("audio/mp4")) {
-          mimeType = "audio/mp4";
-        } else if (MediaRecorder.isTypeSupported("audio/ogg")) {
-          mimeType = "audio/ogg";
+      // 明示的にオーディオコーデックを指定したMIMEタイプを使用する
+      let mimeType = "";
+      const mimeTypes = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/ogg;codecs=opus",
+        "audio/mp4",
+        "audio/ogg"
+      ];
+      
+      // ブラウザがサポートする最初のフォーマットを使用
+      for (const type of mimeTypes) {
+        if (MediaRecorder.isTypeSupported(type)) {
+          mimeType = type;
+          console.log(`サポートされているMIMEタイプを発見: ${type}`);
+          break;
         }
       }
-
-      const recorderOptions = { mimeType };
+      
+      const recorderOptions = mimeType ? { mimeType } : {};
       console.log(`使用する録音フォーマット: ${mimeType}`);
 
       const recorder = new MediaRecorder(stream, recorderOptions);
@@ -116,7 +125,10 @@ export function useRecorder(options?: UseRecorderOptions) {
         }
 
         try {
-          const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+          // 録音機の実際MIMEタイプを使用
+          const blobType = mediaRecorderRef.current?.mimeType || mimeType || "audio/webm;codecs=opus";
+          console.log(`使用するBlobタイプ: ${blobType}`);
+          const audioBlob = new Blob(audioChunksRef.current, { type: blobType });
           console.log("録音データサイズ:", audioBlob.size, "bytes", "タイプ:", audioBlob.type);
 
           // Verify the audio blob is valid
@@ -158,9 +170,9 @@ export function useRecorder(options?: UseRecorderOptions) {
       };
 
       console.log("録音を開始します...");
-      // Decreased the time slice for more frequent data chunks
-      recorder.start(500);
-      console.log("録音状態:", recorder.state);
+      // 録音データの品質向上のためにタイムスライスを大きく設定
+      recorder.start(3000); // より長いタイムスライスでデータの品質を向上
+      console.log("録音状態:", recorder.state, "、MIMEタイプ:", recorder.mimeType);
 
       setIsRecording(true);
       if (options?.onRecordingStatusChange) {

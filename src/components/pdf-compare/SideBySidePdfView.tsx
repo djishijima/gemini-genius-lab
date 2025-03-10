@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Document, Page } from 'react-pdf';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -33,7 +33,7 @@ export function SideBySidePdfView({
   const [scale, setScale] = useState(1.0);
 
   // PDF ファイルを URL に変換する関数
-  const getPdfUrl = (file: File | null) => {
+  const getPdfUrl = useCallback((file: File | null) => {
     if (!file) return null;
     try {
       console.log(`SideBySidePdfView: Creating URL for ${file.name}`);
@@ -42,7 +42,7 @@ export function SideBySidePdfView({
       console.error('SideBySidePdfView: Failed to create Blob URL:', error);
       return null;
     }
-  };
+  }, []);
 
   // コンポーネントがマウントされた時に URL を作成
   useEffect(() => {
@@ -54,31 +54,31 @@ export function SideBySidePdfView({
       if (pdf1Url) URL.revokeObjectURL(pdf1Url);
       if (pdf2Url) URL.revokeObjectURL(pdf2Url);
     };
-  }, [pdf1, pdf2]);
+  }, [pdf1, pdf2, getPdfUrl, pdf1Url, pdf2Url]);
 
   // 最大ページ数を計算
   const maxPages = Math.max(numPages1, numPages2);
 
   // ページ操作関数
-  const goToNextPage = () => {
+  const goToNextPage = useCallback(() => {
     if (currentPage < maxPages) {
-      setCurrentPage(currentPage + 1);
+      setCurrentPage(prev => prev + 1);
     }
-  };
+  }, [currentPage, maxPages]);
 
-  const goToPrevPage = () => {
+  const goToPrevPage = useCallback(() => {
     if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
+      setCurrentPage(prev => prev - 1);
     }
-  };
+  }, [currentPage]);
 
-  const handleZoomIn = () => {
+  const handleZoomIn = useCallback(() => {
     setScale(prev => Math.min(prev + 0.2, 3));
-  };
+  }, []);
 
-  const handleZoomOut = () => {
+  const handleZoomOut = useCallback(() => {
     setScale(prev => Math.max(prev - 0.2, 0.5));
-  };
+  }, []);
 
   // キーボードショートカット
   useEffect(() => {
@@ -98,7 +98,7 @@ export function SideBySidePdfView({
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [currentPage, maxPages]);
+  }, [goToNextPage, goToPrevPage, handleZoomIn, handleZoomOut]);
 
   return (
     <div ref={containerRef} className="side-by-side-view w-full h-full">
@@ -156,7 +156,10 @@ export function SideBySidePdfView({
             {pdf1Url ? (
               <Document
                 file={pdf1Url}
-                options={window.pdfjsOptions}
+                options={{
+                  cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
+                  cMapPacked: true
+                }}
                 onLoadError={(error) => {
                   console.error(`PDF1 load error: ${error.message || JSON.stringify(error)}`);
                 }}
@@ -192,7 +195,10 @@ export function SideBySidePdfView({
             {pdf2Url ? (
               <Document
                 file={pdf2Url}
-                options={window.pdfjsOptions}
+                options={{
+                  cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
+                  cMapPacked: true
+                }}
                 onLoadError={(error) => {
                   console.error(`PDF2 load error: ${error.message || JSON.stringify(error)}`);
                 }}
