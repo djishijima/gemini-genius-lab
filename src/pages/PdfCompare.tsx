@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import type { FC } from "react";
 import { diffWords } from "diff";
@@ -619,7 +620,7 @@ const PdfCompare: React.FC = () => {
                 "div",
                 { className: "flex items-center space-x-2 border rounded-md p-1" },
                 // 表示モード切り替えボタン（改良版）
-                ...displayModes.map(mode => {
+                displayModes.map(mode => {
                   return React.createElement(
                     Button,
                     {
@@ -694,7 +695,6 @@ const PdfCompare: React.FC = () => {
                     }),
                   ),
                 ),
-              },
               ),
               React.createElement(DiffDisplay, {
                 differences: differences,
