@@ -40,16 +40,23 @@ export async function processAudioChunk(
     
     console.log(`選択されたエンコーディング: ${encoding}, チャンクタイプ: ${chunk.type}`);
     
+    // MIMEタイプに基づいてサンプルレートを決定
+    let sampleRateHertz = 16000; // デフォルト値
+    if (chunk.type.includes("webm") || chunk.type.includes("opus")) {
+      sampleRateHertz = 48000; // WebM/Opusの一般的なサンプルレート
+    }
+    
     const requestBody = {
       config: {
         encoding: encoding,
-        sampleRateHertz: 44100,
+        sampleRateHertz: sampleRateHertz,
         languageCode: "ja-JP",
         audioChannelCount: 1,
         enableSeparateRecognitionPerChannel: false,
         enableAutomaticPunctuation: true,
         model: "default",
-        useEnhanced: true,
+        // 無効なパラメータを削除
+        // useEnhanced: true, // APIエラーの原因になる可能性がある
       },
       audio: {
         content: base64Data,

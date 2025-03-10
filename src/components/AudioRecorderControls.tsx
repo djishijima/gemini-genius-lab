@@ -35,32 +35,64 @@ export function AudioRecorderControls({
 
     const updateAudioLevel = () => {
       if (audioStream && isRecording) {
-        if (!audioContext) {
-          audioContext = new AudioContext();
-          const source = audioContext.createMediaStreamSource(audioStream);
-          analyser = audioContext.createAnalyser();
-          analyser.fftSize = 32;
-          source.connect(analyser);
-          dataArray = new Uint8Array(analyser.frequencyBinCount);
-        }
+        try {
+          // AudioContextの初期化
+          if (!audioContext) {
+            console.log('音声分析のAudioContextを初期化中...');
+            audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const source = audioContext.createMediaStreamSource(audioStream);
+            analyser = audioContext.createAnalyser();
+            // 小さい値に設定してパフォーマンスを改善
+            analyser.fftSize = 128;
+            // 時間周波数特性を適用
+            analyser.smoothingTimeConstant = 0.8;
+            source.connect(analyser);
+            dataArray = new Uint8Array(analyser.frequencyBinCount);
+            console.log('音声分析器の初期化完了：', {
+              fftSize: analyser.fftSize,
+              frequencyBinCount: analyser.frequencyBinCount,
+              channelCount: audioContext.destination.channelCount
+            });
+          }
 
-        if (analyser && dataArray) {
-          analyser.getByteFrequencyData(dataArray);
-          // 音声レベルの計算 (0-100の範囲に正規化)
-          const average = dataArray.reduce((acc, val) => acc + val, 0) / dataArray.length;
-          const normalized = Math.min(100, Math.max(0, average * 2));
-          
-          // 新しいレベル配列を作成（古いものをシフトして新しい値を追加）
-          setAudioLevel(prev => {
-            const newLevels = [...prev.slice(1), normalized];
-            return newLevels;
-          });
+          // 音声データの取得と表示
+          if (analyser && dataArray) {
+            // 周波数データを取得
+            analyser.getByteFrequencyData(dataArray);
+            
+            // 幅値の計算方法を改善（ログスケールに近い処理）
+            const values = Array.from(dataArray.slice(0, 5));
+            const maxValue = Math.max(...values, 1); // 0による割り算を避ける
+            
+            // 正規化と強調
+            const normalizedValues = values.map(v => {
+              // 非線形なスケーリングで視覚的に分かりやすくする
+              const normalized = Math.pow(v / maxValue, 0.7) * 100;
+              return Math.min(100, Math.max(15, normalized));
+            });
+            
+            // 最大値が30より小さい場合はランダムな動きを付ける
+            const finalValues = maxValue < 30 ? 
+              normalizedValues.map(v => v + Math.random() * 20) : 
+              normalizedValues;
+              
+            setAudioLevel(finalValues);
+          }
+        } catch (error) {
+          console.error('音声波形の更新中にエラーが発生しました:', error);
         }
+      } else if (!isRecording) {
+        // 非録音時は音量を下げる
+        setAudioLevel([15, 15, 15, 15, 15]);
       }
+      
+      // アニメーションフレームを続ける
       animationId = requestAnimationFrame(updateAudioLevel);
     };
 
+    // 録音が開始されたら音声レベルの更新を開始
     if (isRecording && audioStream) {
+      console.log('音声波形のアニメーションを開始します');
       updateAudioLevel();
     }
 
@@ -91,10 +123,10 @@ export function AudioRecorderControls({
               {audioLevel.map((level, index) => (
                 <div 
                   key={index}
-                  className="w-3 bg-red-500 rounded-t-sm transition-all duration-100"
+                  className="w-4 bg-red-500 rounded-t-md transition-all duration-75 transform hover:scale-110"
                   style={{ 
-                    height: `${Math.max(10, level)}%`,
-                    opacity: level > 10 ? 1 : 0.7
+                    height: `${level}%`,
+                    opacity: 0.7 + (level / 300)
                   }}
                 />
               ))}

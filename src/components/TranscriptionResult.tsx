@@ -1,32 +1,26 @@
 import { Button } from "@/components/ui/button";
 import { ClipboardCopy } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
-import { Editor, IAllProps } from "@tinymce/tinymce-react";
-import { useRef, useState, useEffect } from "react";
-import { Editor as TinyMCEEditor } from "tinymce";
+import { useState, useEffect } from "react";
 
 interface TranscriptionResultProps {
-  transcription: string;
+  transcription: string | null;
   isTranscribing: boolean;
 }
 
 export function TranscriptionResult({ transcription, isTranscribing }: TranscriptionResultProps) {
   const { toast } = useToast();
-  const [editedText, setEditedText] = useState("");
-  const editorRef = useRef<TinyMCEEditor | null>(null);
+  const [resultText, setResultText] = useState("");
 
-  // Update the edited text when transcription changes
+  // Update the result text when transcription changes
   useEffect(() => {
     if (transcription && !isTranscribing) {
-      setEditedText((prev) => (prev ? prev + transcription : transcription));
+      setResultText((prev) => (prev ? prev + transcription : transcription));
     }
   }, [transcription, isTranscribing]);
 
   const handleCopy = () => {
-    const contentToCopy = editorRef.current
-      ? editorRef.current.getContent({ format: "text" })
-      : editedText;
-    navigator.clipboard.writeText(contentToCopy);
+    navigator.clipboard.writeText(resultText);
     toast({
       title: "コピー完了",
       description: "文字起こし結果をクリップボードにコピーしました",
@@ -39,50 +33,8 @@ export function TranscriptionResult({ transcription, isTranscribing }: Transcrip
 
       {isTranscribing && <div className="text-primary animate-pulse mb-4">文字起こし中...</div>}
 
-      <div className="mb-4 bg-background rounded border min-h-[300px]">
-        <Editor
-          apiKey="no-api-key"
-          onInit={(evt, editor) => (editorRef.current = editor)}
-          initialValue={editedText || "ここに文字起こし結果が表示されます..."}
-          value={editedText || ""}
-          onEditorChange={(newText) => setEditedText(newText)}
-          init={{
-            height: 300,
-            menubar: false,
-            plugins: [
-              "advlist",
-              "autolink",
-              "lists",
-              "link",
-              "charmap",
-              "preview",
-              "searchreplace",
-              "visualblocks",
-              "code",
-              "fullscreen",
-              "insertdatetime",
-              "media",
-              "table",
-              "help",
-              "wordcount",
-            ],
-            toolbar:
-              "undo redo | formatselect | " +
-              "bold italic backcolor | alignleft aligncenter " +
-              "alignright alignjustify | bullist numlist outdent indent | " +
-              "removeformat | help",
-            content_style: "body { font-family:Helvetica,Arial,sans-serif; font-size:14px }",
-            mobile: {
-              theme: "mobile",
-              plugins: "autosave lists autolink",
-              toolbar: "undo bold italic styles",
-            },
-            branding: false,
-            promotion: false,
-            statusbar: false,
-            placeholder: "ここに文字起こし結果が表示されます...",
-          }}
-        />
+      <div className="mb-4 bg-background rounded border min-h-[300px] p-4 whitespace-pre-wrap overflow-auto">
+        {resultText || "ここに文字起こし結果が表示されます..."}
       </div>
 
       <div className="flex justify-end mt-2">
