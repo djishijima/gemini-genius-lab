@@ -96,6 +96,7 @@ export async function processAudioChunk(
     console.log("送信するリクエスト:", JSON.stringify(requestBody.config));
     
     try {
+      console.log('Starting transcription process');
       const response = await fetch(`https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`, {
         method: "POST",
         headers: {
