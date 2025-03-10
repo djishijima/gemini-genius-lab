@@ -1,4 +1,4 @@
-import type { SpeechRecognitionResponse } from "./types";
+import type { SpeechRecognitionResult } from "./types";
 
 // 個々のオーディオチャンクを処理する関数
 export async function processAudioChunk(
@@ -95,64 +95,55 @@ export async function processAudioChunk(
     
     console.log("送信するリクエスト:", JSON.stringify(requestBody.config));
     
-    const response = await fetch(
-      `https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`,
-      {
+    try {
+      const response = await fetch(`https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(requestBody),
-      },
-    );
+      });
 
-    if (!response.ok) {
-      try {
-        const errorData = await response.json();
-        console.error("Speech-to-Text API Error:", JSON.stringify(errorData));
-        throw new Error(`APIエラー: ${errorData.error?.message || "不明なエラー"}`);
-      } catch (jsonError) {
-        console.error("API Error (status):", response.status, response.statusText);
-        throw new Error(`APIステータスエラー: ${response.status} ${response.statusText}`);
+      if (!response.ok) {
+        console.error(`API request failed with status: ${response.status}`);
+        throw new Error(`API request failed with status: ${response.status}`);
       }
-    }
 
-    console.log(`==== チャンク ${chunkIndex + 1} のAPIレスポンス受信 status: ${response.status} ====`);
-    const responseText = await response.text();
-    console.log(`生のAPIレスポンス: ${responseText}`);
-    
-    let data: SpeechRecognitionResponse;
-    try {
-      data = JSON.parse(responseText) as SpeechRecognitionResponse;
-      console.log("解析後のAPIレスポンス:", JSON.stringify(data));
-    } catch (e) {
-      console.error("レスポンスJSONの解析エラー:", e);
-      throw new Error(`APIレスポンスがJSONではありません: ${responseText.substring(0, 100)}...`);
-    }
-
-    if (data.results?.length > 0 && data.results.some(result => result.alternatives?.length > 0)) {
-      // 結果があり、少なくとも1つの認識結果に代替テキストがある場合
-      const transcript = data.results
-        .filter(result => result.alternatives?.length > 0)
-        .map(result => result.alternatives[0].transcript)
-        .join("\n");
+      const data = await response.json();
+      console.log('API response:', data);
       
-      if (transcript.trim() !== "") {
-        console.log(`認識テキスト: "${transcript}"`); 
-        return transcript;
+      const results = data.results; 
+      if (results && results.length > 0) { 
+        const firstResult = results[0]; 
+        const alternatives = firstResult.alternatives; 
+        if (alternatives && alternatives.length > 0) {
+          // 結果があり、少なくとも1つの認識結果に代替テキストがある場合
+          const transcript = alternatives
+            .filter(alternative => alternative.transcript.trim() !== "")
+            .map(alternative => alternative.transcript)
+            .join("\n");
+          
+          if (transcript.trim() !== "") {
+            console.log(`認識テキスト: "${transcript}"`); 
+            return transcript;
+          }
+        }
       }
+      
+      // 結果が空の場合のより詳細なエラーメッセージ
+      if (!results || results.length === 0) {
+        console.warn("警告: APIから結果が返されませんでした。音声が認識できなかった可能性があります。");
+      } else if (!results.some(result => result.alternatives?.length > 0)) {
+        console.warn("警告: 認識結果に代替テキストがありません。音声が明確でない可能性があります。");
+      } else {
+        console.warn("警告: APIからの結果が不完全です。", JSON.stringify(data));
+      }
+      
+      return "";
+    } catch (error) {
+      console.error('Error during API request:', error);
+      throw error;
     }
-    
-    // 結果が空の場合のより詳細なエラーメッセージ
-    if (data.results?.length === 0) {
-      console.warn("警告: APIから結果が返されませんでした。音声が認識できなかった可能性があります。");
-    } else if (data.results?.some(result => result.alternatives?.length === 0)) {
-      console.warn("警告: 認識結果に代替テキストがありません。音声が明確でない可能性があります。");
-    } else {
-      console.warn("警告: APIからの結果が不完全です。", JSON.stringify(data));
-    }
-    
-    return "";
   } catch (error) {
     console.error(`チャンク ${chunkIndex + 1} の処理中にエラー:`, error);
     throw error;

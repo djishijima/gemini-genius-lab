@@ -16,8 +16,14 @@ import { TranscriptionResult } from "@/components/TranscriptionResult";
 import { AudioExportButton } from "@/components/AudioExportButton";
 import { handleTranscription } from "@/utils/handleTranscription";
 
+enum RecordingState {
+  Idle = 'Idle',
+  Recording = 'Recording',
+  Paused = 'Paused',
+}
+
 const AudioRecorder: FC = () => {
-  const [transcription, setTranscription] = useState<string | null>(null);
+  const [transcription, setTranscription] = useState<string | null>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -25,6 +31,8 @@ const AudioRecorder: FC = () => {
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [pendingTranscription, setPendingTranscription] = useState<string | null>(null);
   const [transcriptionProgress, setTranscriptionProgress] = useState<number>(0);
+  const [recordingState, setRecordingState] = useState<RecordingState>(RecordingState.Idle);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
 
   const { toast } = useToast();
   const {
@@ -35,7 +43,7 @@ const AudioRecorder: FC = () => {
   } = useAudioRecorder();
 
   // 環境変数からAPIキーを取得
-  const API_KEY = (import.meta as any).env?.VITE_GOOGLE_API_KEY || "AIzaSyB3e3yEOKECnlDtivhi_jPxOpepk8wo6jE";
+  const API_KEY = (import.meta as any).env?.VITE_GOOGLE_API_KEY || "YOUR_API_KEY_HERE";
 
   const handleTranscriptionProcess = useCallback(
     async (blob: Blob) => {
@@ -51,10 +59,10 @@ const AudioRecorder: FC = () => {
       // 音声データの詳細ログ
       console.log("==== 文字起こし処理開始 ====");
       console.log(`音声データ: type=${blob.type}, size=${blob.size} bytes`);
-      console.log(`APIキー: ${API_KEY ? (API_KEY.substring(0, 5) + '...') : '未設定'}`); 
+      console.log(`APIキー: ${API_KEY ? (API_KEY.substring(0, 5) + '...') : '未設定'}`);
       
       setIsProcessing(true);
-      setTranscription(""); // クリア
+      setTranscription(null); // クリア
 
       try {
         // 引数を明示的にログ出力
@@ -62,19 +70,19 @@ const AudioRecorder: FC = () => {
         
         const result = await handleTranscription(blob, {
           apiKey: API_KEY,
-          onProgress: (progress) => {
+          onProgress: (progress: number) => {
             console.log("文字起こし進捗:", progress);
             setTranscriptionProgress(progress);
           },
-          onTranscriptionChange: (text) => {
+          onTranscriptionChange: (text: string) => {
             console.log(`文字起こし結果更新: "${text}", 長さ: ${text.length}`);
             setTranscription(text);
           },
-          onProcessingStateChange: (state) => {
+          onProcessingStateChange: (state: boolean) => {
             console.log(`処理状態変更: ${state}`);
             setIsProcessing(state);
           },
-          onTranscribingStateChange: (state) => {
+          onTranscribingStateChange: (state: boolean) => {
             console.log(`文字起こし状態変更: ${state}`);
             setIsTranscribing(state);
           },
@@ -93,10 +101,10 @@ const AudioRecorder: FC = () => {
         setIsTranscribing(false);
       }
     },
-    [toast],
+    [toast, API_KEY],
   );
 
-  const onStartRecording = useCallback(async () => {
+  const handleRecording = useCallback(async () => {
     try {
       await startRecording();
       setIsRecording(true);
@@ -247,6 +255,8 @@ const AudioRecorder: FC = () => {
     // コンソールに明示的な指示を表示
     console.warn('重要: マイクに向かって話してください。音声が検出されているか確認します。');
 
+    setMediaRecorder(mediaRecorder);
+
     return () => {
       console.log("Cleaning up MediaRecorder");
       mediaRecorder.stop();
@@ -292,7 +302,7 @@ const AudioRecorder: FC = () => {
             audioStream={audioStream}
             isProcessing={isProcessing}
             isTranscribing={isTranscribing}
-            onStartRecording={onStartRecording}
+            onStartRecording={handleRecording}
             onStopRecording={onStopRecording}
             onFileInputClick={() => {}} // 使用しない機能
           />
