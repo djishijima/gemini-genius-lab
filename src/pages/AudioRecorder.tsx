@@ -106,7 +106,7 @@ const AudioRecorder: FC = () => {
         setIsTranscribing(false);
       }
     },
-    [toast, apiKey],
+    [toast],
   );
 
   const handleRecording = useCallback(async () => {

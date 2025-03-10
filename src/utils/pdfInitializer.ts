@@ -4,7 +4,8 @@ import { pdfjs } from 'react-pdf';
 import type { TextItem } from "pdfjs-dist/types/src/display/api";
 
 // PDFjs APIとWorkerのバージョンを統一する定数
-const PDF_VERSION = '3.11.174';
+// 引数として渡す場合は、文字列として渡す必要があるためバージョンを固定します
+const PDF_VERSION = '2.16.105'; // WorkerとAPIバージョンを一致させるために下げる
 
 // pdfjsLibとpdfjs（react-pdf）のバージョン確認
 console.log('pdfjs-dist version:', pdfjsLib.version);
@@ -21,6 +22,7 @@ declare global {
 }
 
 // PDF.jsの設定を安全に初期化する
+// PDF.js初期化をアプリケーションの起動時に必ず呼び出す
 export const initPdfJs = (): boolean => {
   try {
     console.log(`PDF.js初期化を開始します - v${PDF_VERSION}`);
@@ -93,15 +95,24 @@ export const extractFileContent = async (file: File): Promise<string> => {
         console.log('ArrayBuffer取得:', typedArray.length, 'bytes');
         
         // PDF読み込みオプションを定義（window.pdfjsOptionsに依存しない）
+        // PDF読み込みオプションを定義（バージョンを明示的に指定）
         const pdfOptions = {
           data: typedArray,
           cMapUrl: `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDF_VERSION}/cmaps/`,
           cMapPacked: true,
           useSystemFonts: true, // システムフォントを使用して改善
+          standardFontDataUrl: `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDF_VERSION}/standard_fonts/`,
           // APIとWorkerのバージョン整合性を確保
-          apiVersion: PDF_VERSION,
-          workerVersion: PDF_VERSION
+          // バージョンを5%以上違うとエラーが発生する
+          disableRange: true, // 範囲要求を無効化してエラーを回避
+          disableStream: true, // ストリームを無効化してロードを確実に
+          isEvalSupported: true,
+          isOffscreenCanvasSupported: true,
+          canvasMaxAreaInBytes: 0, // キャンバスサイズ制限を設けない
         };
+        
+        // ワーカーオプションを明示的に設定
+        pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDF_VERSION}/build/pdf.worker.min.js`;
         
         // ループを使用してPDF読み込みを試行
         const loadingTask = pdfjsLib.getDocument(pdfOptions);

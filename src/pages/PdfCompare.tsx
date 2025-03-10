@@ -1,40 +1,34 @@
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Layers, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { PDFInputSection } from "@/components/pdf-compare/PDFInputSection";
 import { SimilarityCard } from "@/components/pdf-compare/SimilarityCard";
 import { PdfOverlayView } from "@/components/pdf-compare/PdfOverlayView";
-import { PdfHighlightView } from "@/components/pdf-compare/PdfHighlightView";
-import { PdfVisualDiffView } from "@/components/pdf-compare/PdfVisualDiffView";
+// 簡略化のため不要なインポートを削除
 import { SideBySidePdfView } from "@/components/pdf-compare/SideBySidePdfView";
-import { ChatView } from "@/components/pdf-compare/ChatView";
-import { TextView } from "@/components/pdf-compare/TextView";
+// 簡略化のため不要なインポートを削除
 import { useToast } from "@/components/ui/use-toast";
 import { initPdfJs, checkPdfJsSetup } from "@/utils/pdfInitializer";
-import { DisplayMode } from "@/types/pdf-compare";
+import type { DisplayMode } from "@/types/pdf-compare";
 import { usePdfCompare } from "@/hooks/usePdfCompare";
 import { PdfCompareControls } from "@/components/pdf-compare/PdfCompareControls";
 
 // 初期化を実行
 const pdfJsInitialized = initPdfJs();
 
-const PdfCompare: React.FC = () => {
+const PdfCompare = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   // 表示モードを設定（PDF比較機能を強化）
-  const [displayMode, setDisplayMode] = useState<'chat' | 'text' | 'side-by-side' | 'highlight' | 'visual-diff' | 'overlay'>('chat');
+  const [displayMode, setDisplayMode] = useState<'overlay' | 'side-by-side'>('overlay');
   const [showSimilarity, setShowSimilarity] = useState(true);
   
-  // PDF表示モードのラベルとアイコンをわかりやすく定義
+  // PDF表示モード - 2つのモードに簡略化
   const displayModes: DisplayMode[] = [
-    { id: 'chat', label: 'AIチャット分析', icon: FileText },
-    { id: 'text', label: 'テキスト比較', icon: FileText },
-    { id: 'highlight', label: 'PDF差分ハイライト', icon: FileText, tooltip: '元のPDFに差分をハイライト表示' },
-    { id: 'overlay', label: 'オーバーレイ表示', icon: Layers, tooltip: '2つのPDFを重ねて表示' },
-    { id: 'side-by-side', label: 'ページ比較', icon: FileText },
-    { id: 'visual-diff', label: '視覚的差分', icon: FileText },
+    { id: 'overlay', label: 'オーバーレイ比較', icon: Layers, tooltip: '2つのPDFを重ねて比較' },
+    { id: 'side-by-side', label: 'PDF全景比較', icon: FileText, tooltip: 'PDFの全体像を並べて比較' },
   ];
 
   // カスタムフックから状態と関数を取得
@@ -110,7 +104,7 @@ const PdfCompare: React.FC = () => {
           comparePdfs={comparePdfs}
           showSimilarity={showSimilarity}
           setShowSimilarity={setShowSimilarity}
-          canCompare={(!text1 && !pdf1) || (!text2 && !pdf2) ? false : true}
+          canCompare={!!(text1 || pdf1) && !!(text2 || pdf2)}
           displayModes={displayModes}
         />
         
@@ -124,38 +118,6 @@ const PdfCompare: React.FC = () => {
               />
             )}
 
-            {displayMode === 'text' && (
-              <TextView
-                pdf1={pdf1}
-                pdf2={pdf2}
-                differences={differences}
-                selectedDiffIndex={selectedDiffIndex}
-                setSelectedDiffIndex={setSelectedDiffIndex}
-                numPages1={numPages1}
-                numPages2={numPages2}
-              />
-            )}
-            
-            {displayMode === 'highlight' && (
-              <PdfHighlightView
-                pdf1={pdf1}
-                pdf2={pdf2}
-                differences={differences}
-                numPages1={numPages1}
-                numPages2={numPages2}
-                selectedDiffIndex={selectedDiffIndex}
-                onDiffClick={setSelectedDiffIndex}
-                onError={(error) => {
-                  console.error('PDF Highlight View error:', error);
-                  toast({
-                    title: "PDF読み込みエラー",
-                    description: `PDFの表示に問題が発生しました: ${error?.message || 'unknown error'}`,
-                    variant: "destructive",
-                  });
-                }}
-              />
-            )}
-            
             {displayMode === 'overlay' && (
               <PdfOverlayView
                 pdf1={pdf1}
@@ -174,16 +136,6 @@ const PdfCompare: React.FC = () => {
                 }}
               />
             )}
-            
-            {displayMode === 'visual-diff' && (
-              <PdfVisualDiffView
-                pdf1={pdf1}
-                pdf2={pdf2}
-                numPages1={numPages1}
-                numPages2={numPages2}
-                differences={differences}
-              />
-            )}
 
             {displayMode === 'side-by-side' && (
               <SideBySidePdfView
@@ -191,16 +143,6 @@ const PdfCompare: React.FC = () => {
                 pdf2={pdf2}
                 numPages1={numPages1}
                 numPages2={numPages2}
-              />
-            )}
-            
-            {displayMode === 'chat' && (
-              <ChatView
-                differences={differences}
-                similarityScore={similarityScore}
-                pdf1Text={pdf1Text}
-                pdf2Text={pdf2Text}
-                initialMessages={chatMessages}
               />
             )}
           </div>
