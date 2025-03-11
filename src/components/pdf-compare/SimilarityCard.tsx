@@ -1,5 +1,8 @@
+
 import React from "react";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Plus, Minus } from "lucide-react";
 
 interface SimilarityCardProps {
   similarityScore: number;
@@ -8,23 +11,61 @@ interface SimilarityCardProps {
 }
 
 export function SimilarityCard({ similarityScore, addedCount, removedCount }: SimilarityCardProps) {
+  const similarityPercentage = Math.round(similarityScore * 100);
+  const totalChanges = addedCount + removedCount;
+  
+  // テキストの類似度に基づいた色を決定
+  const getColorClass = () => {
+    if (similarityPercentage >= 95) return "bg-emerald-500";
+    if (similarityPercentage >= 80) return "bg-green-500";
+    if (similarityPercentage >= 60) return "bg-yellow-500";
+    if (similarityPercentage >= 40) return "bg-orange-500";
+    return "bg-red-500";
+  };
+
   return (
-    <Card className="bg-slate-800">
-      <CardHeader>
-        <div className="flex flex-col items-center justify-center space-y-2">
-          <CardTitle className="text-slate-100 text-3xl">類似度</CardTitle>
-          <div className="flex items-center gap-4">
-            <div className="text-5xl font-bold bg-gradient-to-r from-[#0EA5E9] to-[#8B5CF6] bg-clip-text text-transparent">
-              {similarityScore}%
+    <Card className="overflow-hidden border-0 shadow-lg bg-gradient-to-r from-slate-800 to-slate-900">
+      <CardContent className="p-6">
+        <div className="flex flex-col space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-xl font-bold text-white">類似度</h3>
+            <span className="text-3xl font-bold text-white">{similarityPercentage}%</span>
+          </div>
+          
+          <Progress 
+            value={similarityPercentage} 
+            className="h-2"
+            indicatorColor={getColorClass()}
+          />
+          
+          <div className="flex justify-between mt-4">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded bg-red-500/20 text-red-500">
+                <Minus size={14} />
+              </div>
+              <div>
+                <p className="text-white">削除</p>
+                <p className="text-xl font-bold text-white">{removedCount}</p>
+              </div>
             </div>
-            <div className="h-16 w-[2px] bg-slate-700" />
-            <div className="text-slate-400">
-              <div>追加された箇所: {addedCount}</div>
-              <div>削除された箇所: {removedCount}</div>
+            
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded bg-emerald-500/20 text-emerald-500">
+                <Plus size={14} />
+              </div>
+              <div>
+                <p className="text-white">追加</p>
+                <p className="text-xl font-bold text-white">{addedCount}</p>
+              </div>
+            </div>
+            
+            <div>
+              <p className="text-white">合計変更</p>
+              <p className="text-xl font-bold text-white">{totalChanges}</p>
             </div>
           </div>
         </div>
-      </CardHeader>
+      </CardContent>
     </Card>
   );
 }

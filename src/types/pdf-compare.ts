@@ -19,30 +19,11 @@ export interface SimilarityStats {
   similarityPercentage: number;
 }
 
-export interface TourState {
-  run: boolean;
-  steps: {
-    target: string;
-    content: string;
-  }[];
-}
-
-export interface DiffHighlight {
-  text: string;
-  diffIndex: number;
-  isLeft: boolean;
-}
-
 import type { LucideIcon } from 'lucide-react';
 
 export interface DisplayMode {
-  id: 'overlay' | 'side-by-side';
+  id: 'overlay';
   label: string;
   icon: LucideIcon;
   tooltip?: string;
-}
-
-export interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
 }
